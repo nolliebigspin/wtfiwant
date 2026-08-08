@@ -30,6 +30,11 @@ export async function analyzeAnswers(
         (item) => item.evidenceQuestionIds,
       ),
       ...parsed.data.antiLife.evidenceQuestionIds,
+      ...parsed.data.possibleDirections.flatMap(
+        (item) => item.evidenceQuestionIds,
+      ),
+      ...parsed.data.goals.flatMap((item) => item.evidenceQuestionIds),
+      ...parsed.data.firstSteps.flatMap((item) => item.evidenceQuestionIds),
     ];
     return evidenceIds.every((id) => answerIds.has(id))
       ? parsed

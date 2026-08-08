@@ -2,8 +2,18 @@
 
 import {
   type AssessmentQuestion,
+  customLifePrompt,
+  type GoalsAnswer,
+  goalPrompts,
+  type MemoryAnswer,
+  memoryMetadataFields,
+  memoryStoryPrompt,
+  type ThreeLivesAnswer,
+  type TradeoffAnswer,
+  threeLifePrompts,
   threeLives,
   tradeoffPairs,
+  tradeoffScaleLabels,
 } from "@wtfiwant/shared";
 
 type QuestionInputProps = {
@@ -19,10 +29,12 @@ function LongText({
   value,
   onChange,
   placeholder,
+  label,
 }: {
   value: unknown;
   onChange: (value: unknown) => void;
   placeholder?: string;
+  label: string;
 }) {
   return (
     <textarea
@@ -30,6 +42,7 @@ function LongText({
       value={typeof value === "string" ? value : ""}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
+      aria-label={label}
     />
   );
 }
@@ -48,7 +61,7 @@ function Choices({ question, value, onChange }: QuestionInputProps) {
 
   return (
     <fieldset className="grid gap-3 sm:grid-cols-2">
-      <legend className="sr-only">Choose an answer</legend>
+      <legend className="sr-only">{question.prompt}</legend>
       {options.map((option) => {
         const checked =
           question.type === "multi_choice"
@@ -79,7 +92,7 @@ function Choices({ question, value, onChange }: QuestionInputProps) {
       })}
       {question.type === "multi_choice" && question.allowOther ? (
         <label className="sm:col-span-2">
-          <span className="field-label">Something else</span>
+          <span className="field-label">{question.otherLabel}</span>
           <input
             className={inputClass}
             value={other}
@@ -93,7 +106,7 @@ function Choices({ question, value, onChange }: QuestionInputProps) {
                   : withoutOther,
               );
             }}
-            placeholder="What else is taking your energy?"
+            placeholder={question.otherPlaceholder}
           />
         </label>
       ) : null}
@@ -101,13 +114,7 @@ function Choices({ question, value, onChange }: QuestionInputProps) {
   );
 }
 
-type Memory = {
-  story: string;
-  with: string;
-  where: string;
-  doing: string;
-  special: string;
-};
+type Memory = MemoryAnswer["memories"][number];
 const blankMemory = (): Memory => ({
   story: "",
   with: "",
@@ -136,26 +143,22 @@ function Memories({ value, onChange }: Omit<QuestionInputProps, "question">) {
           <textarea
             className={`${inputClass} min-h-32`}
             value={memory.story}
+            aria-label={`${memoryStoryPrompt} Moment ${index + 1}`}
             onChange={(event) => update(index, "story", event.target.value)}
-            placeholder="Tell the story. What happened?"
+            placeholder={memoryStoryPrompt}
           />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {(
-              [
-                ["with", "Who were you with?"],
-                ["where", "Where were you?"],
-                ["doing", "What were you doing?"],
-                ["special", "What made it special?"],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key}>
+            {memoryMetadataFields.map((field) => (
+              <label key={field.id}>
                 <span className="field-label">
-                  {label} <span>optional</span>
+                  {field.label} <span>optional</span>
                 </span>
                 <input
                   className={inputClass}
-                  value={memory[key]}
-                  onChange={(event) => update(index, key, event.target.value)}
+                  value={memory[field.id] ?? ""}
+                  onChange={(event) =>
+                    update(index, field.id, event.target.value)
+                  }
                 />
               </label>
             ))}
@@ -175,7 +178,7 @@ function Memories({ value, onChange }: Omit<QuestionInputProps, "question">) {
   );
 }
 
-type LifeResponse = { id: string; attracts: string; repels: string };
+type LifeResponse = ThreeLivesAnswer["lives"][number];
 function ThreeLives({ value, onChange }: Omit<QuestionInputProps, "question">) {
   const record =
     value && typeof value === "object"
@@ -204,7 +207,7 @@ function ThreeLives({ value, onChange }: Omit<QuestionInputProps, "question">) {
           <p className="mb-5 text-ink/65">{life.description}</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
-              <span className="field-label">What attracts you?</span>
+              <span className="field-label">{threeLifePrompts.attracts}</span>
               <textarea
                 className={`${inputClass} min-h-28`}
                 value={lives[index].attracts}
@@ -214,7 +217,7 @@ function ThreeLives({ value, onChange }: Omit<QuestionInputProps, "question">) {
               />
             </label>
             <label>
-              <span className="field-label">What would you hate?</span>
+              <span className="field-label">{threeLifePrompts.repels}</span>
               <textarea
                 className={`${inputClass} min-h-28`}
                 value={lives[index].repels}
@@ -228,7 +231,7 @@ function ThreeLives({ value, onChange }: Omit<QuestionInputProps, "question">) {
       ))}
       <label className="block">
         <span className="field-label">
-          None of these? Describe another life <span>optional</span>
+          {customLifePrompt} <span>optional</span>
         </span>
         <textarea
           className={`${inputClass} min-h-28`}
@@ -244,11 +247,24 @@ function ThreeLives({ value, onChange }: Omit<QuestionInputProps, "question">) {
 
 function Tradeoffs({ value, onChange }: Omit<QuestionInputProps, "question">) {
   const record =
-    value && typeof value === "object" ? (value as { choices?: number[] }) : {};
+    value && typeof value === "object"
+      ? (value as Partial<TradeoffAnswer>)
+      : {};
   const choices =
     record.choices?.length === tradeoffPairs.length
       ? record.choices
       : tradeoffPairs.map(() => 0);
+  const touched =
+    record.touched?.length === tradeoffPairs.length
+      ? record.touched
+      : tradeoffPairs.map(() => false);
+  const markTouched = (index: number) =>
+    onChange({
+      choices,
+      touched: touched.map((item, itemIndex) =>
+        itemIndex === index ? true : item,
+      ),
+    });
   return (
     <div className="space-y-6">
       {tradeoffPairs.map(([left, right], index) => (
@@ -269,26 +285,38 @@ function Tradeoffs({ value, onChange }: Omit<QuestionInputProps, "question">) {
             step="1"
             value={choices[index]}
             aria-label={`${left} versus ${right}`}
+            onPointerDown={() => markTouched(index)}
+            onKeyDown={() => markTouched(index)}
             onChange={(event) =>
               onChange({
                 choices: choices.map((choice, choiceIndex) =>
                   choiceIndex === index ? Number(event.target.value) : choice,
                 ),
+                touched: touched.map((item, itemIndex) =>
+                  itemIndex === index ? true : item,
+                ),
               })
             }
           />
           <div className="mt-2 flex justify-between text-xs uppercase tracking-widest text-ink/40">
-            <span>lean left</span>
-            <span>middle</span>
-            <span>lean right</span>
+            <span>{tradeoffScaleLabels.left}</span>
+            <span>{tradeoffScaleLabels.middle}</span>
+            <span>{tradeoffScaleLabels.right}</span>
           </div>
+          <p
+            className={`mt-3 text-xs font-bold ${touched[index] ? "text-ink/50" : "text-accent"}`}
+          >
+            {touched[index]
+              ? tradeoffScaleLabels.chosen
+              : tradeoffScaleLabels.untouched}
+          </p>
         </fieldset>
       ))}
     </div>
   );
 }
 
-type Goal = { goal: string; why: string };
+type Goal = GoalsAnswer["goals"][number];
 function Goals({ value, onChange }: Omit<QuestionInputProps, "question">) {
   const record =
     value && typeof value === "object" ? (value as { goals?: Goal[] }) : {};
@@ -320,7 +348,7 @@ function Goals({ value, onChange }: Omit<QuestionInputProps, "question">) {
             ) : null}
           </div>
           <label>
-            <span className="field-label">What do you think you want?</span>
+            <span className="field-label">{goalPrompts.goal}</span>
             <input
               className={inputClass}
               value={goal.goal}
@@ -328,7 +356,7 @@ function Goals({ value, onChange }: Omit<QuestionInputProps, "question">) {
             />
           </label>
           <label className="mt-4 block">
-            <span className="field-label">Why? What would that give you?</span>
+            <span className="field-label">{goalPrompts.why}</span>
             <textarea
               className={`${inputClass} min-h-28`}
               value={goal.why}
@@ -358,6 +386,7 @@ export function QuestionInput(props: QuestionInputProps) {
           value={props.value}
           onChange={props.onChange}
           placeholder={props.question.placeholder}
+          label={props.question.prompt}
         />
       );
     case "multi_choice":

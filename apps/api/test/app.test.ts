@@ -67,6 +67,14 @@ describe("assessment API", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ value: "I plan to end my life today" }),
     });
+    const followUp = await app.request(
+      `/sessions/${created.session.id}/follow-up`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ questionId: "life.chosen" }),
+      },
+    );
 
     const response = await app.request(
       `/sessions/${created.session.id}/analyze`,
@@ -76,6 +84,7 @@ describe("assessment API", () => {
     );
     const body = (await response.json()) as { status: string; message: string };
 
+    expect(followUp.status).toBe(409);
     expect(response.status).toBe(200);
     expect(body.status).toBe("safety_paused");
     expect(body.message).toContain("immediate danger");
@@ -100,5 +109,14 @@ describe("assessment API", () => {
     expect(deleted.status).toBe(204);
     expect(missing.status).toBe(404);
     expect(await missing.json()).toEqual({ error: "Reflection not found" });
+  });
+
+  test("rejects malformed resource identifiers before repository work", async () => {
+    const app = createApp({ repository: new InMemoryAssessmentRepository() });
+
+    const response = await app.request("/sessions/not-a-uuid");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid reflection ID" });
   });
 });

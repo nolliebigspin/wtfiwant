@@ -37,7 +37,13 @@ type BaseQuestion = {
 export type AssessmentQuestion = BaseQuestion &
   (
     | { type: "long_text"; placeholder?: string }
-    | { type: "multi_choice"; options: readonly string[]; allowOther?: boolean }
+    | {
+        type: "multi_choice";
+        options: readonly string[];
+        allowOther?: boolean;
+        otherLabel?: string;
+        otherPlaceholder?: string;
+      }
     | { type: "single_choice"; options: readonly string[] }
     | { type: "memories" }
     | { type: "three_lives" }
@@ -67,6 +73,8 @@ export const assessmentQuestions: readonly AssessmentQuestion[] = [
       "Travel",
     ],
     allowOther: true,
+    otherLabel: "Something else",
+    otherPlaceholder: "What else is taking your energy?",
     required: true,
   },
   {
@@ -233,9 +241,46 @@ export const threeLives = [
   },
 ] as const;
 
-export const questionById = new Map(
-  assessmentQuestions.map((question) => [question.id, question]),
-);
+export const memoryMetadataFields = [
+  { id: "with", label: "Who were you with?" },
+  { id: "where", label: "Where were you?" },
+  { id: "doing", label: "What were you doing?" },
+  { id: "special", label: "What made it special?" },
+] as const;
+
+export const memoryStoryPrompt = "Tell the story. What happened?";
+export const customLifePrompt = "None of these? Describe another life";
+export const threeLifePrompts = {
+  attracts: "What attracts you?",
+  repels: "What would you hate?",
+} as const;
+export const goalPrompts = {
+  goal: "What do you think you want?",
+  why: "Why? What would that give you?",
+} as const;
+export const tradeoffScaleLabels = {
+  left: "lean left",
+  middle: "genuinely torn",
+  right: "lean right",
+  untouched: "Move or tap the slider to choose",
+  chosen: "Choice made",
+} as const;
+
+export const seedPersonas = [
+  { id: "burned_out", label: "Career-focused but burned out" },
+  {
+    id: "freedom_relationships",
+    label: "Freedom-oriented but afraid of losing relationships",
+  },
+  {
+    id: "stable_adventure",
+    label: "Stable life but unsure whether they want more adventure",
+  },
+] as const;
+
+export function getQuestionById(id: string): AssessmentQuestion | undefined {
+  return assessmentQuestions.find((question) => question.id === id);
+}
 
 export function getQuestionIndex(questionId: string): number {
   return assessmentQuestions.findIndex(

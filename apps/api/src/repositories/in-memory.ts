@@ -71,7 +71,15 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
   async saveFollowUp(id: string, followUp: NewFollowUp): Promise<boolean> {
     const view = this.sessions.get(id);
     if (!view) return false;
-    view.followUps.push(copy(followUp));
+    view.followUps.push(
+      copy({
+        id: followUp.id,
+        questionId: followUp.questionId,
+        generatedQuestion: followUp.generatedQuestion,
+        userResponse: followUp.userResponse,
+        createdAt: followUp.createdAt,
+      }),
+    );
     return true;
   }
 

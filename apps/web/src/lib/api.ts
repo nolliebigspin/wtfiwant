@@ -37,7 +37,6 @@ export interface ReflectionClient {
   createFollowUp(
     id: string,
     questionId: string,
-    answer: string,
   ): Promise<{ id: string; generatedQuestion: string }>;
   saveFollowUpResponse(
     id: string,
@@ -73,10 +72,10 @@ export const api: ReflectionClient & {
       body: JSON.stringify({ currentChapter, currentQuestionId }),
     });
   },
-  async createFollowUp(id, questionId, answer) {
+  async createFollowUp(id, questionId) {
     const body = (await request(`/sessions/${id}/follow-up`, {
       method: "POST",
-      body: JSON.stringify({ questionId, answer }),
+      body: JSON.stringify({ questionId }),
     })) as { followUp: unknown };
     const followUp = followUpSchema.parse(body.followUp);
     return { id: followUp.id, generatedQuestion: followUp.generatedQuestion };

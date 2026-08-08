@@ -1,9 +1,12 @@
 "use client";
 
-import { assessmentQuestions, chapters, tradeoffPairs } from "@wtfiwant/shared";
+import {
+  assessmentQuestions,
+  chapters,
+  isAnswerComplete,
+} from "@wtfiwant/shared";
 import { useEffect, useState } from "react";
 import { api, type ReflectionClient } from "@/lib/api";
-import { answerToFollowUpText, isAnswerComplete } from "@/lib/journey";
 import { QuestionInput } from "./question-inputs";
 
 type Props = { sessionId: string; client?: ReflectionClient };
@@ -80,11 +83,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
   };
 
   const continueJourney = async () => {
-    const valueToSave =
-      question.type === "tradeoffs" && value === undefined
-        ? { choices: tradeoffPairs.map(() => 0) }
-        : value;
-    if (!isAnswerComplete(question, valueToSave)) {
+    if (!isAnswerComplete(question, value)) {
       setError("Give this one an honest answer before moving on.");
       return;
     }
@@ -92,7 +91,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
     setSaved(false);
     setError(null);
     try {
-      await client.saveAnswer(sessionId, question.id, valueToSave);
+      await client.saveAnswer(sessionId, question.id, value);
       setSaved(true);
       if (index < assessmentQuestions.length - 1) {
         const next = assessmentQuestions[index + 1];
@@ -101,11 +100,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         try {
-          const generated = await client.createFollowUp(
-            sessionId,
-            question.id,
-            answerToFollowUpText(valueToSave),
-          );
+          const generated = await client.createFollowUp(sessionId, question.id);
           setFollowUp({
             id: generated.id,
             question: generated.generatedQuestion,
@@ -151,6 +146,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
             <textarea
               className="answer-textarea"
               value={followUpResponse}
+              aria-label={followUp.question}
               onChange={(event) => setFollowUpResponse(event.target.value)}
             />
             {error ? (

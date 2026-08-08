@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+export const sessionIdSchema = z.uuid();
+export const followUpIdSchema = z.uuid();
+export const questionIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(/^[a-z0-9_.:-]+$/);
+export const generatedFollowUpSchema = z.string().trim().min(5).max(300);
+export const entitlementSchema = z.enum(["assessment", "full_analysis"]);
+export const seedPersonaSchema = z.enum([
+  "burned_out",
+  "freedom_relationships",
+  "stable_adventure",
+]);
+
 export const chapterIdSchema = z.enum([
   "you",
   "alive",
@@ -18,7 +34,7 @@ export const sessionStatusSchema = z.enum([
 
 export const sessionSchema = z
   .object({
-    id: z.uuid(),
+    id: sessionIdSchema,
     status: sessionStatusSchema,
     currentChapter: chapterIdSchema,
     currentQuestionId: z.string().min(1),
@@ -55,7 +71,7 @@ export const analysisSchema = z
           })
           .strict(),
       )
-      .min(1)
+      .min(3)
       .max(6),
     tensions: z
       .array(
@@ -92,6 +108,7 @@ export const analysisSchema = z
             title: z.string().min(1),
             explanation: z.string().min(1),
             whyItFits: z.string().min(1),
+            evidenceQuestionIds: evidenceIdsSchema,
           })
           .strict(),
       )
@@ -103,6 +120,7 @@ export const analysisSchema = z
           originalGoal: z.string().min(1),
           possibleUnderlyingNeed: z.string().min(1),
           interpretation: z.string().min(1),
+          evidenceQuestionIds: evidenceIdsSchema,
         })
         .strict(),
     ),
@@ -113,6 +131,7 @@ export const analysisSchema = z
             direction: z.string().min(1),
             experiment: z.string().min(1),
             immediateAction: z.string().min(1),
+            evidenceQuestionIds: evidenceIdsSchema,
           })
           .strict(),
       )
@@ -132,9 +151,9 @@ export const storedAnalysisSchema = z
 
 export const followUpSchema = z
   .object({
-    id: z.uuid(),
-    questionId: z.string().min(1),
-    generatedQuestion: z.string().min(1),
+    id: followUpIdSchema,
+    questionId: questionIdSchema,
+    generatedQuestion: generatedFollowUpSchema,
     userResponse: z.string().nullable(),
     createdAt: z.iso.datetime(),
   })
@@ -162,7 +181,7 @@ export const sessionViewSchema = z
     followUps: z.array(followUpSchema),
     analysis: storedAnalysisSchema.nullable(),
     actionPlan: actionPlanSchema.nullable(),
-    entitlements: z.array(z.enum(["assessment", "full_analysis"])),
+    entitlements: z.array(entitlementSchema),
   })
   .strict();
 
@@ -179,8 +198,7 @@ export const saveAnswerInputSchema = z
 
 export const followUpInputSchema = z
   .object({
-    questionId: z.string().min(1),
-    answer: z.string().trim().min(1).max(5000),
+    questionId: questionIdSchema,
   })
   .strict();
 
@@ -216,3 +234,5 @@ export type Analysis = z.infer<typeof analysisSchema>;
 export type StoredAnalysis = z.infer<typeof storedAnalysisSchema>;
 export type ActionPlanInput = z.infer<typeof actionPlanInputSchema>;
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
+export type Entitlement = z.infer<typeof entitlementSchema>;
+export type SeedPersona = z.infer<typeof seedPersonaSchema>;

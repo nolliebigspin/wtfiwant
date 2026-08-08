@@ -31,6 +31,20 @@ const analysis: Analysis = {
       evidenceQuestionIds: ["life.chosen"],
       confidence: "medium",
     },
+    {
+      id: "connection",
+      name: "Connection",
+      explanation: "Your memories include people you trust.",
+      evidenceQuestionIds: ["life.chosen"],
+      confidence: "medium",
+    },
+    {
+      id: "growth",
+      name: "Growth",
+      explanation: "You want challenge that still leaves room to live.",
+      evidenceQuestionIds: ["anti_life.description"],
+      confidence: "low",
+    },
   ],
   tensions: [
     {
@@ -52,11 +66,13 @@ const analysis: Analysis = {
       title: "Build around autonomy",
       explanation: "Test more control without quitting everything.",
       whyItFits: "It matches a repeated pattern.",
+      evidenceQuestionIds: ["life.chosen"],
     },
     {
       title: "Keep people within reach",
       explanation: "Design change with connection as a constraint.",
       whyItFits: "Your alive moments include close friends.",
+      evidenceQuestionIds: ["life.chosen"],
     },
   ],
   goals: [],
@@ -65,6 +81,7 @@ const analysis: Analysis = {
       direction: "Build more autonomy into work",
       experiment: "Try one remote day each week for a month",
       immediateAction: "Ask which day could work",
+      evidenceQuestionIds: ["life.chosen"],
     },
   ],
 };

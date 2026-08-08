@@ -155,6 +155,7 @@ export class LocalAIProvider implements AIProvider {
               originalGoal: goal.goal,
               possibleUnderlyingNeed: goal.why,
               interpretation: `One possible interpretation is that “${goal.goal}” is a vehicle for ${goal.why.toLowerCase()}, rather than the endpoint itself.`,
+              evidenceQuestionIds: evidence(answers, ["goals.current"]),
             },
           ]
         : [],
@@ -205,6 +206,11 @@ export class LocalAIProvider implements AIProvider {
             "Treat this as a design constraint to test, not a command to overturn your life.",
           whyItFits:
             "It connects the parts of your life that feel chosen with the future you do not want to postpone.",
+          evidenceQuestionIds: evidence(answers, [
+            "life.chosen",
+            "anti_life.regret",
+            "tradeoffs.choices",
+          ]),
         },
         {
           title: connection
@@ -215,6 +221,10 @@ export class LocalAIProvider implements AIProvider {
             : "Repeat one small ingredient from an alive moment and notice what actually changes.",
           whyItFits:
             "It turns a recurring pattern in your answers into something observable in real life.",
+          evidenceQuestionIds: evidence(answers, [
+            "alive.memories",
+            "possibilities.three_lives",
+          ]),
         },
       ],
       goals,
@@ -225,6 +235,10 @@ export class LocalAIProvider implements AIProvider {
             "For two weeks, protect one two-hour block for something you consciously choose.",
           immediateAction:
             "Choose the first block in your calendar and write down what it is for.",
+          evidenceQuestionIds: evidence(answers, [
+            "life.chosen",
+            "goals.current",
+          ]),
         },
         {
           direction: connection
@@ -236,6 +250,10 @@ export class LocalAIProvider implements AIProvider {
           immediateAction: connection
             ? "Send the invitation to that person."
             : "Name the memory and circle its smallest repeatable ingredient.",
+          evidenceQuestionIds: evidence(answers, [
+            "alive.memories",
+            "tradeoffs.choices",
+          ]),
         },
       ],
     };

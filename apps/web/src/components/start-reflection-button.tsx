@@ -1,5 +1,6 @@
 "use client";
 
+import { seedPersonas } from "@wtfiwant/shared";
 import { useState } from "react";
 import { api } from "@/lib/api";
 
@@ -43,16 +44,11 @@ export function StartReflectionButton({
 
 export function SeedButtons() {
   const [loading, setLoading] = useState<string | null>(null);
-  const personas = [
-    ["burned_out", "Burned out"],
-    ["freedom_relationships", "Freedom ↔ relationships"],
-    ["stable_adventure", "Stable ↔ adventure"],
-  ];
   return (
     <div className="seed-tools">
       <p>Development shortcuts</p>
       <div>
-        {personas.map(([id, label]) => (
+        {seedPersonas.map(({ id, label }) => (
           <button
             type="button"
             key={id}

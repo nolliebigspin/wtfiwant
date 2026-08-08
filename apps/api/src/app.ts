@@ -1,23 +1,24 @@
 import {
   actionPlanInputSchema,
   assessmentQuestions,
+  followUpIdSchema,
   followUpInputSchema,
   followUpResponseInputSchema,
-  questionById,
+  generatedFollowUpSchema,
+  getQuestionById,
   saveAnswerInputSchema,
+  seedPersonaSchema,
+  sessionIdSchema,
   sessionViewSchema,
+  stringifyAnswerForFollowUp,
   updateSessionInputSchema,
+  validateQuestionAnswer,
 } from "@wtfiwant/shared";
-import { Hono } from "hono";
+import { type Context, Hono, type Next } from "hono";
 import { cors } from "hono/cors";
 import { LocalAIProvider } from "./ai/local";
 import { type AIProvider, analyzeAnswers } from "./ai/provider";
-import {
-  createSeedSession,
-  type SeedPersona,
-  seedPersonas,
-} from "./dev/personas";
-import { validateAnswer } from "./domain/answer-validation";
+import { createSeedSession } from "./dev/personas";
 import { ANALYSIS_PROMPT_VERSION } from "./prompts/analysis";
 import type { AssessmentRepository } from "./repositories/types";
 import { classifySafety, SAFETY_MESSAGE } from "./safety/classifier";
@@ -45,6 +46,15 @@ export function createApp({
   );
 
   app.get("/health", (context) => context.json({ status: "ok" }));
+
+  const validateSessionId = async (context: Context, next: Next) => {
+    if (!sessionIdSchema.safeParse(context.req.param("id")).success) {
+      return context.json({ error: "Invalid reflection ID" }, 400);
+    }
+    await next();
+  };
+  app.use("/sessions/:id", validateSessionId);
+  app.use("/sessions/:id/*", validateSessionId);
 
   app.post("/sessions", async (context) => {
     const session = sessionViewSchema.parse(await repository.createSession());
@@ -85,7 +95,7 @@ export function createApp({
     );
     if (!input.success)
       return context.json({ error: "Invalid answer payload" }, 400);
-    const answer = validateAnswer(
+    const answer = validateQuestionAnswer(
       context.req.param("questionId"),
       input.data.value,
     );
@@ -106,7 +116,26 @@ export function createApp({
     if (view.analysis)
       return context.json({ status: "complete", analysis: view.analysis });
 
-    if (classifySafety(view.answers) === "immediate_self_harm_risk") {
+    const analysisAnswers = {
+      ...view.answers,
+      ...Object.fromEntries(
+        view.followUps.flatMap((followUp) =>
+          followUp.userResponse
+            ? [
+                [
+                  `followup:${followUp.questionId}:${followUp.id}`,
+                  {
+                    question: followUp.generatedQuestion,
+                    answer: followUp.userResponse,
+                  },
+                ],
+              ]
+            : [],
+        ),
+      ),
+    };
+
+    if (classifySafety(analysisAnswers) === "immediate_self_harm_risk") {
       await repository.setStatus(id, "safety_paused");
       return context.json({ status: "safety_paused", message: SAFETY_MESSAGE });
     }
@@ -121,7 +150,7 @@ export function createApp({
       );
     }
 
-    const result = await analyzeAnswers(aiProvider, view.answers, id);
+    const result = await analyzeAnswers(aiProvider, analysisAnswers, id);
     const analysis = {
       version: ANALYSIS_PROMPT_VERSION,
       model: aiProvider.name,
@@ -149,11 +178,11 @@ export function createApp({
       return context.json({ error: "Invalid follow-up request" }, 400);
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
-    const question = questionById.get(input.data.questionId);
+    const question = getQuestionById(input.data.questionId);
     if (!question) return context.json({ error: "Unknown question" }, 400);
     const chapterFollowUps = view.followUps.filter(
       (followUp) =>
-        questionById.get(followUp.questionId)?.chapter === question.chapter,
+        getQuestionById(followUp.questionId)?.chapter === question.chapter,
     );
     if (chapterFollowUps.length >= 2) {
       return context.json(
@@ -161,24 +190,44 @@ export function createApp({
         409,
       );
     }
-    const generatedQuestion = await aiProvider.generateFollowUp(
-      input.data.questionId,
-      input.data.answer,
-      id,
+    if (classifySafety(view.answers) === "immediate_self_harm_risk") {
+      await repository.setStatus(id, "safety_paused");
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    }
+    const savedAnswer = view.answers[input.data.questionId];
+    if (savedAnswer === undefined) {
+      return context.json(
+        { error: "Answer must be saved before a follow-up" },
+        409,
+      );
+    }
+    const userAnswer = stringifyAnswerForFollowUp(savedAnswer);
+    const generatedQuestion = generatedFollowUpSchema.parse(
+      await aiProvider.generateFollowUp(input.data.questionId, userAnswer, id),
     );
-    const followUp = {
+    const storedFollowUp = {
       id: crypto.randomUUID(),
       questionId: input.data.questionId,
-      userAnswer: input.data.answer,
+      userAnswer,
       generatedQuestion,
       userResponse: null,
       createdAt: new Date().toISOString(),
     };
-    await repository.saveFollowUp(id, followUp);
+    await repository.saveFollowUp(id, storedFollowUp);
+    const followUp = {
+      id: storedFollowUp.id,
+      questionId: storedFollowUp.questionId,
+      generatedQuestion: storedFollowUp.generatedQuestion,
+      userResponse: storedFollowUp.userResponse,
+      createdAt: storedFollowUp.createdAt,
+    };
     return context.json({ followUp }, 201);
   });
 
   app.put("/sessions/:id/follow-up/:followUpId", async (context) => {
+    if (!followUpIdSchema.safeParse(context.req.param("followUpId")).success) {
+      return context.json({ error: "Invalid follow-up ID" }, 400);
+    }
     const input = followUpResponseInputSchema.safeParse(
       await context.req.json().catch(() => null),
     );
@@ -210,10 +259,10 @@ export function createApp({
 
   if (process.env.NODE_ENV !== "production") {
     app.post("/dev/seed/:persona", async (context) => {
-      const persona = context.req.param("persona") as SeedPersona;
-      if (!(persona in seedPersonas))
+      const persona = seedPersonaSchema.safeParse(context.req.param("persona"));
+      if (!persona.success)
         return context.json({ error: "Unknown seed persona" }, 400);
-      const view = await createSeedSession(repository, persona);
+      const view = await createSeedSession(repository, persona.data);
       return context.json(view, 201);
     });
   }

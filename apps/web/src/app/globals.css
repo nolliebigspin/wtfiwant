@@ -876,7 +876,6 @@ a {
   border-radius: 0.8rem;
   background: rgb(255 255 255 / 0.35);
   padding: 1rem;
-  outline: none;
 }
 .plan-field textarea {
   min-height: 6rem;

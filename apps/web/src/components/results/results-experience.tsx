@@ -92,6 +92,25 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
       </ResultShell>
     );
 
+  const evidenceAnswers = {
+    ...view.answers,
+    ...Object.fromEntries(
+      view.followUps.flatMap((followUp) =>
+        followUp.userResponse
+          ? [
+              [
+                `followup:${followUp.questionId}:${followUp.id}`,
+                {
+                  question: followUp.generatedQuestion,
+                  answer: followUp.userResponse,
+                },
+              ],
+            ]
+          : [],
+      ),
+    ),
+  };
+
   return (
     <ResultShell>
       <main>
@@ -121,7 +140,7 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
                 <p>{driver.explanation}</p>
                 <EvidenceDrawer
                   ids={driver.evidenceQuestionIds}
-                  answers={view.answers}
+                  answers={evidenceAnswers}
                 />
               </article>
             ))}
@@ -152,7 +171,7 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
                   <p>{tension.explanation}</p>
                   <EvidenceDrawer
                     ids={tension.evidenceQuestionIds}
-                    answers={view.answers}
+                    answers={evidenceAnswers}
                     dark
                   />
                 </article>
@@ -177,7 +196,7 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
           </div>
           <EvidenceDrawer
             ids={analysis.antiLife.evidenceQuestionIds}
-            answers={view.answers}
+            answers={evidenceAnswers}
           />
         </section>
 
@@ -192,7 +211,7 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
                 <p>{influence.observation}</p>
                 <EvidenceDrawer
                   ids={influence.evidenceQuestionIds}
-                  answers={view.answers}
+                  answers={evidenceAnswers}
                 />
               </article>
             ))}
@@ -221,10 +240,40 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
                 <p>{direction.explanation}</p>
                 <small>WHY IT MAY FIT</small>
                 <p>{direction.whyItFits}</p>
+                <EvidenceDrawer
+                  ids={direction.evidenceQuestionIds}
+                  answers={evidenceAnswers}
+                />
               </article>
             ))}
           </div>
         </section>
+
+        {analysis.goals.length > 0 ? (
+          <section className="result-section" aria-labelledby="goals-title">
+            <div className="section-heading">
+              <p className="eyebrow">BENEATH THE STATED GOAL</p>
+              <h2 id="goals-title">
+                What you may be asking the goal to provide
+              </h2>
+            </div>
+            <div className="direction-grid">
+              {analysis.goals.map((goal) => (
+                <article className="direction-card" key={goal.originalGoal}>
+                  <span className="direction-index">YOU SAID</span>
+                  <h3>{goal.originalGoal}</h3>
+                  <small>POSSIBLE UNDERLYING NEED</small>
+                  <p>{goal.possibleUnderlyingNeed}</p>
+                  <p>{goal.interpretation}</p>
+                  <EvidenceDrawer
+                    ids={goal.evidenceQuestionIds}
+                    answers={evidenceAnswers}
+                  />
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="start-transition">
           <p className="eyebrow light">STOP → UNDERSTAND → START</p>
@@ -246,6 +295,7 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
         <ActionPlanBuilder
           sessionId={sessionId}
           steps={analysis.firstSteps}
+          answers={evidenceAnswers}
           savedPlan={view.actionPlan}
           onSave={(input) => client.saveActionPlan(sessionId, input)}
         />
@@ -325,10 +375,12 @@ function ActionPlanBuilder({
   sessionId,
   steps,
   savedPlan,
+  answers,
   onSave,
 }: {
   sessionId: string;
   steps: Analysis["firstSteps"];
+  answers: Record<string, unknown>;
   savedPlan: SessionView["actionPlan"];
   onSave: (input: ActionPlanInput) => Promise<void>;
 }) {
@@ -406,6 +458,7 @@ function ActionPlanBuilder({
           </button>
         ))}
       </div>
+      <EvidenceDrawer ids={step.evidenceQuestionIds} answers={answers} />
       <form onSubmit={save} className="plan-form">
         <PlanField
           number="01"

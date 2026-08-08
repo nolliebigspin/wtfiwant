@@ -1,15 +1,8 @@
+import type { SeedPersona } from "@wtfiwant/shared";
 import { LocalAIProvider } from "../ai/local";
 import { analyzeAnswers } from "../ai/provider";
 import { ANALYSIS_PROMPT_VERSION } from "../prompts/analysis";
 import type { AssessmentRepository } from "../repositories/types";
-
-export const seedPersonas = {
-  burned_out: "Career-focused but burned out",
-  freedom_relationships: "Freedom-oriented but afraid of losing relationships",
-  stable_adventure: "Stable life but unsure whether they want more adventure",
-} as const;
-
-export type SeedPersona = keyof typeof seedPersonas;
 
 const common = {
   "life.energy": ["Work", "Partner", "Health / fitness"],
@@ -61,7 +54,10 @@ const common = {
     ],
     customLife: "A home base with seasons of travel and work I can shape.",
   },
-  "tradeoffs.choices": { choices: [-1, -2, -1, 2, 2, 1] },
+  "tradeoffs.choices": {
+    choices: [-1, -2, -1, 2, 2, 1],
+    touched: [true, true, true, true, true, true],
+  },
   "tradeoffs.accepted_downside":
     "I would accept earning less for more control of my time.",
   "anti_life.regret":
