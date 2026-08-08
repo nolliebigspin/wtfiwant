@@ -1,0 +1,52 @@
+import { type Analysis, analysisSchema } from "@wtfiwant/shared";
+
+export interface AIProvider {
+  readonly name: string;
+  generateFollowUp(
+    questionId: string,
+    answer: string,
+    safetyIdentifier?: string,
+  ): Promise<string>;
+  analyzeAssessment(
+    answers: Record<string, unknown>,
+    repair: boolean,
+    safetyIdentifier?: string,
+  ): Promise<unknown>;
+}
+
+export async function analyzeAnswers(
+  provider: AIProvider,
+  answers: Record<string, unknown>,
+  safetyIdentifier?: string,
+): Promise<Analysis> {
+  const validate = (value: unknown) => {
+    const parsed = analysisSchema.safeParse(value);
+    if (!parsed.success) return parsed;
+    const answerIds = new Set(Object.keys(answers));
+    const evidenceIds = [
+      ...parsed.data.coreDrivers.flatMap((item) => item.evidenceQuestionIds),
+      ...parsed.data.tensions.flatMap((item) => item.evidenceQuestionIds),
+      ...parsed.data.externalInfluences.flatMap(
+        (item) => item.evidenceQuestionIds,
+      ),
+      ...parsed.data.antiLife.evidenceQuestionIds,
+    ];
+    return evidenceIds.every((id) => answerIds.has(id))
+      ? parsed
+      : { success: false as const };
+  };
+
+  const firstAttempt = validate(
+    await provider.analyzeAssessment(answers, false, safetyIdentifier),
+  );
+  if (firstAttempt.success) return firstAttempt.data;
+
+  const repaired = validate(
+    await provider.analyzeAssessment(answers, true, safetyIdentifier),
+  );
+  if (repaired.success) return repaired.data;
+
+  throw new Error(
+    "AI provider returned invalid structured analysis after repair",
+  );
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@wtfiwant/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "start:prod": "bun dist/index.js",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "db:migrate": "bun src/db/migrate.ts"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.2",
+    "@wtfiwant/shared": "workspace:*",
+    "hono": "^4.9.6",
+    "openai": "^5.19.1",
+    "postgres": "^3.4.7",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
