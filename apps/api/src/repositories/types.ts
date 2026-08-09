@@ -1,6 +1,7 @@
 import type {
   ActionPlanInput,
   ChapterId,
+  Locale,
   Session,
   SessionView,
   StoredAnalysis,
@@ -11,6 +12,7 @@ export type NewFollowUp = {
   questionId: string;
   userAnswer: string;
   generatedQuestion: string;
+  locale: Locale;
   userResponse: string | null;
   createdAt: string;
 };

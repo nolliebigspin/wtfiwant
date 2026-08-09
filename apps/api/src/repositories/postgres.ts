@@ -74,22 +74,24 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
             id: string;
             question_id: string;
             generated_question: string;
+            locale: StoredAnalysis["locale"];
             user_response: string | null;
             created_at: Date;
           }>
         >`
-        SELECT id, question_id, generated_question, user_response, created_at
+        SELECT id, question_id, generated_question, locale, user_response, created_at
         FROM ai_followups WHERE session_id = ${id} ORDER BY created_at
       `,
         this.sql<
           Array<{
             version: string;
             model: string;
+            locale: StoredAnalysis["locale"];
             result: StoredAnalysis["result"];
             created_at: Date;
           }>
         >`
-        SELECT version, model, result, created_at
+        SELECT version, model, locale, result, created_at
         FROM assessment_analyses WHERE session_id = ${id} ORDER BY created_at DESC LIMIT 1
       `,
         this.sql<
@@ -119,6 +121,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         id: followUp.id,
         questionId: followUp.question_id,
         generatedQuestion: followUp.generated_question,
+        locale: followUp.locale,
         userResponse: followUp.user_response,
         createdAt: followUp.created_at.toISOString(),
       })),
@@ -126,6 +129,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         ? {
             version: analysisRow.version,
             model: analysisRow.model,
+            locale: analysisRow.locale,
             result: analysisRow.result,
             createdAt: analysisRow.created_at.toISOString(),
           }
@@ -178,10 +182,10 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
   async saveFollowUp(id: string, followUp: NewFollowUp): Promise<boolean> {
     const rows = await this.sql<Array<{ id: string }>>`
       INSERT INTO ai_followups (
-        id, session_id, question_id, user_answer, generated_question, user_response, created_at
+        id, session_id, question_id, user_answer, generated_question, locale, user_response, created_at
       )
       SELECT ${followUp.id}, ${id}, ${followUp.questionId}, ${followUp.userAnswer}, ${followUp.generatedQuestion},
-        ${followUp.userResponse}, ${followUp.createdAt}
+        ${followUp.locale}, ${followUp.userResponse}, ${followUp.createdAt}
       WHERE EXISTS (SELECT 1 FROM assessment_sessions WHERE id = ${id})
       RETURNING id
     `;
@@ -203,11 +207,11 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
 
   async saveAnalysis(id: string, analysis: StoredAnalysis): Promise<boolean> {
     const rows = await this.sql<Array<{ id: string }>>`
-      INSERT INTO assessment_analyses (session_id, version, result, model, created_at)
-      VALUES (${id}, ${analysis.version}, ${this.sql.json(analysis.result)}, ${analysis.model}, ${analysis.createdAt})
+      INSERT INTO assessment_analyses (session_id, version, result, model, locale, created_at)
+      VALUES (${id}, ${analysis.version}, ${this.sql.json(analysis.result)}, ${analysis.model}, ${analysis.locale}, ${analysis.createdAt})
       ON CONFLICT (session_id)
       DO UPDATE SET version = EXCLUDED.version, result = EXCLUDED.result,
-        model = EXCLUDED.model, created_at = EXCLUDED.created_at
+        model = EXCLUDED.model, locale = EXCLUDED.locale, created_at = EXCLUDED.created_at
       RETURNING id
     `;
     if (rows.length === 0) return false;

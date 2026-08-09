@@ -145,6 +145,7 @@ export const storedAnalysisSchema = z
   .object({
     version: z.string().min(1),
     model: z.string().min(1),
+    locale: localeSchema.default("en"),
     result: analysisSchema,
     createdAt: z.iso.datetime(),
   })
@@ -155,6 +156,7 @@ export const followUpSchema = z
     id: followUpIdSchema,
     questionId: questionIdSchema,
     generatedQuestion: generatedFollowUpSchema,
+    locale: localeSchema.default("en"),
     userResponse: z.string().nullable(),
     createdAt: z.iso.datetime(),
   })

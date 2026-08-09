@@ -8,6 +8,7 @@ import {
   threeLives,
   tradeoffPairs,
 } from "@wtfiwant/shared";
+import { LocalAIProvider } from "../src/ai/local";
 import type { AIProvider } from "../src/ai/provider";
 import { createApp } from "../src/app";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
@@ -71,6 +72,39 @@ const validAnalysis: Analysis = {
 };
 
 describe("analysis validation", () => {
+  test("local fallback keeps the same analysis behavior when translating to German", async () => {
+    const provider = new LocalAIProvider();
+    const answers = {
+      "life.chosen": "Freedom with close friends and meaningful work",
+      "alive.memories": "Travel with my community",
+      "anti_life.description": "No time and constant stress",
+      "goals.current": {
+        goals: [{ goal: "Build something", why: "More autonomy" }],
+      },
+    };
+    const english = await provider.analyzeAssessment(
+      answers,
+      false,
+      "test",
+      "en",
+    );
+    const german = await provider.analyzeAssessment(
+      answers,
+      false,
+      "test",
+      "de",
+    );
+
+    expect(german.coreDrivers.map((driver) => driver.id)).toEqual(
+      english.coreDrivers.map((driver) => driver.id),
+    );
+    expect(german.tensions.map((tension) => tension.id)).toEqual(
+      english.tensions.map((tension) => tension.id),
+    );
+    expect(german.goals).toHaveLength(english.goals.length);
+    expect(german.summary).not.toBe(english.summary);
+  });
+
   test("repairs malformed provider output once through the HTTP analysis interface", async () => {
     let attempts = 0;
     let receivedAnswers: Record<string, unknown> = {};
@@ -200,5 +234,21 @@ describe("analysis validation", () => {
         ),
       ),
     ).toBe(true);
+
+    const translatedResponse = await app.request(
+      `/sessions/${created.session.id}/analyze`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locale: "en" }),
+      },
+    );
+    const translated = analysisResponseSchema.parse(
+      await translatedResponse.json(),
+    );
+    expect(translated.status).toBe("complete");
+    if (translated.status === "complete")
+      expect(translated.analysis.locale).toBe("en");
+    expect(receivedLocales).toEqual(["de", "de", "de", "en", "en"]);
   });
 });

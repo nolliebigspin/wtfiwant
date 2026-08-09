@@ -76,6 +76,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
         id: followUp.id,
         questionId: followUp.questionId,
         generatedQuestion: followUp.generatedQuestion,
+        locale: followUp.locale,
         userResponse: followUp.userResponse,
         createdAt: followUp.createdAt,
       }),

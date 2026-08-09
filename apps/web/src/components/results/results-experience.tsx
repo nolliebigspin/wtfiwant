@@ -41,7 +41,7 @@ export function ResultsExperience({
       .then(async (restored) => {
         if (!active) return;
         setView(restored);
-        if (restored.analysis) {
+        if (restored.analysis?.locale === locale) {
           setAnalysis(restored.analysis.result);
           return;
         }
@@ -61,7 +61,7 @@ export function ResultsExperience({
   if (safetyMessage) return <SafetyResult message={safetyMessage} />;
   if (!view || !analysis) return <ResultLoading />;
 
-  const evidenceAnswers = buildEvidenceAnswers(view);
+  const evidenceAnswers = buildEvidenceAnswers(view, locale);
 
   return (
     <ResultShell>

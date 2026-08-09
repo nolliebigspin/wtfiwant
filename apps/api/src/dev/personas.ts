@@ -115,6 +115,7 @@ export async function createSeedSession(
   await repository.saveAnalysis(view.session.id, {
     version: ANALYSIS_PROMPT_VERSION,
     model: provider.name,
+    locale: "en",
     result,
     createdAt: new Date().toISOString(),
   });

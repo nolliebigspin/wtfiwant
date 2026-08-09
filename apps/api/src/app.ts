@@ -119,14 +119,14 @@ export function createApp({
     const id = context.req.param("id");
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
-    if (view.analysis)
+    if (view.analysis?.locale === input.data.locale)
       return context.json({ status: "complete", analysis: view.analysis });
 
     const analysisAnswers = {
       ...view.answers,
       ...Object.fromEntries(
         view.followUps.flatMap((followUp) =>
-          followUp.userResponse
+          followUp.userResponse && followUp.locale === input.data.locale
             ? [
                 [
                   `followup:${followUp.questionId}:${followUp.id}`,
@@ -171,6 +171,7 @@ export function createApp({
     const analysis = {
       version: ANALYSIS_PROMPT_VERSION,
       model: aiProvider.name,
+      locale: input.data.locale,
       result,
       createdAt: new Date().toISOString(),
     };
@@ -232,6 +233,7 @@ export function createApp({
       questionId: input.data.questionId,
       userAnswer,
       generatedQuestion,
+      locale: input.data.locale,
       userResponse: null,
       createdAt: new Date().toISOString(),
     };
@@ -240,6 +242,7 @@ export function createApp({
       id: storedFollowUp.id,
       questionId: storedFollowUp.questionId,
       generatedQuestion: storedFollowUp.generatedQuestion,
+      locale: storedFollowUp.locale,
       userResponse: storedFollowUp.userResponse,
       createdAt: storedFollowUp.createdAt,
     };

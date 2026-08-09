@@ -108,6 +108,7 @@ function view(): SessionView {
     analysis: {
       version: "v1",
       model: "test",
+      locale: "en",
       result: analysis,
       createdAt: "2026-08-08T10:30:00.000Z",
     },
@@ -120,7 +121,10 @@ describe("results experience", () => {
   test("shows the results interface in German", async () => {
     const client: ResultsClient = {
       async getSession() {
-        return view();
+        const restored = view();
+        if (restored.analysis) restored.analysis.locale = "de";
+        restored.answers["life.chosen"] = ["Work"];
+        return restored;
       },
       async analyze(): Promise<AnalysisResponse> {
         throw new Error("not used");
@@ -145,6 +149,8 @@ describe("results experience", () => {
     expect(screen.getAllByText("Warum denkst du das?").length).toBeGreaterThan(
       0,
     );
+    fireEvent.click(screen.getAllByText("Warum denkst du das?")[0]);
+    expect((await screen.findAllByText("Arbeit")).length).toBeGreaterThan(0);
   });
 
   test("shows analysis evidence and saves a concrete action plan", async () => {
