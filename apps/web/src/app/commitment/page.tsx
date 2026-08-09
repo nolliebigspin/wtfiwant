@@ -1,15 +1,12 @@
-import {
-  SeedButtons,
-  StartReflectionButton,
-} from "@/components/start-reflection-button";
+import { SeedButtons } from "@/components/seed-buttons";
+import { StartReflectionButton } from "@/components/start-reflection-button";
+import { BrandLink } from "@/components/ui/brand-link";
 
 export default function CommitmentPage() {
   return (
     <main className="commitment-page">
       <header>
-        <a className="wordmark" href="/">
-          wtfiwant<span>.</span>
-        </a>
+        <BrandLink />
       </header>
       <section className="commitment-card">
         <p className="eyebrow">BEFORE YOU BEGIN</p>

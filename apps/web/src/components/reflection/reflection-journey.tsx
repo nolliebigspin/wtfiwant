@@ -7,7 +7,10 @@ import {
 } from "@wtfiwant/shared";
 import { useEffect, useState } from "react";
 import { api, type ReflectionClient } from "@/lib/api";
-import { QuestionInput } from "./question-inputs";
+import { ChapterProgress } from "./chapter-progress";
+import { CurrentQuestion } from "./current-question";
+import { FollowUpQuestion } from "./follow-up-question";
+import { JourneyShell } from "./journey-shell";
 
 type Props = { sessionId: string; client?: ReflectionClient };
 
@@ -137,94 +140,32 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
       <ChapterProgress activeIndex={chapterIndex} />
       <main className="journey-main">
         {followUp ? (
-          <section className="question-enter">
-            <p className="eyebrow">ONE LAST CLARIFICATION</p>
-            <h1 className="question-title">{followUp.question}</h1>
-            <p className="question-description">
-              This is optional. A useful distinction is enough.
-            </p>
-            <textarea
-              className="answer-textarea"
-              value={followUpResponse}
-              aria-label={followUp.question}
-              onChange={(event) => setFollowUpResponse(event.target.value)}
-            />
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <div className="journey-actions">
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={complete}
-              >
-                Skip
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                disabled={saving}
-                onClick={submitFollowUp}
-              >
-                {saving ? "Saving…" : "See my Compass"}
-              </button>
-            </div>
-          </section>
+          <FollowUpQuestion
+            question={followUp.question}
+            response={followUpResponse}
+            error={error}
+            saving={saving}
+            onResponseChange={setFollowUpResponse}
+            onSkip={complete}
+            onSubmit={submitFollowUp}
+          />
         ) : (
-          <section className="question-enter" key={question.id}>
-            <p className="eyebrow">
-              {chapters[chapterIndex].label} · {index + 1} OF{" "}
-              {assessmentQuestions.length}
-            </p>
-            <p className="chapter-note">{chapters[chapterIndex].eyebrow}</p>
-            <h1 className="question-title">{question.prompt}</h1>
-            {question.description ? (
-              <p className="question-description">{question.description}</p>
-            ) : null}
-            <QuestionInput
-              question={question}
-              value={value}
-              onChange={(next) => {
-                setAnswers((current) => ({ ...current, [question.id]: next }));
-                setError(null);
-                setSaved(false);
-              }}
-            />
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <div className="journey-actions">
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={index === 0 || saving}
-                onClick={goBack}
-              >
-                Back
-              </button>
-              <div className="flex items-center gap-4">
-                <span className="saved-state" aria-live="polite">
-                  {saved ? "Saved" : ""}
-                </span>
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={saving}
-                  onClick={continueJourney}
-                >
-                  {saving
-                    ? "Saving…"
-                    : index === assessmentQuestions.length - 1
-                      ? "Make sense of this"
-                      : "Continue"}
-                </button>
-              </div>
-            </div>
-          </section>
+          <CurrentQuestion
+            question={question}
+            chapterIndex={chapterIndex}
+            questionIndex={index}
+            value={value}
+            error={error}
+            saving={saving}
+            saved={saved}
+            onAnswerChange={(next) => {
+              setAnswers((current) => ({ ...current, [question.id]: next }));
+              setError(null);
+              setSaved(false);
+            }}
+            onBack={goBack}
+            onContinue={continueJourney}
+          />
         )}
       </main>
       <p className="privacy-footer">
@@ -232,39 +173,5 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
         your result.
       </p>
     </JourneyShell>
-  );
-}
-
-function ChapterProgress({ activeIndex }: { activeIndex: number }) {
-  return (
-    <nav className="chapter-progress" aria-label="Reflection chapters">
-      {chapters.map((chapter, index) => (
-        <span
-          key={chapter.id}
-          className={
-            index === activeIndex
-              ? "active"
-              : index < activeIndex
-                ? "complete"
-                : ""
-          }
-        >
-          {index < activeIndex ? "✓" : chapter.label}
-        </span>
-      ))}
-    </nav>
-  );
-}
-
-function JourneyShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="journey-shell">
-      <header className="journey-header">
-        <a href="/" className="wordmark">
-          wtfiwant<span>.</span>
-        </a>
-      </header>
-      {children}
-    </div>
   );
 }

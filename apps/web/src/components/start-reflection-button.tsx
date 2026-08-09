@@ -1,7 +1,7 @@
 "use client";
 
-import { seedPersonas } from "@wtfiwant/shared";
 import { useState } from "react";
+import { FormError } from "@/components/ui/form-error";
 import { api } from "@/lib/api";
 
 export function StartReflectionButton({
@@ -33,36 +33,11 @@ export function StartReflectionButton({
         {loading ? "Making space…" : label}
         <span aria-hidden="true">↗</span>
       </button>
-      {error ? (
-        <p className="form-error">
-          Couldn't reach the API. Check it is running, then try again.
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-export function SeedButtons() {
-  const [loading, setLoading] = useState<string | null>(null);
-  return (
-    <div className="seed-tools">
-      <p>Development shortcuts</p>
-      <div>
-        {seedPersonas.map(({ id, label }) => (
-          <button
-            type="button"
-            key={id}
-            disabled={Boolean(loading)}
-            onClick={async () => {
-              setLoading(id);
-              const view = await api.seed(id);
-              window.location.assign(`/result/${view?.session.id}`);
-            }}
-          >
-            {loading === id ? "Seeding…" : label}
-          </button>
-        ))}
-      </div>
+      <FormError>
+        {error
+          ? "Couldn't reach the API. Check it is running, then try again."
+          : null}
+      </FormError>
     </div>
   );
 }
