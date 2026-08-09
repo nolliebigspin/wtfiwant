@@ -1,0 +1,207 @@
+/*
+ * The landing orbit: the person at the center, the influences that circle them,
+ * and the names riding each ring. Split out of globals.css because it is one
+ * self-contained graphic with its own motion system.
+ */
+
+/*
+ * Rings turn continuously, each in one steady direction. Names are bent onto
+ * their ring and travel with it, so a name reads upside-down while its ring
+ * carries it through the bottom — that is what orbiting looks like, and it
+ * keeps every name locked to its own planet the whole way around.
+ */
+@keyframes orbit-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-rotate-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes orbit-signal {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes orbit-breathe {
+  50% {
+    opacity: 0.42;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes orbit-node {
+  50% {
+    opacity: 0.45;
+    transform: scale(1.28);
+  }
+}
+
+.orbit-visual {
+  color: var(--color-ink);
+  isolation: isolate;
+}
+
+.orbit-layer {
+  transform-box: view-box;
+  transform-origin: center;
+}
+
+/*
+ * Distant influences turn slowly, close ones turn fast, and neighbours turn
+ * against each other so no two rings ever drift in lockstep.
+ */
+.orbit-layer-outer {
+  animation: orbit-rotate 88s linear infinite;
+}
+
+.orbit-layer-fourth {
+  animation: orbit-rotate-reverse 67s linear infinite;
+}
+
+.orbit-layer-middle {
+  animation: orbit-rotate 49s linear infinite;
+}
+
+.orbit-layer-second {
+  animation: orbit-rotate-reverse 36s linear infinite;
+}
+
+.orbit-layer-inner {
+  animation: orbit-rotate 25s linear infinite;
+}
+
+.orbit-dash,
+.orbit-signal {
+  animation: orbit-signal 18s linear infinite;
+}
+
+.orbit-signal {
+  animation-duration: 24s;
+}
+
+.orbit-node-glow {
+  animation: orbit-node 5.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/*
+ * Sizes are in viewBox units, not rem: the SVG scales with the visual, so the
+ * type scales with it too. Names stay black at every distance — only size and
+ * tracking separate the rings, so color is left to the planets alone.
+ */
+.orbit-arc-label {
+  fill: var(--color-ink);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.orbit-arc-relation {
+  fill: var(--color-muted);
+  font-size: 12.5px;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+/*
+ * Every name shares one color and one weight so none reads as lighter or more
+ * important than another; only tracking shifts, to suit each ring's curvature.
+ */
+.orbit-layer-outer .orbit-arc-label {
+  letter-spacing: 0.24em;
+}
+
+.orbit-layer-inner .orbit-arc-label {
+  letter-spacing: 0.15em;
+}
+
+/* The pull the person is held inside of — steady, never quite still. */
+.orbit-pull {
+  animation: orbit-breathe 11s ease-in-out infinite;
+  transform-box: view-box;
+  transform-origin: center;
+}
+
+.orbit-core {
+  align-items: center;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(255 255 255 / 22%), transparent 34%),
+    var(--color-accent);
+  border: 1px solid rgb(22 23 19 / 28%);
+  border-radius: 43% 57% 52% 48% / 52% 44% 56% 48%;
+  box-shadow:
+    0 20px 45px rgb(255 79 36 / 18%),
+    inset 0 1px rgb(255 255 255 / 30%);
+  display: flex;
+  inset: 41%;
+  justify-content: center;
+  position: absolute;
+  z-index: 2;
+}
+
+.orbit-core-halo {
+  animation: orbit-breathe 7s ease-in-out infinite;
+  border: 1px solid rgb(255 79 36 / 36%);
+  border-radius: inherit;
+  inset: -18%;
+  position: absolute;
+}
+
+.orbit-core-grid {
+  background-image:
+    linear-gradient(rgb(22 23 19 / 10%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(22 23 19 / 10%) 1px, transparent 1px);
+  background-size: 11px 11px;
+  border-radius: inherit;
+  inset: 0;
+  -webkit-mask-image: radial-gradient(circle, black 20%, transparent 74%);
+  mask-image: radial-gradient(circle, black 20%, transparent 74%);
+  position: absolute;
+}
+
+.orbit-core b {
+  font-size: clamp(1rem, 2.3vw, 2rem);
+  letter-spacing: -0.055em;
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * At small sizes the relationship lines become unreadable noise long before
+ * the names do, so they drop out and the names hold their weight.
+ */
+@media (max-width: 520px) {
+  .orbit-arc-relation {
+    display: none;
+  }
+
+  .orbit-arc-label {
+    font-size: 20px;
+    letter-spacing: 0.14em;
+  }
+}
+
+/*
+ * Rings hold their authored angle rather than freezing mid-turn, so every
+ * label stays at the position it was laid out to read from.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-layer,
+  .orbit-pull,
+  .orbit-dash,
+  .orbit-signal,
+  .orbit-node-glow,
+  .orbit-core-halo {
+    animation: none;
+  }
+}

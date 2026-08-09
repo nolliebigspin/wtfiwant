@@ -31,6 +31,46 @@ describe("landing orbit", () => {
     expect(orbit?.textContent).not.toMatch(/0[1-7]/);
   });
 
+  test("bends each influence along a ring that turns, so the name travels with it", async () => {
+    const { LandingOrbit } = await import(
+      "../src/components/landing/landing-orbit"
+    );
+
+    const { container } = render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <LandingOrbit />
+      </NextIntlClientProvider>,
+    );
+
+    const named = [...container.querySelectorAll(".orbit-arc-label textPath")];
+    const riding = named.filter((label) => label.closest(".orbit-layer"));
+
+    expect(named).toHaveLength(7);
+    expect(riding).toHaveLength(7);
+    for (const label of named) {
+      expect(label.getAttribute("href")).toMatch(/^#orbit-label-path-/);
+    }
+  });
+
+  test("says how each influence pulls on the person, not just its name", async () => {
+    const { LandingOrbit } = await import(
+      "../src/components/landing/landing-orbit"
+    );
+
+    const { container } = render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <LandingOrbit />
+      </NextIntlClientProvider>,
+    );
+
+    const orbit = container.querySelector(".orbit-visual");
+    const relations = container.querySelectorAll(".orbit-arc-relation");
+
+    expect(relations).toHaveLength(7);
+    expect(orbit?.textContent).toContain("rents your hours");
+    expect(orbit?.textContent).toContain("sells you a life");
+  });
+
   test("surrounds the person with five rings and a distinctly larger outer ring", async () => {
     const { LandingOrbit } = await import(
       "../src/components/landing/landing-orbit"
