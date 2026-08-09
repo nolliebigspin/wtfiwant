@@ -15,6 +15,7 @@ FROM oven/bun:1.3.14-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/package.json /app/bun.lock ./
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/dist ./apps/api/dist

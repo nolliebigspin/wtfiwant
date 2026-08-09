@@ -153,9 +153,10 @@ mise exec -- bun run lint
 mise exec -- bun run typecheck
 mise exec -- bun test
 mise exec -- bun run build
+mise exec -- bun run test:docker
 ```
 
-The backend tests exercise session creation, answer validation and restoration, structured-analysis repair, the safety state, invalid sessions, and deletion through HTTP/public interfaces. The frontend tests exercise restoration, required answers, save-before-navigation, analysis rendering, evidence disclosure, and action-plan persistence.
+The backend tests exercise session creation, answer validation and restoration, structured-analysis repair, the safety state, invalid sessions, and deletion through HTTP/public interfaces. The frontend tests exercise restoration, required answers, save-before-navigation, analysis rendering, evidence disclosure, and action-plan persistence. The Docker smoke test rebuilds the API image and verifies its migration-and-startup path against PostgreSQL.
 
 ## Production deployment
 
