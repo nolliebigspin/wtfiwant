@@ -16,10 +16,13 @@ export function LandingClose() {
       </h2>
       <div className="motion-reveal mt-12">
         <Link
-          className="inline-flex items-center gap-12 rounded-full bg-paper px-[1.8rem] py-[1.2rem] font-black text-ink no-underline transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgb(22_23_19_/_0.14)] focus-visible:outline-ink active:translate-y-0 active:scale-[0.98]"
+          className="motion-button inline-flex items-center gap-12 rounded-full bg-paper px-[1.8rem] py-[1.2rem] font-black text-ink no-underline hover:shadow-[0_12px_28px_rgb(22_23_19_/_0.14)] focus-visible:outline-ink"
           href="/commitment"
         >
-          {t("twenty")} <span>→</span>
+          {t("twenty")}{" "}
+          <span className="motion-button-icon" aria-hidden="true">
+            →
+          </span>
         </Link>
       </div>
       <p className="mt-16 mb-0 text-[0.7rem] opacity-70">{t("disclaimer")}</p>

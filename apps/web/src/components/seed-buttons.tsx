@@ -16,7 +16,7 @@ export function SeedButtons() {
       <div className="flex flex-wrap gap-2">
         {seedPersonas.map(({ id, label }) => (
           <button
-            className="cursor-pointer rounded-full border border-ink/20 bg-transparent px-4 py-2.5 transition-[border-color,background-color,transform] duration-150 hover:-translate-y-px hover:border-ink hover:bg-white/35 active:translate-y-0 active:scale-[0.98] disabled:cursor-wait disabled:opacity-50 disabled:hover:translate-y-0"
+            className="motion-button cursor-pointer rounded-full border border-ink/20 bg-transparent px-4 py-2.5 hover:border-ink hover:bg-white/35 disabled:cursor-wait disabled:opacity-50"
             type="button"
             key={id}
             disabled={Boolean(loading)}

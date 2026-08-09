@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import { ResumeLink } from "@/components/resume-link";
 import { Link } from "@/i18n/navigation";
 import { eyebrowClassName, largePrimaryButtonClassName } from "@/lib/styles";
+import { LandingOrbit } from "./landing-orbit";
 
 export function LandingHero() {
   const t = useTranslations("Landing");
@@ -23,31 +24,15 @@ export function LandingHero() {
         </div>
         <div className="flex flex-wrap items-center gap-5">
           <Link className={largePrimaryButtonClassName} href="/commitment">
-            {t("cta")} <span className="text-xl">↗</span>
+            {t("cta")}{" "}
+            <span className="motion-button-icon text-xl" aria-hidden="true">
+              ↗
+            </span>
           </Link>
           <ResumeLink />
         </div>
       </div>
-      <div
-        className="motion-orbit-enter relative aspect-square w-full max-w-[34rem] justify-self-center max-[800px]:max-w-[23rem]"
-        aria-hidden="true"
-      >
-        <div className="absolute inset-0 grid animate-[slow-spin_38s_linear_infinite] place-items-center rounded-full border border-ink/30">
-          <span className="absolute top-2 bg-paper px-2.5 py-[0.2rem] text-[0.56rem] font-black tracking-[0.17em]">
-            {t("otherPeople")}
-          </span>
-        </div>
-        <div className="absolute inset-[17%] grid animate-[slow-spin_29s_linear_infinite] place-items-center rounded-full border border-ink/30 [animation-direction:reverse]">
-          <span className="absolute top-2 bg-paper px-2.5 py-[0.2rem] text-[0.56rem] font-black tracking-[0.17em]">
-            {t("expectations")}
-          </span>
-        </div>
-        <div className="absolute inset-[36%] grid place-items-center rounded-full border border-accent bg-accent text-ink">
-          <b className="text-[clamp(1.2rem,3vw,2.5rem)] tracking-[-0.06em]">
-            {t("you")}
-          </b>
-        </div>
-      </div>
+      <LandingOrbit />
     </section>
   );
 }

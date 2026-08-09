@@ -31,7 +31,7 @@ export function StartReflectionButton({ label }: { label?: string }) {
         }}
       >
         {loading ? t("loading") : (label ?? t("start"))}
-        <span className="text-xl" aria-hidden="true">
+        <span className="motion-button-icon text-xl" aria-hidden="true">
           ↗
         </span>
       </button>
