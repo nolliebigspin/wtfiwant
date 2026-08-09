@@ -1,4 +1,4 @@
-# whatthefuckiwant.app
+# wtfiwant.app
 
 A private, anonymous guided reflection for one difficult question: **What the fuck do I actually want?**
 
