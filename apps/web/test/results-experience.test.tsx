@@ -13,6 +13,9 @@ import type {
   AnalysisResponse,
   SessionView,
 } from "@wtfiwant/shared";
+import { NextIntlClientProvider } from "next-intl";
+import deMessages from "../messages/de.json";
+import enMessages from "../messages/en.json";
 import {
   type ResultsClient,
   ResultsExperience,
@@ -114,6 +117,36 @@ function view(): SessionView {
 }
 
 describe("results experience", () => {
+  test("shows the results interface in German", async () => {
+    const client: ResultsClient = {
+      async getSession() {
+        return view();
+      },
+      async analyze(): Promise<AnalysisResponse> {
+        throw new Error("not used");
+      },
+      async saveActionPlan() {},
+      async deleteSession() {},
+    };
+
+    render(
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <ResultsExperience
+          sessionId={view().session.id}
+          locale="de"
+          client={client}
+        />
+      </NextIntlClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Dein Kompass" }),
+    ).toBeTruthy();
+    expect(screen.getAllByText("Warum denkst du das?").length).toBeGreaterThan(
+      0,
+    );
+  });
+
   test("shows analysis evidence and saves a concrete action plan", async () => {
     const saved: ActionPlanInput[] = [];
     const client: ResultsClient = {
@@ -131,7 +164,11 @@ describe("results experience", () => {
       async deleteSession() {},
     };
 
-    render(<ResultsExperience sessionId={view().session.id} client={client} />);
+    render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <ResultsExperience sessionId={view().session.id} client={client} />
+      </NextIntlClientProvider>,
+    );
     expect(
       await screen.findByRole("heading", { name: "Your Compass" }),
     ).toBeTruthy();

@@ -5,6 +5,7 @@ import {
   chapters,
   isAnswerComplete,
 } from "@wtfiwant/shared";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { ReflectionClient } from "@/lib/api";
 
@@ -15,6 +16,8 @@ export function useReflectionJourney({
   sessionId: string;
   client: ReflectionClient;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("Reflection");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,16 +46,14 @@ export function useReflectionJourney({
       })
       .catch(() => {
         if (active) {
-          setError(
-            "We couldn't restore this reflection. Check that the API is running and try again.",
-          );
+          setError(t("restoreError"));
           setLoading(false);
         }
       });
     return () => {
       active = false;
     };
-  }, [client, sessionId]);
+  }, [client, sessionId, t]);
 
   const question = assessmentQuestions[index];
   const chapterIndex = question
@@ -61,7 +62,7 @@ export function useReflectionJourney({
   const value = question ? answers[question.id] : undefined;
 
   const complete = () => {
-    window.location.assign(`/result/${sessionId}`);
+    window.location.assign(`/${locale}/result/${sessionId}`);
   };
 
   const goBack = () => {
@@ -74,7 +75,7 @@ export function useReflectionJourney({
 
   const continueJourney = async () => {
     if (!question || !isAnswerComplete(question, value)) {
-      setError("Give this one an honest answer before moving on.");
+      setError(t("required"));
       return;
     }
     setSaving(true);
@@ -90,7 +91,11 @@ export function useReflectionJourney({
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         try {
-          const generated = await client.createFollowUp(sessionId, question.id);
+          const generated = await client.createFollowUp(
+            sessionId,
+            question.id,
+            locale as "en" | "de",
+          );
           setFollowUp({
             id: generated.id,
             question: generated.generatedQuestion,
@@ -100,7 +105,7 @@ export function useReflectionJourney({
         }
       }
     } catch {
-      setError("That didn't save. Your answer is still here — try again.");
+      setError(t("saveError"));
     } finally {
       setSaving(false);
     }
@@ -117,7 +122,7 @@ export function useReflectionJourney({
       );
       complete();
     } catch {
-      setError("That didn't save. Try once more, or skip this question.");
+      setError(t("followUpSaveError"));
       setSaving(false);
     }
   };

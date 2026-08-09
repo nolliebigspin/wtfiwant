@@ -1,13 +1,19 @@
 import {
+  getLocalizedOptionLabel,
+  getLocalizedQuestion,
+} from "@/lib/assessment-i18n";
+import {
   type QuestionInputProps,
   questionInputClassName,
 } from "./question-input.types";
 
 export function ChoiceQuestion({
   question,
+  locale,
   value,
   onChange,
 }: QuestionInputProps) {
+  const localizedQuestion = getLocalizedQuestion(question, locale);
   const selected =
     question.type === "multi_choice" && Array.isArray(value)
       ? (value as string[])
@@ -21,8 +27,8 @@ export function ChoiceQuestion({
 
   return (
     <fieldset className="grid gap-3 sm:grid-cols-2">
-      <legend className="sr-only">{question.prompt}</legend>
-      {options.map((option) => {
+      <legend className="sr-only">{localizedQuestion.prompt}</legend>
+      {options.map((option, optionIndex) => {
         const checked =
           question.type === "multi_choice"
             ? selected.includes(option)
@@ -52,14 +58,18 @@ export function ChoiceQuestion({
                   );
               }}
             />
-            <span>{option}</span>
+            <span>
+              {getLocalizedOptionLabel(question, optionIndex, locale)}
+            </span>
           </label>
         );
       })}
       {question.type === "multi_choice" && question.allowOther ? (
         <label className="sm:col-span-2">
           <span className="mb-2 block text-xs font-extrabold">
-            {question.otherLabel}
+            {localizedQuestion.type === "multi_choice"
+              ? localizedQuestion.otherLabel
+              : question.otherLabel}
           </span>
           <input
             className={questionInputClassName}
@@ -74,7 +84,11 @@ export function ChoiceQuestion({
                   : withoutOther,
               );
             }}
-            placeholder={question.otherPlaceholder}
+            placeholder={
+              localizedQuestion.type === "multi_choice"
+                ? localizedQuestion.otherPlaceholder
+                : question.otherPlaceholder
+            }
           />
         </label>
       ) : null}

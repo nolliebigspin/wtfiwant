@@ -1,4 +1,5 @@
 import type { Analysis } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { EvidenceDrawer } from "./evidence-drawer";
 import type { EvidenceAnswers } from "./results.types";
 import { SectionHeading } from "./section-heading";
@@ -10,6 +11,7 @@ export function TensionsSection({
   tensions: Analysis["tensions"];
   answers: EvidenceAnswers;
 }) {
+  const t = useTranslations("Results");
   if (tensions.length === 0) return null;
 
   return (
@@ -18,15 +20,12 @@ export function TensionsSection({
       aria-labelledby="tensions-title"
     >
       <SectionHeading
-        eyebrow="THE USEFUL FRICTION"
-        title="Your Tensions"
+        eyebrow={t("tensionsEyebrow")}
+        title={t("tensionsTitle")}
         titleId="tensions-title"
         light
       >
-        <p>
-          Not problems to eliminate. Conditions your life may need to hold at
-          the same time.
-        </p>
+        <p>{t("tensionsCopy")}</p>
       </SectionHeading>
       <div className="space-y-5">
         {tensions.map((tension) => (

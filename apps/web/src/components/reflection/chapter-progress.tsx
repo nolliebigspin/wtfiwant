@@ -1,10 +1,20 @@
-import { chapters } from "@wtfiwant/shared";
+import type { Locale } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
+import { getLocalizedChapters } from "@/lib/assessment-i18n";
 
-export function ChapterProgress({ activeIndex }: { activeIndex: number }) {
+export function ChapterProgress({
+  activeIndex,
+  locale,
+}: {
+  activeIndex: number;
+  locale: Locale;
+}) {
+  const t = useTranslations("Reflection");
+  const chapters = getLocalizedChapters(locale);
   return (
     <nav
       className="flex justify-center gap-[clamp(0.6rem,2vw,2.3rem)] overflow-hidden border-b border-ink/12 p-[1.1rem] max-[800px]:justify-start"
-      aria-label="Reflection chapters"
+      aria-label={t("chaptersAria")}
     >
       {chapters.map((chapter, index) => (
         <span

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ActionPlanInput, Analysis, SessionView } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { FormError } from "@/components/ui/form-error";
 import { resultSectionClassName } from "@/lib/styles";
 import { ActionPlanFields } from "./action-plan-fields";
@@ -27,18 +28,13 @@ export function ActionPlanBuilder({
   answers,
   onSave,
 }: ActionPlanBuilderProps) {
+  const t = useTranslations("Results");
   const plan = useActionPlan({ steps, savedPlan, onSave });
 
   return (
     <section className={resultSectionClassName} id={`start-${sessionId}`}>
-      <SectionHeading
-        eyebrow="DIRECTION → EXPERIMENT → NOW"
-        title="Make it real enough to begin."
-      >
-        <p>
-          You do not need to solve your life. Pick one direction and run a
-          small, reversible experiment.
-        </p>
+      <SectionHeading eyebrow={t("planEyebrow")} title={t("planTitle")}>
+        <p>{t("planCopy")}</p>
       </SectionHeading>
       <StepChoices
         steps={steps}

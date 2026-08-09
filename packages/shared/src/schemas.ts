@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { localeSchema } from "./localization";
 
 export const sessionIdSchema = z.uuid();
 export const followUpIdSchema = z.uuid();
@@ -199,7 +200,12 @@ export const saveAnswerInputSchema = z
 export const followUpInputSchema = z
   .object({
     questionId: questionIdSchema,
+    locale: localeSchema.default("en"),
   })
+  .strict();
+
+export const analysisInputSchema = z
+  .object({ locale: localeSchema.default("en") })
   .strict();
 
 export const followUpResponseInputSchema = z

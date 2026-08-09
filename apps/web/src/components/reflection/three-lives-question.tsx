@@ -1,9 +1,11 @@
 import {
   customLifePrompt,
+  getGermanAssessmentTranslation,
   type ThreeLivesAnswer,
   threeLifePrompts,
   threeLives,
 } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { eyebrowClassName, questionCardClassName } from "@/lib/styles";
 import {
   type AnswerInputProps,
@@ -12,7 +14,13 @@ import {
 
 type LifeResponse = ThreeLivesAnswer["lives"][number];
 
-export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
+export function ThreeLivesQuestion({
+  value,
+  onChange,
+  locale,
+}: AnswerInputProps) {
+  const t = useTranslations("Reflection");
+  const german = locale === "de" ? getGermanAssessmentTranslation() : null;
   const record =
     value && typeof value === "object"
       ? (value as { lives?: LifeResponse[]; customLife?: string })
@@ -37,12 +45,16 @@ export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
     <div className="space-y-5">
       {threeLives.map((life, index) => (
         <section className={questionCardClassName} key={life.id}>
-          <p className={eyebrowClassName}>{life.name}</p>
-          <p className="mb-5 text-ink/65">{life.description}</p>
+          <p className={eyebrowClassName}>
+            {german?.threeLives[index].name ?? life.name}
+          </p>
+          <p className="mb-5 text-ink/65">
+            {german?.threeLives[index].description ?? life.description}
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
               <span className="mb-2 block text-xs font-extrabold">
-                {threeLifePrompts.attracts}
+                {german?.threeLifePrompts.attracts ?? threeLifePrompts.attracts}
               </span>
               <textarea
                 className={`${questionInputClassName} min-h-28`}
@@ -54,7 +66,7 @@ export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
             </label>
             <label>
               <span className="mb-2 block text-xs font-extrabold">
-                {threeLifePrompts.repels}
+                {german?.threeLifePrompts.repels ?? threeLifePrompts.repels}
               </span>
               <textarea
                 className={`${questionInputClassName} min-h-28`}
@@ -69,8 +81,8 @@ export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
       ))}
       <label className="block">
         <span className="mb-2 block text-xs font-extrabold">
-          {customLifePrompt}{" "}
-          <span className="font-normal text-muted">optional</span>
+          {german?.customLifePrompt ?? customLifePrompt}{" "}
+          <span className="font-normal text-muted">{t("optional")}</span>
         </span>
         <textarea
           className={`${questionInputClassName} min-h-28`}

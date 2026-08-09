@@ -1,9 +1,11 @@
 import {
+  getGermanAssessmentTranslation,
   type MemoryAnswer,
   maxMemories,
   memoryMetadataFields,
   memoryStoryPrompt,
 } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import {
   eyebrowClassName,
   questionCardClassName,
@@ -20,7 +22,14 @@ function createBlankMemory(): Memory {
   return { story: "", with: "", where: "", doing: "", special: "" };
 }
 
-export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
+export function MemoriesQuestion({
+  value,
+  onChange,
+  locale,
+}: AnswerInputProps) {
+  const t = useTranslations("Reflection");
+  const german = locale === "de" ? getGermanAssessmentTranslation() : null;
+  const storyPrompt = german?.memoryStoryPrompt ?? memoryStoryPrompt;
   const record =
     value && typeof value === "object"
       ? (value as { memories?: Memory[] })
@@ -39,20 +48,24 @@ export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
     <div className="space-y-5">
       {memories.map((memory, index) => (
         <section className={questionCardClassName} key={`memory-${index + 1}`}>
-          <p className={eyebrowClassName}>Moment {index + 1}</p>
+          <p className={eyebrowClassName}>
+            {t("moment", { number: index + 1 })}
+          </p>
           <textarea
             className={`${questionInputClassName} min-h-32`}
             value={memory.story}
-            aria-label={`${memoryStoryPrompt} Moment ${index + 1}`}
+            aria-label={`${storyPrompt} ${t("moment", { number: index + 1 })}`}
             onChange={(event) => update(index, "story", event.target.value)}
-            placeholder={memoryStoryPrompt}
+            placeholder={storyPrompt}
           />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {memoryMetadataFields.map((field) => (
+            {memoryMetadataFields.map((field, fieldIndex) => (
               <label key={field.id}>
                 <span className="mb-2 block text-xs font-extrabold">
-                  {field.label}{" "}
-                  <span className="font-normal text-muted">optional</span>
+                  {german?.memoryMetadataFields[fieldIndex] ?? field.label}{" "}
+                  <span className="font-normal text-muted">
+                    {t("optional")}
+                  </span>
                 </span>
                 <input
                   className={questionInputClassName}
@@ -74,7 +87,7 @@ export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
             onChange({ memories: [...memories, createBlankMemory()] })
           }
         >
-          + Add another moment
+          {t("addMoment")}
         </button>
       ) : null}
     </div>

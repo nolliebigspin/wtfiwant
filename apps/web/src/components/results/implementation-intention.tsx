@@ -1,15 +1,6 @@
 import type { ActionPlanInput } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { eyebrowClassName, fieldControlClassName } from "@/lib/styles";
-
-const obstacles = [
-  "I'm tired after work",
-  "Social media",
-  "I overthink things",
-  "I don't know where to start",
-  "I'm afraid I'll fail",
-  "I always postpone it",
-  "Other",
-];
 
 type ImplementationIntentionProps = {
   form: ActionPlanInput;
@@ -20,22 +11,22 @@ export function ImplementationIntention({
   form,
   onChange,
 }: ImplementationIntentionProps) {
+  const t = useTranslations("Results");
+  const obstacles = t.raw("obstacles") as string[];
   return (
     <div className="mt-12 rounded-[1.3rem] border border-ink/20 p-[clamp(1.2rem,4vw,3rem)]">
-      <p className={eyebrowClassName}>
-        MAKE A PLAN FOR THE MOMENT MOTIVATION DISAPPEARS
-      </p>
+      <p className={eyebrowClassName}>{t("motivation")}</p>
       <label>
         <span className="mb-3 block font-extrabold">
-          What's most likely to stop you?
+          {t("obstacleQuestion")}
         </span>
         <select
           className={fieldControlClassName}
-          aria-label="What's most likely to stop you?"
+          aria-label={t("obstacleQuestion")}
           value={form.obstacle}
           onChange={(event) => onChange("obstacle", event.target.value)}
         >
-          <option value="">Choose the honest obstacle</option>
+          <option value="">{t("chooseObstacle")}</option>
           {obstacles.map((obstacle) => (
             <option key={obstacle}>{obstacle}</option>
           ))}
@@ -43,26 +34,26 @@ export function ImplementationIntention({
       </label>
       <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-[800px]:grid-cols-1">
         <label>
-          <span className="mb-3 block font-extrabold">If</span>
+          <span className="mb-3 block font-extrabold">{t("if")}</span>
           <textarea
             className={`${fieldControlClassName} min-h-32 resize-y`}
-            aria-label="If"
+            aria-label={t("if")}
             value={form.ifCondition}
             onChange={(event) => onChange("ifCondition", event.target.value)}
-            placeholder="I get home and automatically open Instagram…"
+            placeholder={t("ifPlaceholder")}
           />
         </label>
         <div className="text-3xl text-accent max-[800px]:justify-self-center max-[800px]:rotate-90">
           →
         </div>
         <label>
-          <span className="mb-3 block font-extrabold">Then</span>
+          <span className="mb-3 block font-extrabold">{t("then")}</span>
           <textarea
             className={`${fieldControlClassName} min-h-32 resize-y`}
-            aria-label="Then"
+            aria-label={t("then")}
             value={form.thenAction}
             onChange={(event) => onChange("thenAction", event.target.value)}
-            placeholder="I'll first spend ten minutes on the next step…"
+            placeholder={t("thenPlaceholder")}
           />
         </label>
       </div>

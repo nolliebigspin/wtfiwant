@@ -8,6 +8,7 @@ import { questionInputClassName } from "./question-input.types";
 
 type FollowUpQuestionProps = {
   question: string;
+  locale: Locale;
   response: string;
   error: string | null;
   saving: boolean;
@@ -18,6 +19,7 @@ type FollowUpQuestionProps = {
 
 export function FollowUpQuestion({
   question,
+  locale: _locale,
   response,
   error,
   saving,
@@ -25,14 +27,15 @@ export function FollowUpQuestion({
   onSkip,
   onSubmit,
 }: FollowUpQuestionProps) {
+  const t = useTranslations("Reflection");
   return (
     <section className="animate-[enter_0.35s_ease-out]">
-      <p className={eyebrowClassName}>ONE LAST CLARIFICATION</p>
+      <p className={eyebrowClassName}>{t("followUpEyebrow")}</p>
       <h1 className="mb-4 max-w-[18ch] text-[clamp(2.5rem,5vw,5rem)] leading-[0.95] tracking-[-0.07em]">
         {question}
       </h1>
       <p className="mb-9 max-w-[42rem] text-[1.05rem] leading-relaxed text-muted">
-        This is optional. A useful distinction is enough.
+        {t("followUpDescription")}
       </p>
       <textarea
         className={`${questionInputClassName} min-h-48 resize-y`}
@@ -47,7 +50,7 @@ export function FollowUpQuestion({
           type="button"
           onClick={onSkip}
         >
-          Skip
+          {t("skip")}
         </button>
         <button
           className={primaryButtonClassName}
@@ -55,9 +58,12 @@ export function FollowUpQuestion({
           disabled={saving}
           onClick={onSubmit}
         >
-          {saving ? "Saving…" : "See my Compass"}
+          {saving ? t("saving") : t("seeCompass")}
         </button>
       </div>
     </section>
   );
 }
+
+import type { Locale } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";

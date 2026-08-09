@@ -6,6 +6,7 @@ import {
   actionPlanInputSchema,
   type SessionView,
 } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 
 type UseActionPlanOptions = {
@@ -19,6 +20,7 @@ export function useActionPlan({
   savedPlan,
   onSave,
 }: UseActionPlanOptions) {
+  const t = useTranslations("Results");
   const initialIndex = Math.max(
     0,
     steps.findIndex((step) => step.direction === savedPlan?.direction),
@@ -56,7 +58,7 @@ export function useActionPlan({
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (!actionPlanInputSchema.safeParse(form).success) {
-      setError("Make each part concrete before you start.");
+      setError(t("incompletePlan"));
       return;
     }
     setSaving(true);
@@ -65,7 +67,7 @@ export function useActionPlan({
       await onSave(form);
       setDone(true);
     } catch {
-      setError("That didn't save. Nothing was lost — try again.");
+      setError(t("planError"));
     } finally {
       setSaving(false);
     }

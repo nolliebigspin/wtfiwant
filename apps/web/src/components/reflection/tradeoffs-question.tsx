@@ -1,12 +1,22 @@
 import {
+  getGermanAssessmentTranslation,
   type TradeoffAnswer,
   tradeoffPairs,
   tradeoffScaleLabels,
 } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { tradeoffCardClassName } from "@/lib/styles";
 import type { AnswerInputProps } from "./question-input.types";
 
-export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
+export function TradeoffsQuestion({
+  value,
+  onChange,
+  locale,
+}: AnswerInputProps) {
+  const t = useTranslations("Reflection");
+  const german = locale === "de" ? getGermanAssessmentTranslation() : null;
+  const pairs = german?.tradeoffPairs ?? tradeoffPairs;
+  const labels = german?.tradeoffScaleLabels ?? tradeoffScaleLabels;
   const record =
     value && typeof value === "object"
       ? (value as Partial<TradeoffAnswer>)
@@ -29,11 +39,9 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
 
   return (
     <div className="space-y-6">
-      {tradeoffPairs.map(([left, right], index) => (
+      {pairs.map(([left, right], index) => (
         <fieldset className={tradeoffCardClassName} key={left}>
-          <legend className="sr-only">
-            {left} versus {right}
-          </legend>
+          <legend className="sr-only">{t("versus", { left, right })}</legend>
           <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm font-semibold sm:text-base">
             <span>{left}</span>
             <span className="text-ink/35">↔</span>
@@ -46,7 +54,7 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
             max="2"
             step="1"
             value={choices[index]}
-            aria-label={`${left} versus ${right}`}
+            aria-label={t("versus", { left, right })}
             onPointerDown={() => markTouched(index)}
             onKeyDown={() => markTouched(index)}
             onChange={(event) =>
@@ -61,16 +69,14 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
             }
           />
           <div className="mt-2 flex justify-between text-xs uppercase tracking-widest text-ink/40">
-            <span>{tradeoffScaleLabels.left}</span>
-            <span>{tradeoffScaleLabels.middle}</span>
-            <span>{tradeoffScaleLabels.right}</span>
+            <span>{labels.left}</span>
+            <span>{labels.middle}</span>
+            <span>{labels.right}</span>
           </div>
           <p
             className={`mt-3 text-xs font-bold ${touched[index] ? "text-ink/50" : "text-accent-ink"}`}
           >
-            {touched[index]
-              ? tradeoffScaleLabels.chosen
-              : tradeoffScaleLabels.untouched}
+            {touched[index] ? labels.chosen : labels.untouched}
           </p>
         </fieldset>
       ))}

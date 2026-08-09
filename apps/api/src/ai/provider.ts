@@ -1,4 +1,4 @@
-import { type Analysis, analysisSchema } from "@wtfiwant/shared";
+import { type Analysis, analysisSchema, type Locale } from "@wtfiwant/shared";
 
 export interface AIProvider {
   readonly name: string;
@@ -6,11 +6,13 @@ export interface AIProvider {
     questionId: string,
     answer: string,
     safetyIdentifier?: string,
+    locale?: Locale,
   ): Promise<string>;
   analyzeAssessment(
     answers: Record<string, unknown>,
     repair: boolean,
     safetyIdentifier?: string,
+    locale?: Locale,
   ): Promise<unknown>;
 }
 
@@ -18,6 +20,7 @@ export async function analyzeAnswers(
   provider: AIProvider,
   answers: Record<string, unknown>,
   safetyIdentifier?: string,
+  locale: Locale = "en",
 ): Promise<Analysis> {
   const validate = (value: unknown) => {
     const parsed = analysisSchema.safeParse(value);
@@ -42,12 +45,12 @@ export async function analyzeAnswers(
   };
 
   const firstAttempt = validate(
-    await provider.analyzeAssessment(answers, false, safetyIdentifier),
+    await provider.analyzeAssessment(answers, false, safetyIdentifier, locale),
   );
   if (firstAttempt.success) return firstAttempt.data;
 
   const repaired = validate(
-    await provider.analyzeAssessment(answers, true, safetyIdentifier),
+    await provider.analyzeAssessment(answers, true, safetyIdentifier, locale),
   );
   if (repaired.success) return repaired.data;
 

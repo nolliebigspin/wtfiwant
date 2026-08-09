@@ -1,12 +1,13 @@
 import type {
   ActionPlanInput,
   AnalysisResponse,
+  Locale,
   SessionView,
 } from "@wtfiwant/shared";
 
 export interface ResultsClient {
   getSession(id: string): Promise<SessionView>;
-  analyze(id: string): Promise<AnalysisResponse>;
+  analyze(id: string, locale?: Locale): Promise<AnalysisResponse>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<void>;
   deleteSession(id: string): Promise<void>;
 }

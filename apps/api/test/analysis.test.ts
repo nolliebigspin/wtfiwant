@@ -74,12 +74,15 @@ describe("analysis validation", () => {
   test("repairs malformed provider output once through the HTTP analysis interface", async () => {
     let attempts = 0;
     let receivedAnswers: Record<string, unknown> = {};
+    const receivedLocales: string[] = [];
     const provider: AIProvider = {
       name: "test-model",
-      async generateFollowUp() {
+      async generateFollowUp(_questionId, _answer, _safetyIdentifier, locale) {
+        receivedLocales.push(locale ?? "missing");
         return "What would that give you?";
       },
-      async analyzeAssessment(answers, repair) {
+      async analyzeAssessment(answers, repair, _safetyIdentifier, locale) {
+        receivedLocales.push(locale ?? "missing");
         attempts += 1;
         receivedAnswers = answers;
         return repair ? validAnalysis : { summary: "missing everything else" };
@@ -155,7 +158,7 @@ describe("analysis validation", () => {
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ questionId: "goals.current" }),
+        body: JSON.stringify({ questionId: "goals.current", locale: "de" }),
       },
     );
     const generatedBody = (await generatedResponse.json()) as {
@@ -178,6 +181,8 @@ describe("analysis validation", () => {
       `/sessions/${created.session.id}/analyze`,
       {
         method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locale: "de" }),
       },
     );
     const result = analysisResponseSchema.parse(await response.json());
@@ -187,6 +192,7 @@ describe("analysis validation", () => {
     if (result.status === "complete")
       expect(result.analysis.result).toEqual(validAnalysis);
     expect(attempts).toBe(2);
+    expect(receivedLocales).toEqual(["de", "de", "de"]);
     expect(
       Object.values(receivedAnswers).some((value) =>
         JSON.stringify(value).includes(

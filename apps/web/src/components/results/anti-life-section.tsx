@@ -1,4 +1,5 @@
 import type { Analysis } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { resultSectionClassName } from "@/lib/styles";
 import { EvidenceDrawer } from "./evidence-drawer";
 import type { EvidenceAnswers } from "./results.types";
@@ -11,14 +12,15 @@ export function AntiLifeSection({
   antiLife: Analysis["antiLife"];
   answers: EvidenceAnswers;
 }) {
+  const t = useTranslations("Results");
   return (
     <section
       className={`${resultSectionClassName} bg-acid`}
       aria-labelledby="anti-title"
     >
       <SectionHeading
-        eyebrow="A CLEAR NO"
-        title="Your Anti-Life"
+        eyebrow={t("antiEyebrow")}
+        title={t("antiTitle")}
         titleId="anti-title"
       />
       <blockquote className="my-16 max-w-[52rem] font-[Georgia,serif] text-[clamp(1.7rem,3.5vw,3.8rem)] leading-tight">

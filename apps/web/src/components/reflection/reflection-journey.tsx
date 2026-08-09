@@ -1,5 +1,7 @@
 "use client";
 
+import type { Locale } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { api, type ReflectionClient } from "@/lib/api";
 import { ChapterProgress } from "./chapter-progress";
 import { CurrentQuestion } from "./current-question";
@@ -7,15 +9,24 @@ import { FollowUpQuestion } from "./follow-up-question";
 import { JourneyShell } from "./journey-shell";
 import { useReflectionJourney } from "./use-reflection-journey";
 
-type Props = { sessionId: string; client?: ReflectionClient };
+type Props = {
+  sessionId: string;
+  locale?: Locale;
+  client?: ReflectionClient;
+};
 
-export function ReflectionJourney({ sessionId, client = api }: Props) {
+export function ReflectionJourney({
+  sessionId,
+  locale = "en",
+  client = api,
+}: Props) {
+  const t = useTranslations();
   const journey = useReflectionJourney({ sessionId, client });
 
   if (journey.loading) {
     return (
       <JourneyShell>
-        <p className="pt-[30vh] text-center">Restoring your reflection…</p>
+        <p className="pt-[30vh] text-center">{t("Reflection.restoring")}</p>
       </JourneyShell>
     );
   }
@@ -34,10 +45,11 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
 
   return (
     <JourneyShell>
-      <ChapterProgress activeIndex={journey.chapterIndex} />
+      <ChapterProgress activeIndex={journey.chapterIndex} locale={locale} />
       <main className="mx-auto min-h-[calc(100vh-12rem)] w-[min(100%-2rem,56rem)] py-[clamp(4rem,8vw,7rem)]">
         {journey.followUp ? (
           <FollowUpQuestion
+            locale={locale}
             question={journey.followUp.question}
             response={journey.followUpResponse}
             error={journey.error}
@@ -49,6 +61,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
         ) : (
           <CurrentQuestion
             question={journey.question}
+            locale={locale}
             chapterIndex={journey.chapterIndex}
             questionIndex={journey.index}
             value={journey.value}
@@ -62,8 +75,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
         )}
       </main>
       <p className="m-0 p-6 text-center text-[0.67rem] text-muted">
-        Your reflections can be deeply personal. We only use them to generate
-        your result.
+        {t("Common.privacy")}
       </p>
     </JourneyShell>
   );

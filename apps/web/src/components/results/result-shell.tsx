@@ -1,8 +1,10 @@
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { BrandLink } from "@/components/ui/brand-link";
 import { compactHorizontalHeaderClassName } from "@/lib/styles";
 
 export function ResultShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("Results");
   return (
     <div>
       <header
@@ -10,7 +12,7 @@ export function ResultShell({ children }: { children: ReactNode }) {
       >
         <BrandLink />
         <span className="text-[0.58rem] font-black tracking-[0.15em] text-muted">
-          YOUR REFLECTION
+          {t("header")}
         </span>
       </header>
       {children}

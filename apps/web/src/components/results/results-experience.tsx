@@ -1,6 +1,7 @@
 "use client";
 
-import type { Analysis, SessionView } from "@wtfiwant/shared";
+import type { Analysis, Locale, SessionView } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { ActionPlanBuilder } from "./action-plan-builder";
@@ -20,9 +21,14 @@ import { TensionsSection } from "./tensions-section";
 
 export type { ResultsClient } from "./results.types";
 
-type Props = { sessionId: string; client?: ResultsClient };
+type Props = { sessionId: string; locale?: Locale; client?: ResultsClient };
 
-export function ResultsExperience({ sessionId, client = api }: Props) {
+export function ResultsExperience({
+  sessionId,
+  locale = "en",
+  client = api,
+}: Props) {
+  const t = useTranslations("Results");
   const [view, setView] = useState<SessionView | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [safetyMessage, setSafetyMessage] = useState<string | null>(null);
@@ -39,23 +45,17 @@ export function ResultsExperience({ sessionId, client = api }: Props) {
           setAnalysis(restored.analysis.result);
           return;
         }
-        const generated = await client.analyze(sessionId);
+        const generated = await client.analyze(sessionId, locale);
         if (!active) return;
         if (generated.status === "safety_paused")
           setSafetyMessage(generated.message);
         else setAnalysis(generated.analysis.result);
       })
-      .catch(
-        () =>
-          active &&
-          setError(
-            "We couldn't generate your Compass. Your answers are still saved; try again.",
-          ),
-      );
+      .catch(() => active && setError(t("generateError")));
     return () => {
       active = false;
     };
-  }, [client, sessionId]);
+  }, [client, locale, sessionId, t]);
 
   if (error) return <ResultError message={error} />;
   if (safetyMessage) return <SafetyResult message={safetyMessage} />;

@@ -1,9 +1,14 @@
 import {
   type AssessmentQuestion,
   assessmentQuestions,
-  chapters,
+  type Locale,
 } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { FormError } from "@/components/ui/form-error";
+import {
+  getLocalizedChapters,
+  getLocalizedQuestion,
+} from "@/lib/assessment-i18n";
 import {
   eyebrowClassName,
   primaryButtonClassName,
@@ -13,6 +18,7 @@ import { QuestionInput } from "./question-inputs";
 
 type CurrentQuestionProps = {
   question: AssessmentQuestion;
+  locale: Locale;
   chapterIndex: number;
   questionIndex: number;
   value: unknown;
@@ -26,6 +32,7 @@ type CurrentQuestionProps = {
 
 export function CurrentQuestion({
   question,
+  locale,
   chapterIndex,
   questionIndex,
   value,
@@ -36,25 +43,30 @@ export function CurrentQuestion({
   onBack,
   onContinue,
 }: CurrentQuestionProps) {
+  const t = useTranslations("Reflection");
+  const localizedQuestion = getLocalizedQuestion(question, locale);
+  const localizedChapters = getLocalizedChapters(locale);
+
   return (
     <section className="animate-[enter_0.35s_ease-out]" key={question.id}>
       <p className={eyebrowClassName}>
-        {chapters[chapterIndex].label} · {questionIndex + 1} OF{" "}
+        {localizedChapters[chapterIndex].label} · {questionIndex + 1} {t("of")}{" "}
         {assessmentQuestions.length}
       </p>
       <p className="mb-5 font-[Georgia,serif] text-base text-muted italic">
-        {chapters[chapterIndex].eyebrow}
+        {localizedChapters[chapterIndex].eyebrow}
       </p>
       <h1 className="mb-4 max-w-[18ch] text-[clamp(2.5rem,5vw,5rem)] leading-[0.95] tracking-[-0.07em]">
-        {question.prompt}
+        {localizedQuestion.prompt}
       </h1>
-      {question.description ? (
+      {localizedQuestion.description ? (
         <p className="mb-9 max-w-[42rem] text-[1.05rem] leading-relaxed text-muted">
-          {question.description}
+          {localizedQuestion.description}
         </p>
       ) : null}
       <QuestionInput
         question={question}
+        locale={locale}
         value={value}
         onChange={onAnswerChange}
       />
@@ -66,14 +78,14 @@ export function CurrentQuestion({
           disabled={questionIndex === 0 || saving}
           onClick={onBack}
         >
-          Back
+          {t("back")}
         </button>
         <div className="flex items-center gap-4">
           <span
             className="text-[0.7rem] font-extrabold tracking-[0.12em] text-[#557033] uppercase"
             aria-live="polite"
           >
-            {saved ? "Saved" : ""}
+            {saved ? t("saved") : ""}
           </span>
           <button
             className={primaryButtonClassName}
@@ -82,10 +94,10 @@ export function CurrentQuestion({
             onClick={onContinue}
           >
             {saving
-              ? "Saving…"
+              ? t("saving")
               : questionIndex === assessmentQuestions.length - 1
-                ? "Make sense of this"
-                : "Continue"}
+                ? t("finish")
+                : t("continue")}
           </button>
         </div>
       </div>

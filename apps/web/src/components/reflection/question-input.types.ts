@@ -1,7 +1,8 @@
-import type { AssessmentQuestion } from "@wtfiwant/shared";
+import type { AssessmentQuestion, Locale } from "@wtfiwant/shared";
 
 export type QuestionInputProps = {
   question: AssessmentQuestion;
+  locale: Locale;
   value: unknown;
   onChange: (value: unknown) => void;
 };

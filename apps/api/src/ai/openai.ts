@@ -1,4 +1,4 @@
-import { analysisSchema } from "@wtfiwant/shared";
+import { analysisSchema, type Locale } from "@wtfiwant/shared";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import {
@@ -32,11 +32,12 @@ export class OpenAIProvider implements AIProvider {
     questionId: string,
     answer: string,
     safetyIdentifier?: string,
+    locale: Locale = "en",
   ): Promise<string> {
     const response = await this.client.responses.create({
       model: this.followUpModel,
       instructions: FOLLOW_UP_SYSTEM_PROMPT,
-      input: buildFollowUpInput(questionId, answer),
+      input: buildFollowUpInput(questionId, answer, locale),
       max_output_tokens: 120,
       store: false,
       safety_identifier: safetyIdentifier,
@@ -50,11 +51,12 @@ export class OpenAIProvider implements AIProvider {
     answers: Record<string, unknown>,
     repair: boolean,
     safetyIdentifier?: string,
+    locale: Locale = "en",
   ): Promise<unknown> {
     const response = await this.client.responses.parse({
       model: this.name,
       instructions: ANALYSIS_SYSTEM_PROMPT,
-      input: buildAnalysisInput(answers, repair),
+      input: buildAnalysisInput(answers, repair, locale),
       text: { format: zodTextFormat(analysisSchema, "assessment_analysis") },
       store: false,
       safety_identifier: safetyIdentifier,

@@ -1,4 +1,10 @@
-import { type GoalsAnswer, goalPrompts, maxGoals } from "@wtfiwant/shared";
+import {
+  type GoalsAnswer,
+  getGermanAssessmentTranslation,
+  goalPrompts,
+  maxGoals,
+} from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import {
   eyebrowClassName,
   questionCardClassName,
@@ -11,7 +17,12 @@ import {
 
 type Goal = GoalsAnswer["goals"][number];
 
-export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
+export function GoalsQuestion({ value, onChange, locale }: AnswerInputProps) {
+  const t = useTranslations("Reflection");
+  const prompts =
+    locale === "de"
+      ? getGermanAssessmentTranslation().goalPrompts
+      : goalPrompts;
   const record =
     value && typeof value === "object" ? (value as { goals?: Goal[] }) : {};
   const goals = record.goals?.length ? record.goals : [{ goal: "", why: "" }];
@@ -27,7 +38,9 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
       {goals.map((goal, index) => (
         <section className={questionCardClassName} key={`goal-${index + 1}`}>
           <div className="flex items-start justify-between">
-            <p className={eyebrowClassName}>Possibility {index + 1}</p>
+            <p className={eyebrowClassName}>
+              {t("possibility", { number: index + 1 })}
+            </p>
             {index > 0 ? (
               <button
                 className={textButtonClassName}
@@ -38,13 +51,13 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
                   })
                 }
               >
-                Remove
+                {t("remove")}
               </button>
             ) : null}
           </div>
           <label>
             <span className="mb-2 block text-xs font-extrabold">
-              {goalPrompts.goal}
+              {prompts.goal}
             </span>
             <input
               className={questionInputClassName}
@@ -54,7 +67,7 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
           </label>
           <label className="mt-4 block">
             <span className="mb-2 block text-xs font-extrabold">
-              {goalPrompts.why}
+              {prompts.why}
             </span>
             <textarea
               className={`${questionInputClassName} min-h-28`}
@@ -70,7 +83,7 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
           type="button"
           onClick={() => onChange({ goals: [...goals, { goal: "", why: "" }] })}
         >
-          + Add another thing
+          {t("addGoal")}
         </button>
       ) : null}
     </div>

@@ -1,4 +1,5 @@
 import type { ActionPlanInput } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { fieldControlClassName } from "@/lib/styles";
 
@@ -8,40 +9,37 @@ type ActionPlanFieldsProps = {
 };
 
 export function ActionPlanFields({ form, onChange }: ActionPlanFieldsProps) {
+  const t = useTranslations("Results");
   return (
     <>
       <PlanField
         number="01"
-        label="Direction"
-        hint="A broad direction to explore"
+        label={t("directionLabel")}
+        hint={t("directionHint")}
       >
         <input
           className={fieldControlClassName}
-          aria-label="Direction"
+          aria-label={t("directionLabel")}
           value={form.direction}
           onChange={(event) => onChange("direction", event.target.value)}
         />
       </PlanField>
       <PlanField
         number="02"
-        label="Experiment"
-        hint="A reversible real-world test"
+        label={t("experimentLabel")}
+        hint={t("experimentHint")}
       >
         <textarea
           className={`${fieldControlClassName} min-h-24 resize-y`}
-          aria-label="Experiment"
+          aria-label={t("experimentLabel")}
           value={form.experiment}
           onChange={(event) => onChange("experiment", event.target.value)}
         />
       </PlanField>
-      <PlanField
-        number="03"
-        label="Now"
-        hint="Something small enough for the next 24 hours"
-      >
+      <PlanField number="03" label={t("nowLabel")} hint={t("nowHint")}>
         <textarea
           className={`${fieldControlClassName} min-h-24 resize-y`}
-          aria-label="Now"
+          aria-label={t("nowLabel")}
           value={form.immediateAction}
           onChange={(event) => onChange("immediateAction", event.target.value)}
         />

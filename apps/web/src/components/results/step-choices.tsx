@@ -1,4 +1,5 @@
 import type { Analysis } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 
 type StepChoicesProps = {
   steps: Analysis["firstSteps"];
@@ -7,6 +8,7 @@ type StepChoicesProps = {
 };
 
 export function StepChoices({ steps, selected, onChoose }: StepChoicesProps) {
+  const t = useTranslations("Results");
   return (
     <div className="mb-16 grid grid-cols-2 gap-4 max-[800px]:grid-cols-1">
       {steps.map((candidate, index) => (
@@ -21,7 +23,7 @@ export function StepChoices({ steps, selected, onChoose }: StepChoicesProps) {
           onClick={() => onChoose(index)}
         >
           <span className="mb-6 block text-[0.6rem] font-black tracking-[0.14em] text-accent-ink">
-            DIRECTION {index + 1}
+            {t("directionChoice", { number: index + 1 })}
           </span>
           <strong>{candidate.direction}</strong>
         </button>

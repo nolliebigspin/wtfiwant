@@ -6,8 +6,10 @@ export function BrandLink({
   className = "text-[1.15rem] font-black tracking-[-0.06em] no-underline",
 }: BrandLinkProps) {
   return (
-    <a className={className} href="/">
+    <Link className={className} href="/">
       wtfiwant<span className="text-accent-ink">.</span>
-    </a>
+    </Link>
   );
 }
+
+import { Link } from "@/i18n/navigation";

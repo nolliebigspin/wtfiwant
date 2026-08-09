@@ -1,15 +1,14 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { FormError } from "@/components/ui/form-error";
 import { api } from "@/lib/api";
 import { largePrimaryButtonClassName } from "@/lib/styles";
 
-export function StartReflectionButton({
-  label = "I have the time",
-}: {
-  label?: string;
-}) {
+export function StartReflectionButton({ label }: { label?: string }) {
+  const locale = useLocale();
+  const t = useTranslations("Commitment");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   return (
@@ -24,23 +23,19 @@ export function StartReflectionButton({
           try {
             const view = await api.createSession();
             localStorage.setItem("wtfiwant.sessionId", view.session.id);
-            window.location.assign(`/reflection/${view.session.id}`);
+            window.location.assign(`/${locale}/reflection/${view.session.id}`);
           } catch {
             setError(true);
             setLoading(false);
           }
         }}
       >
-        {loading ? "Making space…" : label}
+        {loading ? t("loading") : (label ?? t("start"))}
         <span className="text-xl" aria-hidden="true">
           ↗
         </span>
       </button>
-      <FormError announce={false}>
-        {error
-          ? "Couldn't reach the API. Check it is running, then try again."
-          : null}
-      </FormError>
+      <FormError announce={false}>{error ? t("apiError") : null}</FormError>
     </div>
   );
 }

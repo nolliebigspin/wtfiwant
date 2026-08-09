@@ -5,17 +5,18 @@ const stateClassName =
   "grid min-h-[calc(100vh-4rem)] place-content-center justify-items-start p-8 [&_h1]:mb-4 [&_h1]:max-w-[13ch] [&_h1]:text-[clamp(3rem,7vw,7rem)] [&_h1]:leading-[0.9] [&_h1]:tracking-[-0.075em] [&>p]:max-w-[38rem] [&>p]:leading-relaxed [&>p]:text-muted";
 
 export function ResultError({ message }: { message: string }) {
+  const t = useTranslations("Results");
   return (
     <ResultShell>
       <main className={stateClassName}>
-        <h1>Something got in the way.</h1>
+        <h1>{t("errorTitle")}</h1>
         <p>{message}</p>
         <button
           className={primaryButtonClassName}
           onClick={() => window.location.reload()}
           type="button"
         >
-          Try again
+          {t("retry")}
         </button>
       </main>
     </ResultShell>
@@ -23,11 +24,12 @@ export function ResultError({ message }: { message: string }) {
 }
 
 export function SafetyResult({ message }: { message: string }) {
+  const t = useTranslations("Results");
   return (
     <ResultShell>
       <main className={stateClassName}>
-        <p className={eyebrowClassName}>PAUSE HERE</p>
-        <h1>Your safety matters more than this result.</h1>
+        <p className={eyebrowClassName}>{t("pause")}</p>
+        <h1>{t("safetyTitle")}</h1>
         <p>{message}</p>
       </main>
     </ResultShell>
@@ -35,6 +37,7 @@ export function SafetyResult({ message }: { message: string }) {
 }
 
 export function ResultLoading() {
+  const t = useTranslations("Results");
   return (
     <ResultShell>
       <main className={stateClassName}>
@@ -44,9 +47,11 @@ export function ResultLoading() {
         >
           ✦
         </div>
-        <h1>Reading for patterns.</h1>
-        <p>Separating evidence from interpretation…</p>
+        <h1>{t("loadingTitle")}</h1>
+        <p>{t("loadingCopy")}</p>
       </main>
     </ResultShell>
   );
 }
+
+import { useTranslations } from "next-intl";

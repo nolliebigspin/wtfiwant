@@ -8,10 +8,25 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { SessionView } from "@wtfiwant/shared";
+import { NextIntlClientProvider } from "next-intl";
+import type { ReactElement } from "react";
+import deMessages from "../messages/de.json";
+import enMessages from "../messages/en.json";
 import { ReflectionJourney } from "../src/components/reflection/reflection-journey";
 import type { ReflectionClient } from "../src/lib/api";
 
 afterEach(cleanup);
+
+function renderJourney(ui: ReactElement, locale: "en" | "de" = "en") {
+  return render(
+    <NextIntlClientProvider
+      locale={locale}
+      messages={locale === "de" ? deMessages : enMessages}
+    >
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
 
 function session(overrides: Partial<SessionView> = {}): SessionView {
   return {
@@ -34,6 +49,42 @@ function session(overrides: Partial<SessionView> = {}): SessionView {
 }
 
 describe("reflection journey", () => {
+  test("shows German copy while saving canonical assessment values", async () => {
+    const saves: Array<[string, unknown]> = [];
+    const client: ReflectionClient = {
+      async getSession() {
+        return session();
+      },
+      async saveAnswer(_id, questionId, value) {
+        saves.push([questionId, value]);
+      },
+      async updateProgress() {},
+      async createFollowUp() {
+        throw new Error("not used");
+      },
+      async saveFollowUpResponse() {},
+    };
+
+    renderJourney(
+      <ReflectionJourney
+        sessionId={session().session.id}
+        locale="de"
+        client={client}
+      />,
+      "de",
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Was beansprucht gerade den Großteil deiner Zeit und Energie?",
+      }),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByLabelText("Arbeit"));
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+
+    await waitFor(() => expect(saves).toEqual([["life.energy", ["Work"]]]));
+  });
+
   test("restores the saved screen, requires an answer, then saves before navigating", async () => {
     const saves: Array<[string, unknown]> = [];
     const client: ReflectionClient = {
@@ -53,7 +104,7 @@ describe("reflection journey", () => {
       async saveFollowUpResponse() {},
     };
 
-    render(
+    renderJourney(
       <ReflectionJourney sessionId={session().session.id} client={client} />,
     );
     const restored = await screen.findByDisplayValue(

@@ -1,4 +1,5 @@
 import type { Analysis } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import { resultSectionClassName } from "@/lib/styles";
 import { EvidenceDrawer } from "./evidence-drawer";
 import type { EvidenceAnswers } from "./results.types";
@@ -11,13 +12,14 @@ export function InfluencesSection({
   influences: Analysis["externalInfluences"];
   answers: EvidenceAnswers;
 }) {
+  const t = useTranslations("Results");
   if (influences.length === 0) return null;
 
   return (
     <section className={resultSectionClassName}>
       <SectionHeading
-        eyebrow="THE NOISE"
-        title="What may not be entirely yours"
+        eyebrow={t("influencesEyebrow")}
+        title={t("influencesTitle")}
       />
       {influences.map((influence) => (
         <article

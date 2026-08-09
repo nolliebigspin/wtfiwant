@@ -1,5 +1,6 @@
 import {
   actionPlanInputSchema,
+  analysisInputSchema,
   assessmentQuestions,
   followUpIdSchema,
   followUpInputSchema,
@@ -110,6 +111,11 @@ export function createApp({
   });
 
   app.post("/sessions/:id/analyze", async (context) => {
+    const input = analysisInputSchema.safeParse(
+      await context.req.json().catch(() => ({})),
+    );
+    if (!input.success)
+      return context.json({ error: "Invalid analysis request" }, 400);
     const id = context.req.param("id");
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
@@ -137,7 +143,13 @@ export function createApp({
 
     if (classifySafety(analysisAnswers) === "immediate_self_harm_risk") {
       await repository.setStatus(id, "safety_paused");
-      return context.json({ status: "safety_paused", message: SAFETY_MESSAGE });
+      return context.json({
+        status: "safety_paused",
+        message:
+          input.data.locale === "de"
+            ? "Deine Antwort deutet darauf hin, dass du in unmittelbarer Gefahr sein könntest. Deshalb wurde diese Reflexion pausiert. Wenn du diese Gedanken jetzt in die Tat umsetzen könntest, rufe den örtlichen Notruf oder gehe in die nächste Notaufnahme. Kontaktiere wenn möglich eine vertraute Person und bleibe nicht allein. Diese App kann keine Krisenhilfe leisten."
+            : SAFETY_MESSAGE,
+      });
     }
 
     const missing = assessmentQuestions
@@ -150,7 +162,12 @@ export function createApp({
       );
     }
 
-    const result = await analyzeAnswers(aiProvider, analysisAnswers, id);
+    const result = await analyzeAnswers(
+      aiProvider,
+      analysisAnswers,
+      id,
+      input.data.locale,
+    );
     const analysis = {
       version: ANALYSIS_PROMPT_VERSION,
       model: aiProvider.name,
@@ -203,7 +220,12 @@ export function createApp({
     }
     const userAnswer = stringifyAnswerForFollowUp(savedAnswer);
     const generatedQuestion = generatedFollowUpSchema.parse(
-      await aiProvider.generateFollowUp(input.data.questionId, userAnswer, id),
+      await aiProvider.generateFollowUp(
+        input.data.questionId,
+        userAnswer,
+        id,
+        input.data.locale,
+      ),
     );
     const storedFollowUp = {
       id: crypto.randomUUID(),

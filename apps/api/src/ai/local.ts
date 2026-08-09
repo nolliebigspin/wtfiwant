@@ -1,4 +1,4 @@
-import type { Analysis } from "@wtfiwant/shared";
+import type { Analysis, Locale } from "@wtfiwant/shared";
 import type { AIProvider } from "./provider";
 
 function textOf(value: unknown): string {
@@ -20,12 +20,25 @@ function evidence(
 export class LocalAIProvider implements AIProvider {
   readonly name = "local-patterns-v1";
 
-  async generateFollowUp(_questionId: string, answer: string): Promise<string> {
+  async generateFollowUp(
+    _questionId: string,
+    answer: string,
+    _safetyIdentifier?: string,
+    locale: Locale = "en",
+  ): Promise<string> {
     const subject = answer.trim().split(/\s+/).slice(0, 8).join(" ");
-    return `What would “${subject}” give you that you do not have today?`;
+    return locale === "de"
+      ? `Was würde dir „${subject}“ geben, das dir heute fehlt?`
+      : `What would “${subject}” give you that you do not have today?`;
   }
 
-  async analyzeAssessment(answers: Record<string, unknown>): Promise<Analysis> {
+  async analyzeAssessment(
+    answers: Record<string, unknown>,
+    _repair?: boolean,
+    _safetyIdentifier?: string,
+    locale: Locale = "en",
+  ): Promise<Analysis> {
+    if (locale === "de") return germanAnalysis(answers);
     const allText = Object.values(answers).map(textOf).join(" ").toLowerCase();
     const connection = mentions(allText, [
       "family",
@@ -258,4 +271,84 @@ export class LocalAIProvider implements AIProvider {
       ],
     };
   }
+}
+
+function germanAnalysis(answers: Record<string, unknown>): Analysis {
+  const ids = Object.keys(answers);
+  const cited = (preferred: string[]) => {
+    const found = preferred.filter((id) => id in answers);
+    return found.length > 0 ? found : ids.slice(0, 1);
+  };
+  return {
+    summary:
+      "Deine Antworten deuten darauf hin, dass ein gewünschtes Leben weniger von einem perfekten Etikett als von bewusst gewählten Bedingungen abhängt.",
+    coreDrivers: [
+      {
+        id: "self-direction",
+        name: "Selbstbestimmung",
+        explanation:
+          "Ein wiederkehrendes Muster scheint der Wunsch nach mehr Einfluss auf deine Zeit und Entscheidungen zu sein.",
+        evidenceQuestionIds: cited(["life.chosen", "tradeoffs.choices"]),
+        confidence: "medium",
+      },
+      {
+        id: "connection",
+        name: "Verbundenheit",
+        explanation:
+          "Deine Antworten legen nahe, dass wichtige Menschen genauso zählen wie die Erfahrung selbst.",
+        evidenceQuestionIds: cited(["alive.memories"]),
+        confidence: "medium",
+      },
+      {
+        id: "growth",
+        name: "Sinnvolles Wachstum",
+        explanation:
+          "Herausforderungen scheinen dann wertvoll zu sein, wenn daraus etwas entsteht, das du respektierst.",
+        evidenceQuestionIds: cited(["goals.current", "anti_life.regret"]),
+        confidence: "low",
+      },
+    ],
+    tensions: [],
+    externalInfluences: [],
+    antiLife: {
+      themes: ["Ein Leben im Autopilot", "Aufgeschobene Erfahrungen"],
+      summary:
+        "Du möchtest ein Leben vermeiden, das vor allem von Trägheit und fremden Erwartungen geformt wird.",
+      evidenceQuestionIds: cited([
+        "anti_life.description",
+        "anti_life.repeated_year",
+      ]),
+    },
+    possibleDirections: [
+      {
+        title: "Mehr Raum für eigene Entscheidungen schaffen",
+        explanation:
+          "Behandle das als Bedingung zum Testen, nicht als Aufforderung, dein Leben umzuwerfen.",
+        whyItFits:
+          "Die Richtung verbindet bewusst gewählte Teile deines Lebens mit dem, was du nicht länger aufschieben willst.",
+        evidenceQuestionIds: cited(["life.chosen", "anti_life.regret"]),
+      },
+      {
+        title: "Bessere Hinweise darauf sammeln, was dich lebendig macht",
+        explanation:
+          "Wiederhole eine kleine Zutat aus einem lebendigen Moment und beobachte, was sich verändert.",
+        whyItFits:
+          "So wird ein Muster aus deinen Antworten in der Wirklichkeit beobachtbar.",
+        evidenceQuestionIds: cited([
+          "alive.memories",
+          "possibilities.three_lives",
+        ]),
+      },
+    ],
+    goals: [],
+    firstSteps: [
+      {
+        direction: "Mehr Zeit bewusst selbst gestalten",
+        experiment:
+          "Reserviere zwei Wochen lang einen zweistündigen Block für etwas, das du bewusst wählst.",
+        immediateAction: "Trage den ersten Block in deinen Kalender ein.",
+        evidenceQuestionIds: cited(["life.chosen", "goals.current"]),
+      },
+    ],
+  };
 }

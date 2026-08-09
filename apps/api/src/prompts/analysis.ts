@@ -1,6 +1,6 @@
 import { analysisSchema } from "@wtfiwant/shared";
 
-export const ANALYSIS_PROMPT_VERSION = "v1";
+export const ANALYSIS_PROMPT_VERSION = "v2-i18n";
 
 export const ANALYSIS_SYSTEM_PROMPT = `You identify cautious, useful hypotheses in a person's own reflective answers.
 
@@ -18,9 +18,10 @@ Principles:
 export function buildAnalysisInput(
   answers: Record<string, unknown>,
   repair = false,
+  locale = "en",
 ): string {
   const repairInstruction = repair
     ? "\nA previous result failed validation. Return a complete object matching every required field exactly."
     : "";
-  return `Analyze these answers. Keys are the only evidence IDs you may cite.${repairInstruction}\n\n${JSON.stringify(answers)}\n\nRequired JSON schema:\n${JSON.stringify(analysisSchema.toJSONSchema())}`;
+  return `Write every user-facing field in ${locale === "de" ? "German" : "English"}. Analyze these answers. Keys are the only evidence IDs you may cite.${repairInstruction}\n\n${JSON.stringify(answers)}\n\nRequired JSON schema:\n${JSON.stringify(analysisSchema.toJSONSchema())}`;
 }

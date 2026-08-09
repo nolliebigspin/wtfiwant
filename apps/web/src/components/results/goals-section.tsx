@@ -1,4 +1,5 @@
 import type { Analysis } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import {
   resultCardClassName,
   resultCardCopyClassName,
@@ -18,22 +19,23 @@ export function GoalsSection({
   goals: Analysis["goals"];
   answers: EvidenceAnswers;
 }) {
+  const t = useTranslations("Results");
   if (goals.length === 0) return null;
 
   return (
     <section className={resultSectionClassName} aria-labelledby="goals-title">
       <SectionHeading
-        eyebrow="BENEATH THE STATED GOAL"
-        title="What you may be asking the goal to provide"
+        eyebrow={t("goalsEyebrow")}
+        title={t("goalsTitle")}
         titleId="goals-title"
       />
       <div className={resultCardGridClassName}>
         {goals.map((goal) => (
           <article className={resultCardClassName} key={goal.originalGoal}>
-            <span className={resultCardIndexClassName}>YOU SAID</span>
+            <span className={resultCardIndexClassName}>{t("youSaid")}</span>
             <h3 className={resultCardTitleClassName}>{goal.originalGoal}</h3>
             <small className="mt-8 block text-[0.6rem] font-black tracking-[0.15em] text-accent-ink">
-              POSSIBLE UNDERLYING NEED
+              {t("need")}
             </small>
             <p className={resultCardCopyClassName}>
               {goal.possibleUnderlyingNeed}

@@ -5,6 +5,7 @@ import {
   analysisResponseSchema,
   type ChapterId,
   followUpSchema,
+  type Locale,
   type SessionView,
   sessionViewSchema,
 } from "@wtfiwant/shared";
@@ -37,6 +38,7 @@ export interface ReflectionClient {
   createFollowUp(
     id: string,
     questionId: string,
+    locale?: Locale,
   ): Promise<{ id: string; generatedQuestion: string }>;
   saveFollowUpResponse(
     id: string,
@@ -47,7 +49,7 @@ export interface ReflectionClient {
 
 export const api: ReflectionClient & {
   createSession(): Promise<SessionView>;
-  analyze(id: string): Promise<AnalysisResponse>;
+  analyze(id: string, locale?: Locale): Promise<AnalysisResponse>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<void>;
   deleteSession(id: string): Promise<void>;
   seed(persona: string): Promise<SessionView>;
@@ -72,10 +74,10 @@ export const api: ReflectionClient & {
       body: JSON.stringify({ currentChapter, currentQuestionId }),
     });
   },
-  async createFollowUp(id, questionId) {
+  async createFollowUp(id, questionId, locale = "en") {
     const body = (await request(`/sessions/${id}/follow-up`, {
       method: "POST",
-      body: JSON.stringify({ questionId }),
+      body: JSON.stringify({ questionId, locale }),
     })) as { followUp: unknown };
     const followUp = followUpSchema.parse(body.followUp);
     return { id: followUp.id, generatedQuestion: followUp.generatedQuestion };
@@ -86,9 +88,12 @@ export const api: ReflectionClient & {
       body: JSON.stringify({ response }),
     });
   },
-  async analyze(id) {
+  async analyze(id, locale = "en") {
     return analysisResponseSchema.parse(
-      await request(`/sessions/${id}/analyze`, { method: "POST" }),
+      await request(`/sessions/${id}/analyze`, {
+        method: "POST",
+        body: JSON.stringify({ locale }),
+      }),
     );
   },
   async saveActionPlan(id, input) {

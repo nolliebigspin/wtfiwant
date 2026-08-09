@@ -1,4 +1,5 @@
 import type { Analysis } from "@wtfiwant/shared";
+import { useTranslations } from "next-intl";
 import {
   resultCardClassName,
   resultCardCopyClassName,
@@ -18,11 +19,12 @@ export function DriversSection({
   drivers: Analysis["coreDrivers"];
   answers: EvidenceAnswers;
 }) {
+  const t = useTranslations("Results");
   return (
     <section className={resultSectionClassName} aria-labelledby="drivers-title">
       <SectionHeading
-        eyebrow="SIGNALS, NOT SCORES"
-        title="What seems to matter"
+        eyebrow={t("driversEyebrow")}
+        title={t("driversTitle")}
         titleId="drivers-title"
       />
       <div className={resultCardGridClassName}>

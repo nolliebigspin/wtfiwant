@@ -1,11 +1,13 @@
-const facts = [
-  ["20–30", "minutes, roughly"],
-  ["0", "right answers"],
-  ["AI", "finds patterns, not diagnoses"],
-  ["NO", "account required"],
-] as const;
+import { useTranslations } from "next-intl";
 
 export function LandingFacts() {
+  const t = useTranslations("Landing");
+  const facts = [
+    ["20–30", t("facts.minutes")],
+    ["0", t("facts.answers")],
+    ["AI", t("facts.ai")],
+    [t("facts.no"), t("facts.account")],
+  ];
   return (
     <section className="grid grid-cols-4 border-b border-ink/20 max-[800px]:grid-cols-2">
       {facts.map(([value, label]) => (
