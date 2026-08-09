@@ -5,7 +5,7 @@
 This repository is a Bun workspace with three independently deployable modules:
 
 - `apps/web`: Next.js 16 App Router UI. It renders the landing page, guided reflection, results, evidence, and action-plan builder. It calls the backend through a typed client and keeps only the opaque session UUID in local storage.
-- `apps/api`: Hono REST server. It validates requests, owns session rules, safety classification, analysis orchestration, prompts, and persistence. Hono was chosen because it has a small Web-standard interface, first-class TypeScript support, and runs directly on Bun without a framework adapter.
+- `packages/api`: Hono app mounted by `apps/web` at `/api`. It validates requests, owns session rules, safety classification, analysis orchestration, prompts, and persistence. Hono was chosen because it has a small Web-standard interface, first-class TypeScript support, and mounts into a Next.js route handler without a framework adapter.
 - `packages/shared`: the stable seam between both applications: assessment configuration, Zod request/response schemas, and shared types.
 
 The backend's `AssessmentRepository` interface hides storage behavior. Production uses PostgreSQL; tests use an in-memory adapter through the same interface. AI follows the same shape: `AIProvider` has OpenAI and deterministic local adapters. The local adapter enables private, credential-free development; OpenAI is opt-in.
@@ -20,7 +20,7 @@ Chapters and question screens are immutable data in `packages/shared/src/assessm
 
 ## AI and safety
 
-Strict schemas in `packages/shared/src/schemas.ts` define analysis, follow-up, session, and action-plan payloads. The backend validates generated JSON and performs one repair attempt. Versioned prompts live under `apps/api/src/prompts`. A safety classifier runs before analysis; possible immediate self-harm language returns a dedicated safe state rather than motivational analysis.
+Strict schemas in `packages/shared/src/schemas.ts` define analysis, follow-up, session, and action-plan payloads. The backend validates generated JSON and performs one repair attempt. Versioned prompts live under `packages/api/src/prompts`. A safety classifier runs before analysis; possible immediate self-harm language returns a dedicated safe state rather than motivational analysis.
 
 ## Delivery sequence
 

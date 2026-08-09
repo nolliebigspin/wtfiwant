@@ -15,21 +15,21 @@ This is not a personality test, therapy app, happiness score, chatbot, or produc
 - Explainable Compass, Tensions, Anti-Life, possible directions, and evidence drawers tied to saved question IDs
 - Direction → Experiment → Now planning and an editable If → Then intention
 - Three development-only completed personas
-- PostgreSQL migration, Docker Compose, production Dockerfiles, and behavior tests
+- PostgreSQL migrations, Docker Compose, a production Dockerfile, and behavior tests
 
 ## Architecture
 
 ```text
 apps/
-  web/       Next.js 16 App Router UI
-  api/       Hono REST API, domain rules, AI, safety, PostgreSQL
+  web/       Next.js 16 App Router UI, and the API mounted at /api
 packages/
+  api/       Hono app, domain rules, AI, safety, PostgreSQL
   shared/    Zod contracts and assessment configuration
 ```
 
-The web and API are separate deployable applications. The browser knows only `NEXT_PUBLIC_API_URL`; it never receives an AI or database credential.
+This is a single deployable. `packages/api` is a library exporting `createApp`, which `apps/web` mounts as a catch-all route handler at [`src/app/api/[[...route]]/route.ts`](apps/web/src/app/api/[[...route]]/route.ts). Requests are same-origin, so there is no CORS layer and no browser-visible API origin. Database and AI credentials stay server-side.
 
-Hono was chosen for the backend because its small Web-standard interface runs directly on Bun, is easy to exercise as HTTP in tests, and does not impose a second large application framework. PostgreSQL sits behind an `AssessmentRepository` seam. Production uses `PostgresAssessmentRepository`; tests use the same interface with an in-memory adapter. AI follows an equivalent `AIProvider` seam.
+Hono was chosen for the backend because its small Web-standard interface is easy to exercise as HTTP in tests and does not impose a second large application framework. Because `createApp` takes its dependencies and base path as parameters, the same app runs unchanged under Next in production and mounted at `/` in tests. PostgreSQL sits behind an `AssessmentRepository` seam. Production uses `PostgresAssessmentRepository`; tests use the same interface with an in-memory adapter. AI follows an equivalent `AIProvider` seam.
 
 See [the implementation plan](docs/implementation-plan.md) for the initial architecture and schema decisions.
 
@@ -50,40 +50,25 @@ docker compose up -d postgres
 mise exec -- bun run db:migrate
 ```
 
-Start both applications:
+Start the application:
 
 ```bash
 mise exec -- bun run dev
 ```
 
-Or start them separately:
-
-```bash
-mise exec -- bun run dev:api
-mise exec -- bun run dev:web
-```
-
-Open [http://localhost:3000](http://localhost:3000). The API health endpoint is [http://localhost:4000/health](http://localhost:4000/health).
-
-To run PostgreSQL and the API in containers while keeping the web app local:
-
-```bash
-docker compose up --build
-mise exec -- bun run dev:web
-```
+Open [http://localhost:3000](http://localhost:3000). The API health endpoint is [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
 ## Environment variables
 
 | Variable | Used by | Meaning |
 | --- | --- | --- |
-| `DATABASE_URL` | API | PostgreSQL connection string |
-| `API_PORT` | API | REST server port; defaults to `4000` |
-| `WEB_ORIGIN` | API | Allowed browser origin for CORS |
-| `AI_PROVIDER` | API | `local` or `openai` |
-| `AI_API_KEY` | API | Required only for `AI_PROVIDER=openai` |
-| `AI_MODEL` | API | Structured analysis model |
-| `AI_FOLLOWUP_MODEL` | API | Targeted follow-up model |
-| `NEXT_PUBLIC_API_URL` | Web | Browser-visible API origin; never put secrets here |
+| `DATABASE_URL` | Server | PostgreSQL connection string |
+| `AI_PROVIDER` | Server | `local` or `openai` |
+| `AI_API_KEY` | Server | Required only for `AI_PROVIDER=openai` |
+| `AI_MODEL` | Server | Structured analysis model |
+| `AI_FOLLOWUP_MODEL` | Server | Targeted follow-up model |
+
+All of these are server-only and read inside route handlers. None is exposed as `NEXT_PUBLIC_*`.
 
 `AI_PROVIDER=local` is the default. It sends no reflections to an external AI service and produces cautious deterministic hypotheses for development. To use OpenAI, set `AI_PROVIDER=openai` and provide a key plus models. The adapter uses the Responses API with Zod-backed structured output; all returned data is still validated locally before it can be stored or shown.
 
@@ -91,7 +76,7 @@ No reflection answer or assembled prompt is intentionally written to application
 
 ## Database and migrations
 
-The initial migration is `apps/api/migrations/0001_initial.sql`. It creates:
+The initial migration is `packages/api/migrations/0001_initial.sql`. It creates:
 
 - `assessment_sessions`
 - `assessment_answers`
@@ -118,7 +103,7 @@ Question IDs are durable evidence references stored in analyses. Treat a release
 Prompts are not scattered through routes:
 
 ```text
-apps/api/src/prompts/
+packages/api/src/prompts/
   analysis.ts
   follow-up.ts
   action-plan.ts
@@ -139,9 +124,9 @@ In development, open `/commitment` and use one of the three development shortcut
 Or call the development endpoint directly:
 
 ```bash
-curl -X POST http://localhost:4000/dev/seed/burned_out
-curl -X POST http://localhost:4000/dev/seed/freedom_relationships
-curl -X POST http://localhost:4000/dev/seed/stable_adventure
+curl -X POST http://localhost:3000/api/dev/seed/burned_out
+curl -X POST http://localhost:3000/api/dev/seed/freedom_relationships
+curl -X POST http://localhost:3000/api/dev/seed/stable_adventure
 ```
 
 The endpoints and UI shortcuts do not exist when `NODE_ENV=production`.
@@ -153,23 +138,23 @@ mise exec -- bun run lint
 mise exec -- bun run typecheck
 mise exec -- bun test
 mise exec -- bun run build
-mise exec -- bun run test:docker
 ```
 
-The backend tests exercise session creation, answer validation and restoration, structured-analysis repair, the safety state, invalid sessions, and deletion through HTTP/public interfaces. The frontend tests exercise restoration, required answers, save-before-navigation, analysis rendering, evidence disclosure, and action-plan persistence. The Docker smoke test rebuilds the API image and verifies its migration-and-startup path against PostgreSQL.
+The backend tests exercise session creation, answer validation and restoration, structured-analysis repair, the safety state, invalid sessions, and deletion through the Hono app's public interface, mounted directly with an in-memory repository. The frontend tests exercise restoration, required answers, save-before-navigation, analysis rendering, evidence disclosure, and action-plan persistence.
 
 ## Production deployment
 
-Build each application independently from the repository root:
+The application deploys as a single unit. On Vercel, the API routes become functions alongside the pages; set `DATABASE_URL` and the `AI_*` variables as server-side environment variables and run `bun run db:migrate` before rolling out a release that expects a new column.
+
+Analysis and follow-up generation call the AI provider, so [the route handler](apps/web/src/app/api/[[...route]]/route.ts) sets `maxDuration = 300`. With fluid compute, waiting on the model is billed as idle rather than active CPU.
+
+For a self-hosted container, the standalone image serves both the UI and the API:
 
 ```bash
-docker build -f apps/api/Dockerfile -t wtfiwant-api .
-docker build -f apps/web/Dockerfile \
-  --build-arg NEXT_PUBLIC_API_URL=https://api.example.com \
-  -t wtfiwant-web .
+docker build -f apps/web/Dockerfile -t wtfiwant-web .
 ```
 
-Deploy the API close to PostgreSQL, run migrations before API rollout, and expose it over HTTPS. Deploy the standalone Next.js image separately with its public API origin set at build time. Restrict `WEB_ORIGIN` to the real web origin. Keep `AI_API_KEY` only in the API runtime's secret store.
+Deploy close to PostgreSQL, expose it over HTTPS, and keep `AI_API_KEY` only in the runtime's secret store.
 
 ## Current MVP limitations
 

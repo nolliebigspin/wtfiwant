@@ -12,7 +12,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - This is a Bun workspace monorepo. Run Bun only through `mise exec -- bun`.
 - `apps/web` is presentation and browser orchestration; domain contracts and question data belong in `packages/shared`.
-- `apps/api` owns persistence, safety checks, AI calls, prompts, and business rules.
+- `packages/api` owns persistence, safety checks, AI calls, prompts, and business rules. It is a Hono app mounted by `apps/web` at `app/api/[[...route]]/route.ts`; it is never a separate deployable.
+- Keep `createApp` free of Next.js imports. Its tests mount it directly at the root base path, and that seam is what keeps them fast.
 - Never log reflection answers, assembled prompts, or AI credentials.
 - Validate every request and every AI-generated payload with the shared Zod schemas.
 - Prefer behavior tests at public seams. Run `mise exec -- bun run typecheck`, `test`, `lint`, and `build` before handoff.

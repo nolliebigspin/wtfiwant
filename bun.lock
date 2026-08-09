@@ -10,26 +10,11 @@
         "typescript": "^5",
       },
     },
-    "apps/api": {
-      "name": "@wtfiwant/api",
-      "version": "0.1.0",
-      "dependencies": {
-        "@hono/zod-validator": "^0.7.2",
-        "@wtfiwant/shared": "workspace:*",
-        "hono": "^4.9.6",
-        "openai": "^5.19.1",
-        "postgres": "^3.4.7",
-        "zod": "^4.1.5",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5",
-      },
-    },
     "apps/web": {
       "name": "@wtfiwant/web",
       "version": "0.1.0",
       "dependencies": {
+        "@wtfiwant/api": "workspace:*",
         "@wtfiwant/shared": "workspace:*",
         "clsx": "^2.1.1",
         "next": "16.3.0",
@@ -52,6 +37,22 @@
         "babel-plugin-react-compiler": "1.0.0",
         "happy-dom": "^18.0.1",
         "tailwindcss": "^4",
+        "typescript": "^5",
+      },
+    },
+    "packages/api": {
+      "name": "@wtfiwant/api",
+      "version": "0.1.0",
+      "dependencies": {
+        "@hono/zod-validator": "^0.7.2",
+        "@wtfiwant/shared": "workspace:*",
+        "hono": "^4.9.6",
+        "openai": "^5.19.1",
+        "postgres": "^3.4.7",
+        "zod": "^4.1.5",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
         "typescript": "^5",
       },
     },
@@ -302,7 +303,7 @@
 
     "@types/whatwg-mimetype": ["@types/whatwg-mimetype@3.0.2", "", {}, "sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA=="],
 
-    "@wtfiwant/api": ["@wtfiwant/api@workspace:apps/api"],
+    "@wtfiwant/api": ["@wtfiwant/api@workspace:packages/api"],
 
     "@wtfiwant/shared": ["@wtfiwant/shared@workspace:packages/shared"],
 

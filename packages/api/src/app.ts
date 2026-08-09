@@ -16,7 +16,6 @@ import {
   validateQuestionAnswer,
 } from "@wtfiwant/shared";
 import { type Context, Hono, type Next } from "hono";
-import { cors } from "hono/cors";
 import { LocalAIProvider } from "./ai/local";
 import { type AIProvider, analyzeAnswers } from "./ai/provider";
 import { createSeedSession } from "./dev/personas";
@@ -27,24 +26,19 @@ import { classifySafety, SAFETY_MESSAGE } from "./safety/classifier";
 type AppDependencies = {
   repository: AssessmentRepository;
   aiProvider?: AIProvider;
-  webOrigin?: string;
+  /**
+   * Path the app is mounted under. Next.js serves it from `/api`; tests mount
+   * it at the root so request paths stay identical to the route definitions.
+   */
+  basePath?: string;
 };
 
 export function createApp({
   repository,
   aiProvider = new LocalAIProvider(),
-  webOrigin = "http://localhost:3000",
+  basePath = "/",
 }: AppDependencies) {
-  const app = new Hono();
-
-  app.use(
-    "*",
-    cors({
-      origin: webOrigin,
-      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type"],
-    }),
-  );
+  const app = new Hono().basePath(basePath);
 
   app.get("/health", (context) => context.json({ status: "ok" }));
 

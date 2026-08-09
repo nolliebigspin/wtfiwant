@@ -15,20 +15,19 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
+  web:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/web/Dockerfile
     env_file: ${ENV_FILE:-.env}
     environment:
       DATABASE_URL: postgres://wtfiwant:wtfiwant@postgres:5432/wtfiwant
-      API_PORT: 4000
+      PORT: 3000
     ports:
-      - "4000:4000"
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["sh", "-c", "bun run db:migrate && bun run start:prod"]
 
 volumes:
   wtfiwant_postgres:

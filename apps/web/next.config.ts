@@ -4,7 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
-  transpilePackages: ["@wtfiwant/shared"],
+  transpilePackages: ["@wtfiwant/api", "@wtfiwant/shared"],
 };
 
 const withNextIntl = createNextIntlPlugin();

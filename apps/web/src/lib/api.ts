@@ -10,10 +10,11 @@ import {
   sessionViewSchema,
 } from "@wtfiwant/shared";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// The API runs in-process as Next route handlers, so requests stay same-origin.
+const API_BASE = "/api";
 
 async function request(path: string, init?: RequestInit): Promise<unknown> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: { "content-type": "application/json", ...init?.headers },
   });
