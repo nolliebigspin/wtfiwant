@@ -10,7 +10,7 @@ export function StartTransition() {
       <h2 className="motion-reveal m-0 text-[clamp(3.5rem,8vw,9rem)] leading-[0.85] tracking-[-0.08em]">
         {t("thoughtEnough")}
         <br />
-        <em className="font-[Georgia,serif] font-normal">{t("doSomething")}</em>
+        <em className="font-serif font-normal">{t("doSomething")}</em>
       </h2>
       <p className="motion-reveal mt-12 max-w-[35rem] text-xl leading-relaxed">
         {t("transitionCopy")}

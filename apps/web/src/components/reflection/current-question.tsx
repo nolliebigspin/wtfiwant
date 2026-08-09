@@ -53,7 +53,7 @@ export function CurrentQuestion({
         {localizedChapters[chapterIndex].label} · {questionIndex + 1} {t("of")}{" "}
         {assessmentQuestions.length}
       </p>
-      <p className="mb-5 font-[Georgia,serif] text-base text-muted italic">
+      <p className="mb-5 font-serif text-base text-muted italic">
         {localizedChapters[chapterIndex].eyebrow}
       </p>
       <h1 className="mb-4 max-w-[18ch] text-[clamp(2.5rem,5vw,5rem)] leading-[0.95] tracking-[-0.07em]">

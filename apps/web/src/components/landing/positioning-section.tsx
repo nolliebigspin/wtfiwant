@@ -16,9 +16,7 @@ export function PositioningSection() {
         <h2 className="m-0 text-[clamp(2.8rem,5vw,5.8rem)] leading-[0.95] tracking-[-0.065em]">
           {t("stop")}
           <br />
-          <em className="font-[Georgia,serif] font-normal text-acid">
-            {t("then")}
-          </em>
+          <em className="font-serif font-normal text-acid">{t("then")}</em>
         </h2>
       </div>
       <div className="grid grid-cols-2 max-[520px]:grid-cols-1">

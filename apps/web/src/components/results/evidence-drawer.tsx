@@ -61,7 +61,7 @@ export function EvidenceDrawer({
         </p>
         {ids.map((id) => (
           <figure className="motion-feedback my-4" key={id}>
-            <blockquote className="m-0 whitespace-pre-wrap font-[Georgia,serif] text-base">
+            <blockquote className="m-0 whitespace-pre-wrap font-serif text-base">
               {formatAnswer(
                 answers[id],
                 t("noAnswer"),

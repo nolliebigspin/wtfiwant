@@ -12,7 +12,7 @@ export function LandingClose() {
         <br />
         {t("success")}
         <br />
-        <em className="font-[Georgia,serif] font-normal">{t("feel")}</em>
+        <em className="font-serif font-normal">{t("feel")}</em>
       </h2>
       <div className="motion-reveal mt-12">
         <Link

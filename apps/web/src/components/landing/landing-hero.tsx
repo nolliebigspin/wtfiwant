@@ -9,9 +9,9 @@ export function LandingHero() {
     <section className="grid min-h-[calc(100vh-5rem)] grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)] items-center gap-16 px-[clamp(1.2rem,7vw,8rem)] py-[clamp(4rem,8vw,8rem)] max-[800px]:min-h-auto max-[800px]:grid-cols-1">
       <div className="motion-hero-copy">
         <p className={eyebrowClassName}>{t("eyebrow")}</p>
-        <h1 className="m-0 max-w-[12ch] text-[clamp(3.6rem,7.4vw,8.5rem)] leading-[0.85] font-black tracking-[-0.075em]">
+        <h1 className="m-0 max-w-[12ch] text-[clamp(3.6rem,7.4vw,8.5rem)] leading-[0.88] font-extrabold tracking-[-0.062em]">
           {t("titleBefore")}
-          <em className="font-[Georgia,serif] font-normal text-accent-ink">
+          <em className="font-serif font-normal tracking-[-0.035em] text-accent-ink">
             {t("titleEmphasis")}
           </em>{" "}
           {t("titleAfter")}

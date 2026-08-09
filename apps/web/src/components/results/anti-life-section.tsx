@@ -23,7 +23,7 @@ export function AntiLifeSection({
         title={t("antiTitle")}
         titleId="anti-title"
       />
-      <blockquote className="motion-reveal my-16 max-w-[52rem] font-[Georgia,serif] text-[clamp(1.7rem,3.5vw,3.8rem)] leading-tight">
+      <blockquote className="motion-reveal my-16 max-w-[52rem] font-serif text-[clamp(1.7rem,3.5vw,3.8rem)] leading-tight">
         {antiLife.summary}
       </blockquote>
       <div className="motion-reveal flex flex-wrap gap-3">
