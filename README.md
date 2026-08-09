@@ -156,6 +156,24 @@ docker build -f apps/web/Dockerfile -t wtfiwant-web .
 
 Deploy close to PostgreSQL, expose it over HTTPS, and keep `AI_API_KEY` only in the runtime's secret store.
 
+### Dokploy
+
+[`docker-compose.dokploy.yml`](docker-compose.dokploy.yml) is the deployable stack: PostgreSQL, a one-shot `migrate` service, and the web container. It differs from the development [`docker-compose.yml`](docker-compose.yml) in that nothing is published to the host — Dokploy's proxy reaches `web` over the internal network — and the database password has no default, so a missing secret fails the deploy instead of silently standing up a well-known password.
+
+Create an application in Dokploy, point it at this repository, choose **Docker Compose** with `docker-compose.dokploy.yml`, and set the environment:
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` | yes | Deploy fails without it. |
+| `AI_PROVIDER` | no | `local` by default; `openai` opts in to remote calls. |
+| `AI_API_KEY` | when `AI_PROVIDER=openai` | The API refuses to start otherwise. |
+| `POSTGRES_DB`, `POSTGRES_USER` | no | Default to `wtfiwant`. |
+| `AI_MODEL`, `AI_FOLLOWUP_MODEL` | no | Default to `gpt-5-mini`. |
+
+Add a domain pointing at the `web` service on port 3000. `DATABASE_URL` is assembled from the PostgreSQL variables, so it should not be set by hand.
+
+Migrations run as their own service rather than from the web container's entrypoint: `web` depends on it with `service_completed_successfully`, so a release that expects a new column never serves traffic against the old schema, and a failed migration aborts the rollout. Reruns are idempotent — already-applied versions are skipped.
+
 ## Current MVP limitations
 
 - Anonymous session URLs are bearer access: anyone with the UUID can open that reflection. Accounts and stronger per-session secrets are future work.

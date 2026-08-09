@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wtfiwant}
+      POSTGRES_USER: ${POSTGRES_USER:-wtfiwant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - wtfiwant_postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-wtfiwant} -d ${POSTGRES_DB:-wtfiwant}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Migrations run to completion before web starts, so a release that expects a
+  # new column never serves traffic against the old schema.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-wtfiwant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wtfiwant}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-wtfiwant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wtfiwant}
+      PORT: 3000
+      AI_PROVIDER: ${AI_PROVIDER:-local}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gpt-5-mini}
+      AI_FOLLOWUP_MODEL: ${AI_FOLLOWUP_MODEL:-gpt-5-mini}
+    expose:
+      - "3000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  wtfiwant_postgres:
