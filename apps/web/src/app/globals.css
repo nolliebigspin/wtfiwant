@@ -267,15 +267,23 @@ button.motion-button:active:not(:disabled) {
 }
 
 .orbit-layer-outer {
-  animation: orbit-rotate 46s linear infinite;
+  animation: orbit-rotate 58s linear infinite;
+}
+
+.orbit-layer-fourth {
+  animation: orbit-rotate-reverse 47s linear infinite;
 }
 
 .orbit-layer-middle {
-  animation: orbit-rotate-reverse 34s linear infinite;
+  animation: orbit-rotate 36s linear infinite;
+}
+
+.orbit-layer-second {
+  animation: orbit-rotate-reverse 28s linear infinite;
 }
 
 .orbit-layer-inner {
-  animation: orbit-rotate 23s linear infinite;
+  animation: orbit-rotate 21s linear infinite;
 }
 
 .orbit-dash,
@@ -318,14 +326,39 @@ button.motion-button:active:not(:disabled) {
   letter-spacing: 0;
 }
 
-.orbit-label-outer {
-  left: 3%;
+.orbit-label-family {
+  left: 7%;
+  top: 13%;
+}
+
+.orbit-label-friends {
+  right: 3%;
   top: 25%;
 }
 
-.orbit-label-inner {
-  bottom: 20%;
+.orbit-label-society {
+  left: 1%;
+  top: 43%;
+}
+
+.orbit-label-social {
   right: 1%;
+  top: 51%;
+}
+
+.orbit-label-work {
+  bottom: 24%;
+  left: 9%;
+}
+
+.orbit-label-money {
+  bottom: 16%;
+  right: 8%;
+}
+
+.orbit-label-culture {
+  bottom: 2%;
+  left: 40%;
 }
 
 .orbit-core {
@@ -340,7 +373,7 @@ button.motion-button:active:not(:disabled) {
     0 20px 45px rgb(255 79 36 / 18%),
     inset 0 1px rgb(255 255 255 / 30%);
   display: flex;
-  inset: 39%;
+  inset: 41%;
   justify-content: center;
   position: absolute;
   z-index: 2;
@@ -375,8 +408,9 @@ button.motion-button:active:not(:disabled) {
 
 @media (max-width: 520px) {
   .orbit-label {
-    font-size: 0.5rem;
-    padding: 0.42rem 0.58rem;
+    font-size: 0.44rem;
+    gap: 0.34rem;
+    padding: 0.36rem 0.48rem;
   }
 }
 
@@ -521,9 +555,7 @@ button.motion-button:active:not(:disabled) {
     transform: none;
   }
 
-  .orbit-layer-outer,
-  .orbit-layer-middle,
-  .orbit-layer-inner,
+  .orbit-layer,
   .orbit-dash,
   .orbit-signal,
   .orbit-node-glow,
