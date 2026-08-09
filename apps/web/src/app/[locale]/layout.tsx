@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Instrument_Serif } from "next/font/google";
+import { DM_Sans, Newsreader } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
@@ -13,12 +13,12 @@ const dmSans = DM_Sans({
   variable: "--font-dm-sans",
 });
 
-const instrumentSerif = Instrument_Serif({
+const newsreader = Newsreader({
+  axes: ["opsz"],
   display: "swap",
   style: ["normal", "italic"],
   subsets: ["latin"],
-  variable: "--font-instrument-serif",
-  weight: "400",
+  variable: "--font-newsreader",
 });
 
 export function generateStaticParams() {
@@ -46,10 +46,7 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   return (
-    <html
-      className={`${dmSans.variable} ${instrumentSerif.variable}`}
-      lang={locale}
-    >
+    <html className={`${dmSans.variable} ${newsreader.variable}`} lang={locale}>
       <body className="bg-paper font-sans text-ink antialiased">
         <NextIntlClientProvider messages={await getMessages()}>
           {children}

@@ -7,12 +7,16 @@ export function LandingClose() {
       <p className={`${eyebrowBaseClassName} motion-reveal`}>
         {t("closeEyebrow")}
       </p>
-      <h2 className="motion-reveal m-0 max-w-[17ch] text-[clamp(2.8rem,5vw,5.8rem)] leading-[0.95] tracking-[-0.065em]">
-        {t("parents")}
-        <br />
-        {t("success")}
-        <br />
-        <em className="font-serif font-normal">{t("feel")}</em>
+      <h2 className="motion-reveal m-0 text-[clamp(2.8rem,5vw,5.8rem)] leading-[0.93] font-bold tracking-[-0.055em]">
+        <span className="block min-[960px]:whitespace-nowrap">
+          {t("parents")}
+        </span>
+        <span className="block min-[960px]:whitespace-nowrap">
+          {t("success")}
+        </span>
+        <em className="block font-serif font-medium tracking-[-0.035em] min-[960px]:whitespace-nowrap">
+          {t("feel")}
+        </em>
       </h2>
       <div className="motion-reveal mt-12">
         <Link
