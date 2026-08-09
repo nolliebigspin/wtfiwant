@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { BrandLink } from "@/components/ui/brand-link";
-import { horizontalHeaderClassName } from "@/lib/styles";
+import { compactHorizontalHeaderClassName } from "@/lib/styles";
 
 export function JourneyShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen">
-      <header className={`${horizontalHeaderClassName} min-h-16`}>
+      <header className={compactHorizontalHeaderClassName}>
         <BrandLink />
       </header>
       {children}

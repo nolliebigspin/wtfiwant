@@ -3,7 +3,7 @@ import {
   tradeoffPairs,
   tradeoffScaleLabels,
 } from "@wtfiwant/shared";
-import { questionCardClassName } from "@/lib/styles";
+import { tradeoffCardClassName } from "@/lib/styles";
 import type { AnswerInputProps } from "./question-input.types";
 
 export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
@@ -30,7 +30,7 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
   return (
     <div className="space-y-6">
       {tradeoffPairs.map(([left, right], index) => (
-        <fieldset className={`${questionCardClassName} p-6`} key={left}>
+        <fieldset className={tradeoffCardClassName} key={left}>
           <legend className="sr-only">
             {left} versus {right}
           </legend>
@@ -40,7 +40,7 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
             <span className="text-right">{right}</span>
           </div>
           <input
-            className="w-full accent-[var(--accent)]"
+            className="w-full accent-accent"
             type="range"
             min="-2"
             max="2"

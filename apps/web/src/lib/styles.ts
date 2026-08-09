@@ -7,10 +7,12 @@ export const darkEyebrowClassName = `${eyebrowBaseClassName} text-accent`;
 
 export const lightEyebrowClassName = `${eyebrowBaseClassName} text-acid`;
 
-export const primaryButtonClassName =
-  "inline-flex min-h-[3.2rem] cursor-pointer items-center justify-center gap-8 rounded-full border-0 bg-ink px-[1.4rem] py-[0.85rem] font-extrabold text-white no-underline transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-accent-ink active:translate-y-0 disabled:cursor-wait disabled:opacity-55 disabled:hover:translate-y-0";
+const primaryButtonBaseClassName =
+  "inline-flex cursor-pointer items-center justify-center gap-8 rounded-full border-0 bg-ink font-extrabold text-white no-underline transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-accent-ink active:translate-y-0 disabled:cursor-wait disabled:opacity-55 disabled:hover:translate-y-0";
 
-export const largePrimaryButtonClassName = `${primaryButtonClassName} min-h-16 px-[1.8rem] py-4`;
+export const primaryButtonClassName = `${primaryButtonBaseClassName} min-h-[3.2rem] px-[1.4rem] py-[0.85rem]`;
+
+export const largePrimaryButtonClassName = `${primaryButtonBaseClassName} min-h-16 px-[1.8rem] py-4`;
 
 export const secondaryButtonClassName =
   "cursor-pointer border-0 bg-transparent p-4 font-bold text-ink transition-colors hover:text-accent-ink disabled:cursor-not-allowed disabled:opacity-25";
@@ -18,8 +20,12 @@ export const secondaryButtonClassName =
 export const textButtonClassName =
   "cursor-pointer border-0 bg-transparent px-0 py-2 font-extrabold text-accent-ink underline-offset-4 hover:underline";
 
-export const horizontalHeaderClassName =
-  "flex min-h-20 items-center justify-between border-b border-ink/15 px-[clamp(1.2rem,4vw,4.5rem)]";
+const horizontalHeaderBaseClassName =
+  "flex items-center justify-between border-b border-ink/15 px-[clamp(1.2rem,4vw,4.5rem)]";
+
+export const horizontalHeaderClassName = `${horizontalHeaderBaseClassName} min-h-20`;
+
+export const compactHorizontalHeaderClassName = `${horizontalHeaderBaseClassName} min-h-16`;
 
 export const resultSectionClassName =
   "px-[clamp(1.2rem,9vw,9rem)] py-[clamp(5rem,9vw,9rem)]";
@@ -42,5 +48,9 @@ export const resultCardCopyClassName =
 export const fieldControlClassName =
   "w-full rounded-[0.8rem] border border-ink/18 bg-white/35 p-4 outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10";
 
-export const questionCardClassName =
-  "rounded-[1.4rem] border border-ink/16 bg-white/25 p-[clamp(1rem,3vw,2rem)]";
+const questionCardBaseClassName =
+  "rounded-[1.4rem] border border-ink/16 bg-white/25";
+
+export const questionCardClassName = `${questionCardBaseClassName} p-[clamp(1rem,3vw,2rem)]`;
+
+export const tradeoffCardClassName = `${questionCardBaseClassName} p-6`;
