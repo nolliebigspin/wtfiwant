@@ -1,8 +1,9 @@
+import { defaultLocale, locales } from "@wtfiwant/shared";
 import { defineRouting } from "next-intl/routing";
 
 export const routing = defineRouting({
-  locales: ["en", "de"],
-  defaultLocale: "en",
+  locales,
+  defaultLocale,
   localePrefix: "always",
 });
 
