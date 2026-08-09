@@ -178,6 +178,11 @@ describe("results experience", () => {
     expect(
       await screen.findByRole("heading", { name: "Your Compass" }),
     ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: /direction 1/i })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
 
     fireEvent.click(screen.getAllByText("Why do you think this?")[0]);
     expect(

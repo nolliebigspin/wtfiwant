@@ -5,11 +5,11 @@ import { horizontalHeaderClassName } from "@/lib/styles";
 export function LandingNav() {
   const t = useTranslations("Landing");
   return (
-    <nav className={horizontalHeaderClassName}>
+    <nav className={`${horizontalHeaderClassName} motion-header-enter`}>
       <BrandLink />
       <div className="flex items-center gap-4 sm:gap-6">
         <a
-          className="text-xs font-extrabold tracking-[0.12em] text-muted uppercase no-underline transition-colors hover:text-ink"
+          className="text-xs font-extrabold tracking-[0.12em] text-muted uppercase no-underline transition-[color,transform] duration-150 hover:-translate-y-px hover:text-ink"
           href="#what-this-is"
         >
           {t("nav")}

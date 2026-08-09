@@ -2,7 +2,7 @@ import { eyebrowClassName, primaryButtonClassName } from "@/lib/styles";
 import { ResultShell } from "./result-shell";
 
 const stateClassName =
-  "grid min-h-[calc(100vh-4rem)] place-content-center justify-items-start p-8 [&_h1]:mb-4 [&_h1]:max-w-[13ch] [&_h1]:text-[clamp(3rem,7vw,7rem)] [&_h1]:leading-[0.9] [&_h1]:tracking-[-0.075em] [&>p]:max-w-[38rem] [&>p]:leading-relaxed [&>p]:text-muted";
+  "motion-page-enter grid min-h-[calc(100vh-4rem)] place-content-center justify-items-start p-8 [&_h1]:mb-4 [&_h1]:max-w-[13ch] [&_h1]:text-[clamp(3rem,7vw,7rem)] [&_h1]:leading-[0.9] [&_h1]:tracking-[-0.075em] [&>p]:max-w-[38rem] [&>p]:leading-relaxed [&>p]:text-muted";
 
 export function ResultError({ message }: { message: string }) {
   const t = useTranslations("Results");

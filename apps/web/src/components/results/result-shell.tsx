@@ -9,7 +9,7 @@ export function ResultShell({ children }: { children: ReactNode }) {
   return (
     <div>
       <header
-        className={`${compactHorizontalHeaderClassName} sticky top-0 z-20 bg-paper/90 backdrop-blur-xl`}
+        className={`${compactHorizontalHeaderClassName} motion-header-enter sticky top-0 z-20 bg-paper/90 backdrop-blur-xl`}
       >
         <BrandLink />
         <div className="flex items-center gap-4 sm:gap-6">

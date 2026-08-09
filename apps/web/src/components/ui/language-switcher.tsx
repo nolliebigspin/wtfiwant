@@ -11,10 +11,10 @@ export function LanguageSwitcher() {
   const router = useRouter();
 
   return (
-    <span className="relative inline-flex items-center">
+    <span className="group relative inline-flex items-center">
       <select
         aria-label={t("label")}
-        className="cursor-pointer appearance-none rounded-full border border-ink/20 bg-transparent py-2 pr-8 pl-3 text-[0.65rem] font-black tracking-[0.12em] text-ink uppercase outline-none transition-colors hover:border-ink focus:border-ink focus:ring-2 focus:ring-accent/25"
+        className="cursor-pointer appearance-none rounded-full border border-ink/20 bg-transparent py-2 pr-8 pl-3 text-[0.65rem] font-black tracking-[0.12em] text-ink uppercase outline-none transition-[border-color,background-color,box-shadow] duration-200 hover:border-ink hover:bg-white/25 focus:border-ink focus:bg-white/35 focus:ring-2 focus:ring-accent/25"
         value={locale}
         onChange={(event) =>
           router.replace(pathname, {
@@ -31,7 +31,7 @@ export function LanguageSwitcher() {
       </select>
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute right-3 size-3"
+        className="pointer-events-none absolute right-3 size-3 transition-transform duration-150 ease-out group-hover:translate-y-px"
         viewBox="0 0 12 12"
       >
         <path

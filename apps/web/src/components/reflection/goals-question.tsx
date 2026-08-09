@@ -34,7 +34,7 @@ export function GoalsQuestion({ value, onChange, locale }: AnswerInputProps) {
     });
 
   return (
-    <div className="space-y-5">
+    <div className="motion-list space-y-5">
       {goals.map((goal, index) => (
         <section className={questionCardClassName} key={`goal-${index + 1}`}>
           <div className="flex items-start justify-between">

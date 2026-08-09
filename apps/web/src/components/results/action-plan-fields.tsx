@@ -60,7 +60,7 @@ function PlanField({
   children: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[3rem_11rem_1fr] items-start gap-4 border-t border-ink/18 py-8 max-[800px]:grid-cols-[2rem_1fr] max-[800px]:[&>input]:col-span-full max-[800px]:[&>textarea]:col-span-full">
+    <div className="motion-reveal grid grid-cols-[3rem_11rem_1fr] items-start gap-4 border-t border-ink/18 py-8 max-[800px]:grid-cols-[2rem_1fr] max-[800px]:[&>input]:col-span-full max-[800px]:[&>textarea]:col-span-full">
       <span className="text-[0.7rem] font-black text-accent-ink">{number}</span>
       <span>
         <strong className="block text-xl">{label}</strong>

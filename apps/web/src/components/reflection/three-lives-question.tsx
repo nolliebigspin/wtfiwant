@@ -42,7 +42,7 @@ export function ThreeLivesQuestion({
     });
 
   return (
-    <div className="space-y-5">
+    <div className="motion-list space-y-5">
       {threeLives.map((life, index) => (
         <section className={questionCardClassName} key={life.id}>
           <p className={eyebrowClassName}>

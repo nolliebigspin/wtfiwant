@@ -48,7 +48,7 @@ export function CurrentQuestion({
   const localizedChapters = getLocalizedChapters(locale);
 
   return (
-    <section className="animate-[enter_0.35s_ease-out]" key={question.id}>
+    <section className="motion-question-enter" key={question.id}>
       <p className={eyebrowClassName}>
         {localizedChapters[chapterIndex].label} · {questionIndex + 1} {t("of")}{" "}
         {assessmentQuestions.length}
@@ -82,10 +82,12 @@ export function CurrentQuestion({
         </button>
         <div className="flex items-center gap-4">
           <span
-            className="text-[0.7rem] font-extrabold tracking-[0.12em] text-[#557033] uppercase"
+            className="min-w-12 text-right text-[0.7rem] font-extrabold tracking-[0.12em] text-[#557033] uppercase"
             aria-live="polite"
           >
-            {saved ? t("saved") : ""}
+            {saved ? (
+              <span className="motion-feedback">{t("saved")}</span>
+            ) : null}
           </span>
           <button
             className={primaryButtonClassName}

@@ -11,7 +11,7 @@ export function FormError({
 
   return (
     <p
-      className="mt-4 text-sm font-bold text-[#a22d19]"
+      className="motion-feedback mt-4 text-sm font-bold text-[#a22d19]"
       role={announce ? "alert" : undefined}
     >
       {children}

@@ -7,7 +7,7 @@ export function LandingHero() {
   const t = useTranslations("Landing");
   return (
     <section className="grid min-h-[calc(100vh-5rem)] grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)] items-center gap-16 px-[clamp(1.2rem,7vw,8rem)] py-[clamp(4rem,8vw,8rem)] max-[800px]:min-h-auto max-[800px]:grid-cols-1">
-      <div>
+      <div className="motion-hero-copy">
         <p className={eyebrowClassName}>{t("eyebrow")}</p>
         <h1 className="m-0 max-w-[12ch] text-[clamp(3.6rem,7.4vw,8.5rem)] leading-[0.85] font-black tracking-[-0.075em]">
           {t("titleBefore")}
@@ -29,7 +29,7 @@ export function LandingHero() {
         </div>
       </div>
       <div
-        className="relative aspect-square w-full max-w-[34rem] justify-self-center max-[800px]:max-w-[23rem]"
+        className="motion-orbit-enter relative aspect-square w-full max-w-[34rem] justify-self-center max-[800px]:max-w-[23rem]"
         aria-hidden="true"
       >
         <div className="absolute inset-0 grid animate-[slow-spin_38s_linear_infinite] place-items-center rounded-full border border-ink/30">

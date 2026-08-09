@@ -11,7 +11,7 @@ export function ResumeLink() {
   if (!id) return null;
   return (
     <Link
-      className="text-[0.8rem] font-extrabold no-underline hover:underline hover:underline-offset-4"
+      className="motion-feedback inline-flex items-center gap-1 text-[0.8rem] font-extrabold no-underline transition-[color,transform] duration-150 hover:translate-x-0.5 hover:text-accent-ink hover:underline hover:underline-offset-4"
       href={`/reflection/${id}`}
     >
       {t("resume")} <span className="text-accent-ink">→</span>

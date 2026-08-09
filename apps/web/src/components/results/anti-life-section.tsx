@@ -23,10 +23,10 @@ export function AntiLifeSection({
         title={t("antiTitle")}
         titleId="anti-title"
       />
-      <blockquote className="my-16 max-w-[52rem] font-[Georgia,serif] text-[clamp(1.7rem,3.5vw,3.8rem)] leading-tight">
+      <blockquote className="motion-reveal my-16 max-w-[52rem] font-[Georgia,serif] text-[clamp(1.7rem,3.5vw,3.8rem)] leading-tight">
         {antiLife.summary}
       </blockquote>
-      <div className="flex flex-wrap gap-3">
+      <div className="motion-reveal flex flex-wrap gap-3">
         {antiLife.themes.map((theme) => (
           <span
             className="rounded-full border border-ink px-4 py-2.5 text-[0.7rem] font-extrabold"

@@ -6,7 +6,7 @@ import { horizontalHeaderClassName } from "@/lib/styles";
 export default function CommitmentPage() {
   return (
     <main className="min-h-screen pb-16">
-      <header className={horizontalHeaderClassName}>
+      <header className={`${horizontalHeaderClassName} motion-header-enter`}>
         <BrandLink />
         <LanguageSwitcher />
       </header>

@@ -6,7 +6,9 @@ import { compactHorizontalHeaderClassName } from "@/lib/styles";
 export function JourneyShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen">
-      <header className={compactHorizontalHeaderClassName}>
+      <header
+        className={`${compactHorizontalHeaderClassName} motion-header-enter`}
+      >
         <BrandLink />
         <LanguageSwitcher />
       </header>

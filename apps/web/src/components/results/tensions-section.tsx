@@ -30,7 +30,7 @@ export function TensionsSection({
       <div className="space-y-5">
         {tensions.map((tension) => (
           <article
-            className="rounded-[1.2rem] border border-white/18 p-[clamp(1.4rem,4vw,3rem)]"
+            className="motion-reveal rounded-[1.2rem] border border-white/18 p-[clamp(1.4rem,4vw,3rem)]"
             key={tension.id}
           >
             <h3 className="m-0 grid grid-cols-[1fr_auto_1fr] gap-4 text-[clamp(2rem,5vw,5rem)] tracking-[-0.065em] max-[800px]:grid-cols-1">

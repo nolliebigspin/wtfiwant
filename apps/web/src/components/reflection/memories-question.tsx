@@ -45,7 +45,7 @@ export function MemoriesQuestion({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="motion-list space-y-5">
       {memories.map((memory, index) => (
         <section className={questionCardClassName} key={`memory-${index + 1}`}>
           <p className={eyebrowClassName}>

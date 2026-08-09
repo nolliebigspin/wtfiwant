@@ -18,7 +18,7 @@ export function SectionHeading({
 }: SectionHeadingProps) {
   return (
     <div
-      className={`mb-12 max-w-3xl [&>p:last-child]:leading-relaxed ${
+      className={`motion-reveal mb-12 max-w-3xl [&>p:last-child]:leading-relaxed ${
         light ? "[&>p:last-child]:text-white/55" : "[&>p:last-child]:text-muted"
       }`}
     >

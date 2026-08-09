@@ -19,9 +19,10 @@ export function ChapterProgress({
       {chapters.map((chapter, index) => (
         <span
           key={chapter.id}
-          className={`text-[0.55rem] font-black tracking-[0.11em] whitespace-nowrap ${
+          aria-current={index === activeIndex ? "step" : undefined}
+          className={`transition-[color,transform] duration-300 ease-out text-[0.55rem] font-black tracking-[0.11em] whitespace-nowrap ${
             index === activeIndex
-              ? "text-accent-ink"
+              ? "motion-feedback text-accent-ink"
               : index < activeIndex
                 ? "text-ink"
                 : "text-ink/30"

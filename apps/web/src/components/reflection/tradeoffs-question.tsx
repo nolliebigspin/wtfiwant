@@ -38,7 +38,7 @@ export function TradeoffsQuestion({
     });
 
   return (
-    <div className="space-y-6">
+    <div className="motion-list space-y-6">
       {pairs.map(([left, right], index) => (
         <fieldset className={tradeoffCardClassName} key={left}>
           <legend className="sr-only">{t("versus", { left, right })}</legend>
@@ -48,7 +48,7 @@ export function TradeoffsQuestion({
             <span className="text-right">{right}</span>
           </div>
           <input
-            className="w-full accent-accent"
+            className="motion-range w-full accent-accent"
             type="range"
             min="-2"
             max="2"

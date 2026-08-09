@@ -7,7 +7,7 @@ export function BrandLink({
 }: BrandLinkProps) {
   return (
     <Link className={className} href="/">
-      wtfiwant<span className="text-accent-ink">.</span>
+      wtfiwant<span className="motion-brand-dot text-accent-ink">.</span>
     </Link>
   );
 }

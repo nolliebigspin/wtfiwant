@@ -26,7 +26,15 @@ export function ReflectionJourney({
   if (journey.loading) {
     return (
       <JourneyShell>
-        <p className="pt-[30vh] text-center">{t("Reflection.restoring")}</p>
+        <p className="motion-page-enter pt-[30vh] text-center">
+          <span
+            className="mr-3 inline-block animate-[pulse-mark_1.3s_infinite_alternate] text-accent"
+            aria-hidden="true"
+          >
+            ✦
+          </span>
+          {t("Reflection.restoring")}
+        </p>
       </JourneyShell>
     );
   }
@@ -34,7 +42,7 @@ export function ReflectionJourney({
   if (journey.error && !journey.question) {
     return (
       <JourneyShell>
-        <p className="mt-4 px-8 text-sm font-bold text-[#a22d19]">
+        <p className="motion-feedback mt-4 px-8 text-sm font-bold text-[#a22d19]">
           {journey.error}
         </p>
       </JourneyShell>

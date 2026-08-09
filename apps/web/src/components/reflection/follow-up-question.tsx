@@ -29,7 +29,7 @@ export function FollowUpQuestion({
 }: FollowUpQuestionProps) {
   const t = useTranslations("Reflection");
   return (
-    <section className="animate-[enter_0.35s_ease-out]">
+    <section className="motion-question-enter">
       <p className={eyebrowClassName}>{t("followUpEyebrow")}</p>
       <h1 className="mb-4 max-w-[18ch] text-[clamp(2.5rem,5vw,5rem)] leading-[0.95] tracking-[-0.07em]">
         {question}

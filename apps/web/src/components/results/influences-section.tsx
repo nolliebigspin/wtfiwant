@@ -23,7 +23,7 @@ export function InfluencesSection({
       />
       {influences.map((influence) => (
         <article
-          className="max-w-[50rem] border-l-[3px] border-accent pl-8 text-xl leading-normal"
+          className="motion-reveal motion-reveal-left max-w-[50rem] border-l-[3px] border-accent pl-8 text-xl leading-normal"
           key={influence.observation}
         >
           <p>{influence.observation}</p>

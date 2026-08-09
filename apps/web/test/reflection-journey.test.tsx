@@ -79,6 +79,7 @@ describe("reflection journey", () => {
         name: "Was beansprucht gerade den Großteil deiner Zeit und Energie?",
       }),
     ).toBeTruthy();
+    expect(document.querySelector('[aria-current="step"]')).toBeTruthy();
     await userEvent.click(screen.getByLabelText("Arbeit"));
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
 

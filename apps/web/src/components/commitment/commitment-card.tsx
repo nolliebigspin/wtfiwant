@@ -5,7 +5,7 @@ import { eyebrowClassName } from "@/lib/styles";
 export function CommitmentCard() {
   const t = useTranslations("Commitment");
   return (
-    <section className="mx-auto my-[5vh] max-w-[53rem]">
+    <section className="motion-page-enter mx-auto my-[5vh] max-w-[53rem]">
       <p className={eyebrowClassName}>{t("eyebrow")}</p>
       <h1 className="m-0 text-[clamp(3.5rem,8vw,7rem)] leading-[0.9] tracking-[-0.08em]">
         {t("title")}
@@ -21,7 +21,7 @@ export function CommitmentCard() {
         <StartReflectionButton />
         <Link href="/">{t("later")}</Link>
       </div>
-      <aside className="mt-12 flex gap-8 rounded-2xl border border-ink/15 p-5">
+      <aside className="motion-reveal mt-12 flex gap-8 rounded-2xl border border-ink/15 p-5">
         <span className="text-[0.65rem] font-black tracking-[0.13em] text-accent-ink">
           {t("private")}
         </span>
@@ -35,7 +35,7 @@ export function CommitmentCard() {
 function CommitmentChecklist() {
   const t = useTranslations("Commitment");
   return (
-    <ul className="my-12 grid list-none grid-cols-3 p-0 max-[800px]:grid-cols-1">
+    <ul className="motion-list my-12 grid list-none grid-cols-3 p-0 max-[800px]:grid-cols-1">
       <li className="border-t border-ink/20 py-4 pr-3 font-bold">
         <span className="mb-8 block text-[0.65rem] text-accent-ink max-[800px]:mr-4 max-[800px]:mb-0 max-[800px]:inline">
           01

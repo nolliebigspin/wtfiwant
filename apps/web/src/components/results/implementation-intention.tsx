@@ -14,7 +14,7 @@ export function ImplementationIntention({
   const t = useTranslations("Results");
   const obstacles = t.raw("obstacles") as string[];
   return (
-    <div className="mt-12 rounded-[1.3rem] border border-ink/20 p-[clamp(1.2rem,4vw,3rem)]">
+    <div className="motion-reveal motion-reveal-scale mt-12 rounded-[1.3rem] border border-ink/20 p-[clamp(1.2rem,4vw,3rem)]">
       <p className={eyebrowClassName}>{t("motivation")}</p>
       <label>
         <span className="mb-3 block font-extrabold">
@@ -43,7 +43,7 @@ export function ImplementationIntention({
             placeholder={t("ifPlaceholder")}
           />
         </label>
-        <div className="text-3xl text-accent max-[800px]:justify-self-center max-[800px]:rotate-90">
+        <div className="text-3xl text-accent transition-transform duration-300 max-[800px]:justify-self-center max-[800px]:rotate-90">
           →
         </div>
         <label>

@@ -47,20 +47,20 @@ export function EvidenceDrawer({
   const t = useTranslations("Results");
   const locale = useLocale() as Locale;
   return (
-    <details className="mt-8">
+    <details className="motion-disclosure mt-8">
       <summary
         className={`cursor-pointer text-xs font-black ${dark ? "text-acid" : "text-accent-ink"}`}
       >
         {t("evidenceToggle")}
       </summary>
       <div
-        className={`mt-4 border-l-2 p-4 ${dark ? "border-acid" : "border-accent"}`}
+        className={`motion-details-panel mt-4 border-l-2 p-4 ${dark ? "border-acid" : "border-accent"}`}
       >
         <p className="text-[0.58rem] font-black tracking-[0.13em] uppercase">
           {t("evidenceTitle")}
         </p>
         {ids.map((id) => (
-          <figure className="my-4" key={id}>
+          <figure className="motion-feedback my-4" key={id}>
             <blockquote className="m-0 whitespace-pre-wrap font-[Georgia,serif] text-base">
               {formatAnswer(
                 answers[id],

@@ -14,6 +14,16 @@ html {
   scroll-behavior: smooth;
 }
 
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 240ms;
+  --motion-slow: 520ms;
+  --motion-question: 360ms;
+  --motion-orbit: 700ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -40,6 +50,71 @@ a {
     opacity: 0;
     transform: translateY(12px);
   }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes enter-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes enter-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.965);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes header-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes feedback-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes details-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse-mark {
@@ -48,13 +123,186 @@ a {
   }
 }
 
+.motion-header-enter {
+  animation: header-enter var(--motion-slow) var(--motion-ease-out) both;
+}
+
+.motion-page-enter,
+.motion-question-enter {
+  animation: enter var(--motion-slow) var(--motion-ease-out) both;
+}
+
+.motion-question-enter {
+  animation-duration: var(--motion-question);
+}
+
+.motion-hero-copy > * {
+  animation: enter var(--motion-slow) var(--motion-ease-out) both;
+}
+
+.motion-hero-copy > :nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.motion-hero-copy > :nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.motion-hero-copy > :nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.motion-orbit-enter {
+  animation: enter-scale var(--motion-orbit) var(--motion-ease-out) 120ms both;
+}
+
+.motion-list > :not(button) {
+  animation: enter var(--motion-slow) var(--motion-ease-out) both;
+}
+
+.motion-list > :not(button):nth-child(2) {
+  animation-delay: 55ms;
+}
+
+.motion-list > :not(button):nth-child(3) {
+  animation-delay: 110ms;
+}
+
+.motion-list > :not(button):nth-child(4) {
+  animation-delay: 165ms;
+}
+
+.motion-feedback {
+  animation: feedback-enter var(--motion-base) var(--motion-ease-spring) both;
+}
+
+.motion-brand-dot {
+  display: inline-block;
+  transform-origin: center bottom;
+  transition: transform var(--motion-base) var(--motion-ease-spring);
+}
+
+@media (hover: hover) {
+  a:hover .motion-brand-dot {
+    transform: translateY(-1px) scale(1.35);
+  }
+}
+
+.motion-disclosure > summary {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+  list-style: none;
+  width: fit-content;
+}
+
+.motion-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.motion-disclosure > summary::after {
+  content: "+";
+  display: inline-grid;
+  font-size: 0.9rem;
+  line-height: 1;
+  place-items: center;
+  transition: transform var(--motion-base) var(--motion-ease-spring);
+}
+
+.motion-disclosure[open] > summary::after {
+  transform: rotate(45deg);
+}
+
+.motion-disclosure[open] .motion-details-panel {
+  animation: details-enter var(--motion-base) var(--motion-ease-out) both;
+}
+
+.motion-range {
+  cursor: pointer;
+}
+
+.motion-range::-webkit-slider-thumb {
+  transition:
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease-spring);
+}
+
+.motion-range:focus-visible::-webkit-slider-thumb,
+.motion-range:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgb(255 79 36 / 14%);
+  transform: scale(1.12);
+}
+
+.motion-range::-moz-range-thumb {
+  transition:
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease-spring);
+}
+
+.motion-range:focus-visible::-moz-range-thumb,
+.motion-range:active::-moz-range-thumb {
+  box-shadow: 0 0 0 6px rgb(255 79 36 / 14%);
+  transform: scale(1.12);
+}
+
+/* Long pages reveal content when it reaches the viewport in supporting browsers.
+   The fallback is fully visible, so motion never gates access to content. */
+@supports (animation-timeline: view()) {
+  .motion-reveal {
+    animation: enter linear both;
+    animation-range: entry 0% entry 32%;
+    animation-timeline: view();
+  }
+
+  .motion-reveal-left {
+    animation-name: enter-from-left;
+  }
+
+  .motion-reveal-scale {
+    animation-name: enter-scale;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0.01ms;
+    --motion-base: 0.01ms;
+    --motion-slow: 0.01ms;
+    --motion-question: 0.01ms;
+    --motion-orbit: 0.01ms;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
-    scroll-behavior: auto;
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
     transition-duration: 0.01ms;
+  }
+
+  .motion-hero-copy > *,
+  .motion-orbit-enter,
+  .motion-list > :not(button) {
+    animation-delay: 0ms;
+  }
+
+  [class*="animate-["] {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+
+  [class*="transition"] {
+    transition-delay: 0ms;
+    transition-duration: 0.01ms;
+  }
+
+  .motion-reveal,
+  .motion-reveal-left,
+  .motion-reveal-scale {
+    animation: none;
   }
 }
