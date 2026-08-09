@@ -1,5 +1,6 @@
 import type { ActionPlanInput } from "@wtfiwant/shared";
 import type { ReactNode } from "react";
+import { fieldControlClassName } from "@/lib/styles";
 
 type ActionPlanFieldsProps = {
   form: ActionPlanInput;
@@ -15,6 +16,7 @@ export function ActionPlanFields({ form, onChange }: ActionPlanFieldsProps) {
         hint="A broad direction to explore"
       >
         <input
+          className={fieldControlClassName}
           aria-label="Direction"
           value={form.direction}
           onChange={(event) => onChange("direction", event.target.value)}
@@ -26,6 +28,7 @@ export function ActionPlanFields({ form, onChange }: ActionPlanFieldsProps) {
         hint="A reversible real-world test"
       >
         <textarea
+          className={`${fieldControlClassName} min-h-24 resize-y`}
           aria-label="Experiment"
           value={form.experiment}
           onChange={(event) => onChange("experiment", event.target.value)}
@@ -37,6 +40,7 @@ export function ActionPlanFields({ form, onChange }: ActionPlanFieldsProps) {
         hint="Something small enough for the next 24 hours"
       >
         <textarea
+          className={`${fieldControlClassName} min-h-24 resize-y`}
           aria-label="Now"
           value={form.immediateAction}
           onChange={(event) => onChange("immediateAction", event.target.value)}
@@ -58,11 +62,11 @@ function PlanField({
   children: ReactNode;
 }) {
   return (
-    <div className="plan-field">
-      <span className="plan-number">{number}</span>
-      <span className="plan-label">
-        <strong>{label}</strong>
-        <small>{hint}</small>
+    <div className="grid grid-cols-[3rem_11rem_1fr] items-start gap-4 border-t border-ink/18 py-8 max-[800px]:grid-cols-[2rem_1fr] max-[800px]:[&>input]:col-span-full max-[800px]:[&>textarea]:col-span-full">
+      <span className="text-[0.7rem] font-black text-accent-ink">{number}</span>
+      <span>
+        <strong className="block text-xl">{label}</strong>
+        <small className="mt-1.5 block text-muted">{hint}</small>
       </span>
       {children}
     </div>

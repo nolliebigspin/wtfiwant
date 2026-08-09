@@ -1,4 +1,5 @@
 import type { ActionPlanInput } from "@wtfiwant/shared";
+import { eyebrowClassName, fieldControlClassName } from "@/lib/styles";
 
 const obstacles = [
   "I'm tired after work",
@@ -20,13 +21,16 @@ export function ImplementationIntention({
   onChange,
 }: ImplementationIntentionProps) {
   return (
-    <div className="intention-card">
-      <p className="eyebrow">
+    <div className="mt-12 rounded-[1.3rem] border border-ink/20 p-[clamp(1.2rem,4vw,3rem)]">
+      <p className={eyebrowClassName}>
         MAKE A PLAN FOR THE MOMENT MOTIVATION DISAPPEARS
       </p>
       <label>
-        <span>What's most likely to stop you?</span>
+        <span className="mb-3 block font-extrabold">
+          What's most likely to stop you?
+        </span>
         <select
+          className={fieldControlClassName}
           aria-label="What's most likely to stop you?"
           value={form.obstacle}
           onChange={(event) => onChange("obstacle", event.target.value)}
@@ -37,20 +41,24 @@ export function ImplementationIntention({
           ))}
         </select>
       </label>
-      <div className="if-then">
+      <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-[800px]:grid-cols-1">
         <label>
-          <span>If</span>
+          <span className="mb-3 block font-extrabold">If</span>
           <textarea
+            className={`${fieldControlClassName} min-h-32 resize-y`}
             aria-label="If"
             value={form.ifCondition}
             onChange={(event) => onChange("ifCondition", event.target.value)}
             placeholder="I get home and automatically open Instagram…"
           />
         </label>
-        <div className="then-arrow">→</div>
+        <div className="text-3xl text-accent max-[800px]:justify-self-center max-[800px]:rotate-90">
+          →
+        </div>
         <label>
-          <span>Then</span>
+          <span className="mb-3 block font-extrabold">Then</span>
           <textarea
+            className={`${fieldControlClassName} min-h-32 resize-y`}
             aria-label="Then"
             value={form.thenAction}
             onChange={(event) => onChange("thenAction", event.target.value)}

@@ -8,15 +8,21 @@ type StepChoicesProps = {
 
 export function StepChoices({ steps, selected, onChoose }: StepChoicesProps) {
   return (
-    <div className="step-choices">
+    <div className="mb-16 grid grid-cols-2 gap-4 max-[800px]:grid-cols-1">
       {steps.map((candidate, index) => (
         <button
-          className={selected === index ? "selected" : ""}
+          className={`min-h-32 cursor-pointer rounded-2xl bg-transparent p-5 text-left transition-colors ${
+            selected === index
+              ? "border-2 border-accent bg-accent/5"
+              : "border border-ink/20 hover:border-ink"
+          }`}
           type="button"
           key={candidate.direction}
           onClick={() => onChoose(index)}
         >
-          <span>DIRECTION {index + 1}</span>
+          <span className="mb-6 block text-[0.6rem] font-black tracking-[0.14em] text-accent-ink">
+            DIRECTION {index + 1}
+          </span>
           <strong>{candidate.direction}</strong>
         </button>
       ))}

@@ -31,9 +31,14 @@ export function ChoiceQuestion({
         return (
           <label
             key={option}
-            className={`choice-card ${checked ? "choice-card-selected" : ""}`}
+            className={`flex min-h-16 cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 transition-colors hover:border-ink ${
+              checked
+                ? "border-accent bg-accent/6"
+                : "border-ink/16 bg-transparent"
+            }`}
           >
             <input
+              className="size-[1.1rem] accent-accent"
               type={question.type === "multi_choice" ? "checkbox" : "radio"}
               name={question.id}
               checked={checked}
@@ -53,7 +58,9 @@ export function ChoiceQuestion({
       })}
       {question.type === "multi_choice" && question.allowOther ? (
         <label className="sm:col-span-2">
-          <span className="field-label">{question.otherLabel}</span>
+          <span className="mb-2 block text-xs font-extrabold">
+            {question.otherLabel}
+          </span>
           <input
             className={questionInputClassName}
             value={other}

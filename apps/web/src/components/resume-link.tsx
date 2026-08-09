@@ -7,8 +7,11 @@ export function ResumeLink() {
   useEffect(() => setId(localStorage.getItem("wtfiwant.sessionId")), []);
   if (!id) return null;
   return (
-    <a className="resume-link" href={`/reflection/${id}`}>
-      Continue your saved reflection <span>→</span>
+    <a
+      className="text-[0.8rem] font-extrabold no-underline hover:underline hover:underline-offset-4"
+      href={`/reflection/${id}`}
+    >
+      Continue your saved reflection <span className="text-accent-ink">→</span>
     </a>
   );
 }

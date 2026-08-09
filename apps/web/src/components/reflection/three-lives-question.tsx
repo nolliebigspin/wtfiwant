@@ -4,6 +4,7 @@ import {
   threeLifePrompts,
   threeLives,
 } from "@wtfiwant/shared";
+import { eyebrowClassName, questionCardClassName } from "@/lib/styles";
 import {
   type AnswerInputProps,
   questionInputClassName,
@@ -35,12 +36,14 @@ export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
   return (
     <div className="space-y-5">
       {threeLives.map((life, index) => (
-        <section className="life-card" key={life.id}>
-          <p className="eyebrow">{life.name}</p>
+        <section className={questionCardClassName} key={life.id}>
+          <p className={eyebrowClassName}>{life.name}</p>
           <p className="mb-5 text-ink/65">{life.description}</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
-              <span className="field-label">{threeLifePrompts.attracts}</span>
+              <span className="mb-2 block text-xs font-extrabold">
+                {threeLifePrompts.attracts}
+              </span>
               <textarea
                 className={`${questionInputClassName} min-h-28`}
                 value={lives[index].attracts}
@@ -50,7 +53,9 @@ export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
               />
             </label>
             <label>
-              <span className="field-label">{threeLifePrompts.repels}</span>
+              <span className="mb-2 block text-xs font-extrabold">
+                {threeLifePrompts.repels}
+              </span>
               <textarea
                 className={`${questionInputClassName} min-h-28`}
                 value={lives[index].repels}
@@ -63,8 +68,9 @@ export function ThreeLivesQuestion({ value, onChange }: AnswerInputProps) {
         </section>
       ))}
       <label className="block">
-        <span className="field-label">
-          {customLifePrompt} <span>optional</span>
+        <span className="mb-2 block text-xs font-extrabold">
+          {customLifePrompt}{" "}
+          <span className="font-normal text-muted">optional</span>
         </span>
         <textarea
           className={`${questionInputClassName} min-h-28`}

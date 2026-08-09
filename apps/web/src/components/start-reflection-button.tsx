@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FormError } from "@/components/ui/form-error";
 import { api } from "@/lib/api";
+import { largePrimaryButtonClassName } from "@/lib/styles";
 
 export function StartReflectionButton({
   label = "I have the time",
@@ -14,7 +15,7 @@ export function StartReflectionButton({
   return (
     <div>
       <button
-        className="primary-button large"
+        className={largePrimaryButtonClassName}
         type="button"
         disabled={loading}
         onClick={async () => {
@@ -31,7 +32,9 @@ export function StartReflectionButton({
         }}
       >
         {loading ? "Making space…" : label}
-        <span aria-hidden="true">↗</span>
+        <span className="text-xl" aria-hidden="true">
+          ↗
+        </span>
       </button>
       <FormError announce={false}>
         {error

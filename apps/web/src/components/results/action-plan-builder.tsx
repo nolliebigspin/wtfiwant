@@ -2,6 +2,7 @@
 
 import type { ActionPlanInput, Analysis, SessionView } from "@wtfiwant/shared";
 import { FormError } from "@/components/ui/form-error";
+import { resultSectionClassName } from "@/lib/styles";
 import { ActionPlanFields } from "./action-plan-fields";
 import { ActionPlanSubmit } from "./action-plan-submit";
 import { EvidenceDrawer } from "./evidence-drawer";
@@ -29,7 +30,7 @@ export function ActionPlanBuilder({
   const plan = useActionPlan({ steps, savedPlan, onSave });
 
   return (
-    <section className="action-builder" id={`start-${sessionId}`}>
+    <section className={resultSectionClassName} id={`start-${sessionId}`}>
       <SectionHeading
         eyebrow="DIRECTION → EXPERIMENT → NOW"
         title="Make it real enough to begin."
@@ -45,7 +46,7 @@ export function ActionPlanBuilder({
         onChoose={plan.chooseStep}
       />
       <EvidenceDrawer ids={plan.step.evidenceQuestionIds} answers={answers} />
-      <form onSubmit={plan.save} className="plan-form">
+      <form onSubmit={plan.save} className="max-w-5xl">
         <ActionPlanFields form={plan.form} onChange={plan.update} />
         <ImplementationIntention form={plan.form} onChange={plan.update} />
         <FormError>{plan.error}</FormError>

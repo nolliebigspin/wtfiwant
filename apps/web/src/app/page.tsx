@@ -6,7 +6,7 @@ import { PositioningSection } from "@/components/landing/positioning-section";
 
 export default function Home() {
   return (
-    <main className="landing">
+    <main className="overflow-hidden">
       <LandingNav />
       <LandingHero />
       <PositioningSection />

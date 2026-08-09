@@ -5,6 +5,11 @@ import {
   memoryStoryPrompt,
 } from "@wtfiwant/shared";
 import {
+  eyebrowClassName,
+  questionCardClassName,
+  textButtonClassName,
+} from "@/lib/styles";
+import {
   type AnswerInputProps,
   questionInputClassName,
 } from "./question-input.types";
@@ -33,8 +38,8 @@ export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
   return (
     <div className="space-y-5">
       {memories.map((memory, index) => (
-        <section className="memory-card" key={`memory-${index + 1}`}>
-          <p className="eyebrow">Moment {index + 1}</p>
+        <section className={questionCardClassName} key={`memory-${index + 1}`}>
+          <p className={eyebrowClassName}>Moment {index + 1}</p>
           <textarea
             className={`${questionInputClassName} min-h-32`}
             value={memory.story}
@@ -45,8 +50,9 @@ export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {memoryMetadataFields.map((field) => (
               <label key={field.id}>
-                <span className="field-label">
-                  {field.label} <span>optional</span>
+                <span className="mb-2 block text-xs font-extrabold">
+                  {field.label}{" "}
+                  <span className="font-normal text-muted">optional</span>
                 </span>
                 <input
                   className={questionInputClassName}
@@ -62,7 +68,7 @@ export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
       ))}
       {memories.length < maxMemories ? (
         <button
-          className="text-button"
+          className={textButtonClassName}
           type="button"
           onClick={() =>
             onChange({ memories: [...memories, createBlankMemory()] })

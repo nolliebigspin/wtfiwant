@@ -1,4 +1,12 @@
 import type { Analysis } from "@wtfiwant/shared";
+import {
+  resultCardClassName,
+  resultCardCopyClassName,
+  resultCardGridClassName,
+  resultCardIndexClassName,
+  resultCardTitleClassName,
+  resultSectionClassName,
+} from "@/lib/styles";
 import { EvidenceDrawer } from "./evidence-drawer";
 import type { EvidenceAnswers } from "./results.types";
 import { SectionHeading } from "./section-heading";
@@ -11,21 +19,18 @@ export function DriversSection({
   answers: EvidenceAnswers;
 }) {
   return (
-    <section
-      className="result-section compass-grid"
-      aria-labelledby="drivers-title"
-    >
+    <section className={resultSectionClassName} aria-labelledby="drivers-title">
       <SectionHeading
         eyebrow="SIGNALS, NOT SCORES"
         title="What seems to matter"
         titleId="drivers-title"
       />
-      <div className="driver-grid">
+      <div className={resultCardGridClassName}>
         {drivers.map((driver, index) => (
-          <article className="driver-card" key={driver.id}>
-            <span className="card-number">0{index + 1}</span>
-            <h3>{driver.name}</h3>
-            <p>{driver.explanation}</p>
+          <article className={resultCardClassName} key={driver.id}>
+            <span className={resultCardIndexClassName}>0{index + 1}</span>
+            <h3 className={resultCardTitleClassName}>{driver.name}</h3>
+            <p className={resultCardCopyClassName}>{driver.explanation}</p>
             <EvidenceDrawer
               ids={driver.evidenceQuestionIds}
               answers={answers}

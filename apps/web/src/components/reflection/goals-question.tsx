@@ -1,5 +1,10 @@
 import { type GoalsAnswer, goalPrompts, maxGoals } from "@wtfiwant/shared";
 import {
+  eyebrowClassName,
+  questionCardClassName,
+  textButtonClassName,
+} from "@/lib/styles";
+import {
   type AnswerInputProps,
   questionInputClassName,
 } from "./question-input.types";
@@ -20,12 +25,12 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
   return (
     <div className="space-y-5">
       {goals.map((goal, index) => (
-        <section className="goal-card" key={`goal-${index + 1}`}>
+        <section className={questionCardClassName} key={`goal-${index + 1}`}>
           <div className="flex items-start justify-between">
-            <p className="eyebrow">Possibility {index + 1}</p>
+            <p className={eyebrowClassName}>Possibility {index + 1}</p>
             {index > 0 ? (
               <button
-                className="text-button"
+                className={textButtonClassName}
                 type="button"
                 onClick={() =>
                   onChange({
@@ -38,7 +43,9 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
             ) : null}
           </div>
           <label>
-            <span className="field-label">{goalPrompts.goal}</span>
+            <span className="mb-2 block text-xs font-extrabold">
+              {goalPrompts.goal}
+            </span>
             <input
               className={questionInputClassName}
               value={goal.goal}
@@ -46,7 +53,9 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
             />
           </label>
           <label className="mt-4 block">
-            <span className="field-label">{goalPrompts.why}</span>
+            <span className="mb-2 block text-xs font-extrabold">
+              {goalPrompts.why}
+            </span>
             <textarea
               className={`${questionInputClassName} min-h-28`}
               value={goal.why}
@@ -57,7 +66,7 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
       ))}
       {goals.length < maxGoals ? (
         <button
-          className="text-button"
+          className={textButtonClassName}
           type="button"
           onClick={() => onChange({ goals: [...goals, { goal: "", why: "" }] })}
         >

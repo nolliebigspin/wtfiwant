@@ -3,6 +3,7 @@ import {
   tradeoffPairs,
   tradeoffScaleLabels,
 } from "@wtfiwant/shared";
+import { questionCardClassName } from "@/lib/styles";
 import type { AnswerInputProps } from "./question-input.types";
 
 export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
@@ -29,7 +30,7 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
   return (
     <div className="space-y-6">
       {tradeoffPairs.map(([left, right], index) => (
-        <fieldset className="tradeoff-card" key={left}>
+        <fieldset className={`${questionCardClassName} p-6`} key={left}>
           <legend className="sr-only">
             {left} versus {right}
           </legend>
@@ -65,7 +66,7 @@ export function TradeoffsQuestion({ value, onChange }: AnswerInputProps) {
             <span>{tradeoffScaleLabels.right}</span>
           </div>
           <p
-            className={`mt-3 text-xs font-bold ${touched[index] ? "text-ink/50" : "text-accent"}`}
+            className={`mt-3 text-xs font-bold ${touched[index] ? "text-ink/50" : "text-accent-ink"}`}
           >
             {touched[index]
               ? tradeoffScaleLabels.chosen

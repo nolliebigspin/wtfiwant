@@ -32,14 +32,28 @@ export function EvidenceDrawer({
   dark?: boolean;
 }) {
   return (
-    <details className={`evidence-drawer ${dark ? "dark" : ""}`}>
-      <summary>Why do you think this?</summary>
-      <div>
-        <p className="evidence-label">Evidence from your answers</p>
+    <details className="mt-8">
+      <summary
+        className={`cursor-pointer text-xs font-black ${dark ? "text-acid" : "text-accent-ink"}`}
+      >
+        Why do you think this?
+      </summary>
+      <div
+        className={`mt-4 border-l-2 p-4 ${dark ? "border-acid" : "border-accent"}`}
+      >
+        <p className="text-[0.58rem] font-black tracking-[0.13em] uppercase">
+          Evidence from your answers
+        </p>
         {ids.map((id) => (
-          <figure key={id}>
-            <blockquote>{formatAnswer(answers[id])}</blockquote>
-            <figcaption>{id}</figcaption>
+          <figure className="my-4" key={id}>
+            <blockquote className="m-0 whitespace-pre-wrap font-[Georgia,serif] text-base">
+              {formatAnswer(answers[id])}
+            </blockquote>
+            <figcaption
+              className={`mt-1.5 text-[0.58rem] ${dark ? "text-white/55" : "text-muted"}`}
+            >
+              {id}
+            </figcaption>
           </figure>
         ))}
       </div>

@@ -1,4 +1,12 @@
 import type { Analysis } from "@wtfiwant/shared";
+import {
+  resultCardClassName,
+  resultCardCopyClassName,
+  resultCardGridClassName,
+  resultCardIndexClassName,
+  resultCardTitleClassName,
+  resultSectionClassName,
+} from "@/lib/styles";
 import { EvidenceDrawer } from "./evidence-drawer";
 import type { EvidenceAnswers } from "./results.types";
 import { SectionHeading } from "./section-heading";
@@ -13,20 +21,24 @@ export function GoalsSection({
   if (goals.length === 0) return null;
 
   return (
-    <section className="result-section" aria-labelledby="goals-title">
+    <section className={resultSectionClassName} aria-labelledby="goals-title">
       <SectionHeading
         eyebrow="BENEATH THE STATED GOAL"
         title="What you may be asking the goal to provide"
         titleId="goals-title"
       />
-      <div className="direction-grid">
+      <div className={resultCardGridClassName}>
         {goals.map((goal) => (
-          <article className="direction-card" key={goal.originalGoal}>
-            <span className="direction-index">YOU SAID</span>
-            <h3>{goal.originalGoal}</h3>
-            <small>POSSIBLE UNDERLYING NEED</small>
-            <p>{goal.possibleUnderlyingNeed}</p>
-            <p>{goal.interpretation}</p>
+          <article className={resultCardClassName} key={goal.originalGoal}>
+            <span className={resultCardIndexClassName}>YOU SAID</span>
+            <h3 className={resultCardTitleClassName}>{goal.originalGoal}</h3>
+            <small className="mt-8 block text-[0.6rem] font-black tracking-[0.15em] text-accent-ink">
+              POSSIBLE UNDERLYING NEED
+            </small>
+            <p className={resultCardCopyClassName}>
+              {goal.possibleUnderlyingNeed}
+            </p>
+            <p className={resultCardCopyClassName}>{goal.interpretation}</p>
             <EvidenceDrawer ids={goal.evidenceQuestionIds} answers={answers} />
           </article>
         ))}

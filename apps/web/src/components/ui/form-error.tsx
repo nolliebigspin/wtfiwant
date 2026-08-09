@@ -10,7 +10,10 @@ export function FormError({
   if (!children) return null;
 
   return (
-    <p className="form-error" role={announce ? "alert" : undefined}>
+    <p
+      className="mt-4 text-sm font-bold text-[#a22d19]"
+      role={announce ? "alert" : undefined}
+    >
       {children}
     </p>
   );

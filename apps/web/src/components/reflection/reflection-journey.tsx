@@ -15,7 +15,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
   if (journey.loading) {
     return (
       <JourneyShell>
-        <p className="loading-copy">Restoring your reflection…</p>
+        <p className="pt-[30vh] text-center">Restoring your reflection…</p>
       </JourneyShell>
     );
   }
@@ -23,7 +23,9 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
   if (journey.error && !journey.question) {
     return (
       <JourneyShell>
-        <p className="error-copy">{journey.error}</p>
+        <p className="mt-4 px-8 text-sm font-bold text-[#a22d19]">
+          {journey.error}
+        </p>
       </JourneyShell>
     );
   }
@@ -33,7 +35,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
   return (
     <JourneyShell>
       <ChapterProgress activeIndex={journey.chapterIndex} />
-      <main className="journey-main">
+      <main className="mx-auto min-h-[calc(100vh-12rem)] w-[min(100%-2rem,56rem)] py-[clamp(4rem,8vw,7rem)]">
         {journey.followUp ? (
           <FollowUpQuestion
             question={journey.followUp.question}
@@ -59,7 +61,7 @@ export function ReflectionJourney({ sessionId, client = api }: Props) {
           />
         )}
       </main>
-      <p className="privacy-footer">
+      <p className="m-0 p-6 text-center text-[0.67rem] text-muted">
         Your reflections can be deeply personal. We only use them to generate
         your result.
       </p>
