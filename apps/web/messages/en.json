@@ -140,6 +140,7 @@
     "evidenceToggle": "Why do you think this?",
     "evidenceTitle": "Evidence from your answers",
     "noAnswer": "No saved answer.",
+    "additionalFollowUp": "Additional answer from the reflection",
     "answerKeys": {
       "story": "Story",
       "with": "With",

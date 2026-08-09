@@ -61,7 +61,11 @@ export function ResultsExperience({
   if (safetyMessage) return <SafetyResult message={safetyMessage} />;
   if (!view || !analysis) return <ResultLoading />;
 
-  const evidenceAnswers = buildEvidenceAnswers(view, locale);
+  const evidenceAnswers = buildEvidenceAnswers(
+    view,
+    locale,
+    t("additionalFollowUp"),
+  );
 
   return (
     <ResultShell>

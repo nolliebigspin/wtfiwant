@@ -5,6 +5,7 @@ import {
   threeLives,
   tradeoffPairs,
 } from "./assessment";
+import type { Locale } from "./localization";
 
 const reflectionTextSchema = z.string().trim().min(1).max(10_000);
 
@@ -139,12 +140,15 @@ export function isAnswerComplete(
   );
 }
 
-export function stringifyAnswerForFollowUp(value: unknown): string {
+export function stringifyAnswerForFollowUp(
+  value: unknown,
+  locale: Locale = "en",
+): string {
   if (typeof value === "string") return value;
   const goals = goalsAnswerSchema.safeParse(value);
   if (goals.success) {
     const first = goals.data.goals[0];
-    return `${first.goal}. Why: ${first.why}`;
+    return `${first.goal}. ${locale === "de" ? "Warum" : "Why"}: ${first.why}`;
   }
   return JSON.stringify(value);
 }

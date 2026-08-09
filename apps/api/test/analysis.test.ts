@@ -250,5 +250,10 @@ describe("analysis validation", () => {
     if (translated.status === "complete")
       expect(translated.analysis.locale).toBe("en");
     expect(receivedLocales).toEqual(["de", "de", "de", "en", "en"]);
+    expect(
+      Object.values(receivedAnswers).some((value) =>
+        JSON.stringify(value).includes("Additional answer from the reflection"),
+      ),
+    ).toBe(true);
   });
 });

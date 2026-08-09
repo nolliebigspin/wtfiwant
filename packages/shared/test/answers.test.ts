@@ -2,11 +2,19 @@ import { describe, expect, test } from "bun:test";
 import {
   getQuestionById,
   isAnswerComplete,
+  stringifyAnswerForFollowUp,
   threeLives,
   tradeoffPairs,
 } from "../src";
 
 describe("shared assessment answer contracts", () => {
+  test("serializes structured follow-up context in the requested language", () => {
+    const goals = { goals: [{ goal: "Mehr Zeit", why: "Mehr Freiheit" }] };
+    expect(stringifyAnswerForFollowUp(goals, "de")).toBe(
+      "Mehr Zeit. Warum: Mehr Freiheit",
+    );
+  });
+
   test("trade-offs require an explicit interaction with every competing good", () => {
     const question = getQuestionById("tradeoffs.choices");
     if (!question) throw new Error("Trade-off question is missing");

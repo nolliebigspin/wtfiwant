@@ -10,17 +10,21 @@ import type { EvidenceAnswers } from "./results.types";
 export function buildEvidenceAnswers(
   view: SessionView,
   locale: Locale = "en",
+  additionalFollowUp = "Additional answer from the reflection",
 ): EvidenceAnswers {
   return {
     ...view.answers,
     ...Object.fromEntries(
       view.followUps.flatMap((followUp) =>
-        followUp.userResponse && followUp.locale === locale
+        followUp.userResponse
           ? [
               [
                 `followup:${followUp.questionId}:${followUp.id}`,
                 {
-                  question: followUp.generatedQuestion,
+                  question:
+                    followUp.locale === locale
+                      ? followUp.generatedQuestion
+                      : additionalFollowUp,
                   answer: followUp.userResponse,
                 },
               ],

@@ -126,12 +126,17 @@ export function createApp({
       ...view.answers,
       ...Object.fromEntries(
         view.followUps.flatMap((followUp) =>
-          followUp.userResponse && followUp.locale === input.data.locale
+          followUp.userResponse
             ? [
                 [
                   `followup:${followUp.questionId}:${followUp.id}`,
                   {
-                    question: followUp.generatedQuestion,
+                    question:
+                      followUp.locale === input.data.locale
+                        ? followUp.generatedQuestion
+                        : input.data.locale === "de"
+                          ? "Zusätzliche Antwort aus der Reflexion"
+                          : "Additional answer from the reflection",
                     answer: followUp.userResponse,
                   },
                 ],
@@ -219,7 +224,10 @@ export function createApp({
         409,
       );
     }
-    const userAnswer = stringifyAnswerForFollowUp(savedAnswer);
+    const userAnswer = stringifyAnswerForFollowUp(
+      savedAnswer,
+      input.data.locale,
+    );
     const generatedQuestion = generatedFollowUpSchema.parse(
       await aiProvider.generateFollowUp(
         input.data.questionId,

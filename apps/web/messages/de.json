@@ -140,6 +140,7 @@
     "evidenceToggle": "Warum denkst du das?",
     "evidenceTitle": "Hinweise aus deinen Antworten",
     "noAnswer": "Keine gespeicherte Antwort.",
+    "additionalFollowUp": "Zusätzliche Antwort aus der Reflexion",
     "answerKeys": {
       "story": "Geschichte",
       "with": "Mit",
