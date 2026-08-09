@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
-import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -34,9 +33,6 @@ export default async function LocaleLayout({
     <html lang={locale}>
       <body className="bg-paper font-sans text-ink">
         <NextIntlClientProvider messages={await getMessages()}>
-          <div className="fixed top-5 right-[clamp(1.2rem,4vw,4.5rem)] z-50">
-            <LanguageSwitcher />
-          </div>
           {children}
         </NextIntlClientProvider>
       </body>

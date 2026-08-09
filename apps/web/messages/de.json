@@ -4,6 +4,7 @@
     "description": "Eine private, geführte Reflexion, um Wichtiges von nur wichtig Scheinendem zu trennen."
   },
   "LanguageSwitcher": {
+    "label": "Sprache",
     "switchTo": "Zu {locale} wechseln",
     "en": "Englisch",
     "de": "Deutsch"

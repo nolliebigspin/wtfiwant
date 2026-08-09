@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BrandLink } from "@/components/ui/brand-link";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { compactHorizontalHeaderClassName } from "@/lib/styles";
 
 export function JourneyShell({ children }: { children: ReactNode }) {
@@ -7,6 +8,7 @@ export function JourneyShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen">
       <header className={compactHorizontalHeaderClassName}>
         <BrandLink />
+        <LanguageSwitcher />
       </header>
       {children}
     </div>

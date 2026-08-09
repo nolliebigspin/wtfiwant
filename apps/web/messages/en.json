@@ -4,6 +4,7 @@
     "description": "A private guided reflection for separating what matters from what merely looks important."
   },
   "LanguageSwitcher": {
+    "label": "Language",
     "switchTo": "Switch to {locale}",
     "en": "English",
     "de": "German"
