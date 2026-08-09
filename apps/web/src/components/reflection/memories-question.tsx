@@ -1,5 +1,6 @@
 import {
   type MemoryAnswer,
+  maxMemories,
   memoryMetadataFields,
   memoryStoryPrompt,
 } from "@wtfiwant/shared";
@@ -59,7 +60,7 @@ export function MemoriesQuestion({ value, onChange }: AnswerInputProps) {
           </div>
         </section>
       ))}
-      {memories.length < 3 ? (
+      {memories.length < maxMemories ? (
         <button
           className="text-button"
           type="button"

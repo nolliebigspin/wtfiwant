@@ -1,6 +1,11 @@
 "use client";
 
-import type { ActionPlanInput, Analysis, SessionView } from "@wtfiwant/shared";
+import {
+  type ActionPlanInput,
+  type Analysis,
+  actionPlanInputSchema,
+  type SessionView,
+} from "@wtfiwant/shared";
 import { type FormEvent, useState } from "react";
 
 type UseActionPlanOptions = {
@@ -50,7 +55,7 @@ export function useActionPlan({
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (Object.values(form).some((value) => !value.trim())) {
+    if (!actionPlanInputSchema.safeParse(form).success) {
       setError("Make each part concrete before you start.");
       return;
     }

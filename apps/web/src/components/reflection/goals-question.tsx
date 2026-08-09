@@ -1,4 +1,4 @@
-import { type GoalsAnswer, goalPrompts } from "@wtfiwant/shared";
+import { type GoalsAnswer, goalPrompts, maxGoals } from "@wtfiwant/shared";
 import {
   type AnswerInputProps,
   questionInputClassName,
@@ -55,7 +55,7 @@ export function GoalsQuestion({ value, onChange }: AnswerInputProps) {
           </label>
         </section>
       ))}
-      {goals.length < 3 ? (
+      {goals.length < maxGoals ? (
         <button
           className="text-button"
           type="button"

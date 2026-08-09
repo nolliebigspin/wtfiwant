@@ -8,6 +8,9 @@ import {
 
 const reflectionTextSchema = z.string().trim().min(1).max(10_000);
 
+export const maxMemories = 3;
+export const maxGoals = 3;
+
 export const memoryAnswerSchema = z
   .object({
     memories: z
@@ -23,7 +26,7 @@ export const memoryAnswerSchema = z
           .strict(),
       )
       .min(1)
-      .max(3),
+      .max(maxMemories),
   })
   .strict();
 
@@ -71,7 +74,7 @@ export const goalsAnswerSchema = z
           .strict(),
       )
       .min(1)
-      .max(3),
+      .max(maxGoals),
   })
   .strict();
 
