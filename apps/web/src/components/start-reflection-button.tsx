@@ -33,7 +33,7 @@ export function StartReflectionButton({
         {loading ? "Making space…" : label}
         <span aria-hidden="true">↗</span>
       </button>
-      <FormError>
+      <FormError announce={false}>
         {error
           ? "Couldn't reach the API. Check it is running, then try again."
           : null}
