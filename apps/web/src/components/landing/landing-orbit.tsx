@@ -168,34 +168,13 @@ export function LandingOrbit() {
         />
       </svg>
 
-      <span className="orbit-label orbit-label-family">
-        <small>01</small>
-        {t("family")}
-      </span>
-      <span className="orbit-label orbit-label-friends">
-        <small>02</small>
-        {t("friends")}
-      </span>
-      <span className="orbit-label orbit-label-society">
-        <small>03</small>
-        {t("society")}
-      </span>
-      <span className="orbit-label orbit-label-social">
-        <small>04</small>
-        {t("socialMedia")}
-      </span>
-      <span className="orbit-label orbit-label-work">
-        <small>05</small>
-        {t("work")}
-      </span>
-      <span className="orbit-label orbit-label-money">
-        <small>06</small>
-        {t("money")}
-      </span>
-      <span className="orbit-label orbit-label-culture">
-        <small>07</small>
-        {t("culture")}
-      </span>
+      <span className="orbit-label orbit-label-family">{t("family")}</span>
+      <span className="orbit-label orbit-label-friends">{t("friends")}</span>
+      <span className="orbit-label orbit-label-society">{t("society")}</span>
+      <span className="orbit-label orbit-label-social">{t("socialMedia")}</span>
+      <span className="orbit-label orbit-label-work">{t("work")}</span>
+      <span className="orbit-label orbit-label-money">{t("money")}</span>
+      <span className="orbit-label orbit-label-culture">{t("culture")}</span>
 
       <div className="orbit-core">
         <span className="orbit-core-halo" />

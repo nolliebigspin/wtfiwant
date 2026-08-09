@@ -28,6 +28,7 @@ describe("landing orbit", () => {
     expect(orbit?.textContent).toContain("CULTURE");
     expect(orbit?.textContent).not.toContain("OTHER PEOPLE");
     expect(orbit?.textContent).not.toContain("EXPECTATIONS");
+    expect(orbit?.textContent).not.toMatch(/0[1-7]/);
   });
 
   test("surrounds the person with five rings and a distinctly larger outer ring", async () => {
