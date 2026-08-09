@@ -2,11 +2,12 @@ import { CommitmentCard } from "@/components/commitment/commitment-card";
 import { BrandLink } from "@/components/ui/brand-link";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { horizontalHeaderClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 export default function CommitmentPage() {
   return (
     <main className="min-h-screen pb-16">
-      <header className={`${horizontalHeaderClassName} motion-header-enter`}>
+      <header className={cn(horizontalHeaderClassName, "motion-header-enter")}>
         <BrandLink />
         <LanguageSwitcher />
       </header>

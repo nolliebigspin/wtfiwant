@@ -1,6 +1,7 @@
 import type { Analysis } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import { resultSectionClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 import { EvidenceDrawer } from "./evidence-drawer";
 import type { EvidenceAnswers } from "./results.types";
 import { SectionHeading } from "./section-heading";
@@ -15,7 +16,7 @@ export function AntiLifeSection({
   const t = useTranslations("Results");
   return (
     <section
-      className={`${resultSectionClassName} bg-acid`}
+      className={cn(resultSectionClassName, "bg-acid")}
       aria-labelledby="anti-title"
     >
       <SectionHeading

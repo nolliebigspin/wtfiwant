@@ -1,6 +1,7 @@
 import type { Locale } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import { getLocalizedChapters } from "@/lib/assessment-i18n";
+import { cn } from "@/lib/utils";
 
 export function ChapterProgress({
   activeIndex,
@@ -20,13 +21,14 @@ export function ChapterProgress({
         <span
           key={chapter.id}
           aria-current={index === activeIndex ? "step" : undefined}
-          className={`transition-[color,transform] duration-300 ease-out text-[0.55rem] font-black tracking-[0.11em] whitespace-nowrap ${
+          className={cn(
+            "text-[0.55rem] font-black whitespace-nowrap tracking-[0.11em] transition-[color,transform] duration-300 ease-out",
             index === activeIndex
               ? "motion-feedback text-accent-ink"
               : index < activeIndex
                 ? "text-ink"
-                : "text-ink/30"
-          }`}
+                : "text-ink/30",
+          )}
         >
           {index < activeIndex ? "✓" : chapter.label}
         </span>

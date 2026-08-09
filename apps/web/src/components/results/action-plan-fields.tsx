@@ -2,6 +2,7 @@ import type { ActionPlanInput } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { fieldControlClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 type ActionPlanFieldsProps = {
   form: ActionPlanInput;
@@ -30,7 +31,7 @@ export function ActionPlanFields({ form, onChange }: ActionPlanFieldsProps) {
         hint={t("experimentHint")}
       >
         <textarea
-          className={`${fieldControlClassName} min-h-24 resize-y`}
+          className={cn(fieldControlClassName, "min-h-24 resize-y")}
           aria-label={t("experimentLabel")}
           value={form.experiment}
           onChange={(event) => onChange("experiment", event.target.value)}
@@ -38,7 +39,7 @@ export function ActionPlanFields({ form, onChange }: ActionPlanFieldsProps) {
       </PlanField>
       <PlanField number="03" label={t("nowLabel")} hint={t("nowHint")}>
         <textarea
-          className={`${fieldControlClassName} min-h-24 resize-y`}
+          className={cn(fieldControlClassName, "min-h-24 resize-y")}
           aria-label={t("nowLabel")}
           value={form.immediateAction}
           onChange={(event) => onChange("immediateAction", event.target.value)}

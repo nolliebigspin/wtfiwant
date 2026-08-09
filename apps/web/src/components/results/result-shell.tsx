@@ -3,17 +3,21 @@ import type { ReactNode } from "react";
 import { BrandLink } from "@/components/ui/brand-link";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { compactHorizontalHeaderClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 export function ResultShell({ children }: { children: ReactNode }) {
   const t = useTranslations("Results");
   return (
     <div>
       <header
-        className={`${compactHorizontalHeaderClassName} motion-header-enter sticky top-0 z-20 bg-paper/90 backdrop-blur-xl`}
+        className={cn(
+          compactHorizontalHeaderClassName,
+          "motion-header-enter sticky top-0 z-20 bg-paper/90 backdrop-blur-xl",
+        )}
       >
         <BrandLink />
         <div className="flex items-center gap-4 sm:gap-6">
-          <span className="text-[0.58rem] font-black tracking-[0.15em] text-muted">
+          <span className="text-[0.58rem] font-black tracking-[0.15em] text-muted max-[520px]:hidden">
             {t("header")}
           </span>
           <LanguageSwitcher />

@@ -1,10 +1,11 @@
 import { eyebrowBaseClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 export function StartTransition() {
   const t = useTranslations("Results");
   return (
     <section className="bg-accent px-[clamp(1.2rem,9vw,9rem)] py-[clamp(6rem,12vw,12rem)] text-ink">
-      <p className={`${eyebrowBaseClassName} motion-reveal`}>
+      <p className={cn(eyebrowBaseClassName, "motion-reveal")}>
         {t("transitionEyebrow")}
       </p>
       <h2 className="motion-reveal m-0 text-[clamp(3.5rem,8vw,9rem)] leading-[0.85] tracking-[-0.08em]">

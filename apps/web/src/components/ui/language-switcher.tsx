@@ -3,46 +3,28 @@
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
+import { Select, type SelectOption } from "./select";
 
 export function LanguageSwitcher() {
   const locale = useLocale() as AppLocale;
   const t = useTranslations("LanguageSwitcher");
   const pathname = usePathname();
   const router = useRouter();
+  const options: readonly SelectOption[] = [
+    { value: "en", label: t("en"), icon: "🇬🇧", lang: "en" },
+    { value: "de", label: t("de"), icon: "🇩🇪", lang: "de" },
+  ];
 
   return (
-    <span className="group relative inline-flex items-center">
-      <select
-        aria-label={t("label")}
-        className="cursor-pointer appearance-none rounded-full border border-ink/20 bg-transparent py-2 pr-8 pl-3 text-[0.65rem] font-black tracking-[0.12em] text-ink uppercase outline-none transition-[border-color,background-color,box-shadow] duration-200 hover:border-ink hover:bg-white/25 focus:border-ink focus:bg-white/35 focus:ring-2 focus:ring-accent/25"
-        value={locale}
-        onChange={(event) =>
-          router.replace(pathname, {
-            locale: event.target.value as AppLocale,
-          })
-        }
-      >
-        <option value="en" lang="en">
-          EN
-        </option>
-        <option value="de" lang="de">
-          DE
-        </option>
-      </select>
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 size-3 transition-transform duration-150 ease-out group-hover:translate-y-px"
-        viewBox="0 0 12 12"
-      >
-        <path
-          d="m3 4.5 3 3 3-3"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.5"
-        />
-      </svg>
-    </span>
+    <Select
+      ariaLabel={t("label")}
+      menuAlign="end"
+      onValueChange={(nextLocale) =>
+        router.replace(pathname, { locale: nextLocale as AppLocale })
+      }
+      options={options}
+      value={locale}
+      variant="compact"
+    />
   );
 }

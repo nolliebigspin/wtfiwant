@@ -5,6 +5,7 @@ import {
   type SessionView,
 } from "@wtfiwant/shared";
 import { useLocale, useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import type { EvidenceAnswers } from "./results.types";
 
 export function buildEvidenceAnswers(
@@ -49,12 +50,18 @@ export function EvidenceDrawer({
   return (
     <details className="motion-disclosure mt-8">
       <summary
-        className={`cursor-pointer text-xs font-black ${dark ? "text-acid" : "text-accent-ink"}`}
+        className={cn(
+          "cursor-pointer text-xs font-black",
+          dark ? "text-acid" : "text-accent-ink",
+        )}
       >
         {t("evidenceToggle")}
       </summary>
       <div
-        className={`motion-details-panel mt-4 border-l-2 p-4 ${dark ? "border-acid" : "border-accent"}`}
+        className={cn(
+          "motion-details-panel mt-4 border-l-2 p-4",
+          dark ? "border-acid" : "border-accent",
+        )}
       >
         <p className="text-[0.58rem] font-black tracking-[0.13em] uppercase">
           {t("evidenceTitle")}
@@ -70,7 +77,10 @@ export function EvidenceDrawer({
               )}
             </blockquote>
             <figcaption
-              className={`mt-1.5 text-[0.58rem] ${dark ? "text-white/55" : "text-muted"}`}
+              className={cn(
+                "mt-1.5 text-[0.58rem]",
+                dark ? "text-white/55" : "text-muted",
+              )}
             >
               {id}
             </figcaption>

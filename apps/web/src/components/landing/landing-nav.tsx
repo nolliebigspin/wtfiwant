@@ -1,15 +1,16 @@
 import { BrandLink } from "@/components/ui/brand-link";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { horizontalHeaderClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 export function LandingNav() {
   const t = useTranslations("Landing");
   return (
-    <nav className={`${horizontalHeaderClassName} motion-header-enter`}>
+    <nav className={cn(horizontalHeaderClassName, "motion-header-enter")}>
       <BrandLink />
       <div className="flex items-center gap-4 sm:gap-6">
         <a
-          className="text-xs font-extrabold tracking-[0.12em] text-muted uppercase no-underline transition-[color,transform] duration-150 hover:-translate-y-px hover:text-ink"
+          className="text-xs font-extrabold tracking-[0.12em] text-muted uppercase no-underline transition-[color,transform] duration-150 hover:-translate-y-px hover:text-ink max-[520px]:hidden"
           href="#what-this-is"
         >
           {t("nav")}

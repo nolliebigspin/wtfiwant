@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import {
   type AnswerInputProps,
   questionInputClassName,
@@ -16,7 +17,7 @@ export function LongTextQuestion({
 }: LongTextQuestionProps) {
   return (
     <textarea
-      className={`${questionInputClassName} min-h-44 resize-y`}
+      className={cn(questionInputClassName, "min-h-44 resize-y")}
       value={typeof value === "string" ? value : ""}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}

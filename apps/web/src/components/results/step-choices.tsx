@@ -1,5 +1,6 @@
 import type { Analysis } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 type StepChoicesProps = {
   steps: Analysis["firstSteps"];
@@ -14,11 +15,12 @@ export function StepChoices({ steps, selected, onChoose }: StepChoicesProps) {
       {steps.map((candidate, index) => (
         <button
           aria-pressed={selected === index}
-          className={`motion-button min-h-32 cursor-pointer rounded-2xl bg-transparent p-5 text-left ${
+          className={cn(
+            "motion-button min-h-32 cursor-pointer rounded-2xl bg-transparent p-5 text-left",
             selected === index
               ? "border-2 border-accent bg-accent/5 shadow-[0_10px_24px_rgb(255_79_36_/_0.09)]"
-              : "border border-ink/20 hover:border-ink hover:shadow-[0_10px_24px_rgb(22_23_19_/_0.07)]"
-          }`}
+              : "border border-ink/20 hover:border-ink hover:shadow-[0_10px_24px_rgb(22_23_19_/_0.07)]",
+          )}
           type="button"
           key={candidate.direction}
           onClick={() => onChoose(index)}

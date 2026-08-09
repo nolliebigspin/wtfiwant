@@ -10,6 +10,7 @@ import {
   questionCardClassName,
   textButtonClassName,
 } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 import {
   type AnswerInputProps,
   questionInputClassName,
@@ -70,7 +71,7 @@ export function GoalsQuestion({ value, onChange, locale }: AnswerInputProps) {
               {prompts.why}
             </span>
             <textarea
-              className={`${questionInputClassName} min-h-28`}
+              className={cn(questionInputClassName, "min-h-28")}
               value={goal.why}
               onChange={(event) => update(index, "why", event.target.value)}
             />

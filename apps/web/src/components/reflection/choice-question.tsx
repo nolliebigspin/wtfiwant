@@ -2,6 +2,7 @@ import {
   getLocalizedOptionLabel,
   getLocalizedQuestion,
 } from "@/lib/assessment-i18n";
+import { cn } from "@/lib/utils";
 import {
   type QuestionInputProps,
   questionInputClassName,
@@ -37,11 +38,12 @@ export function ChoiceQuestion({
         return (
           <label
             key={option}
-            className={`flex min-h-16 cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:border-ink active:translate-y-0 ${
+            className={cn(
+              "flex min-h-16 cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:border-ink active:translate-y-0",
               checked
                 ? "border-accent bg-accent/6 shadow-[0_8px_20px_rgb(255_79_36_/_0.08)]"
-                : "border-ink/16 bg-transparent"
-            }`}
+                : "border-ink/16 bg-transparent",
+            )}
           >
             <input
               className="size-[1.1rem] accent-accent"

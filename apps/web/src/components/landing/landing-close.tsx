@@ -1,10 +1,11 @@
 import { eyebrowBaseClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 export function LandingClose() {
   const t = useTranslations("Landing");
   return (
     <section className="bg-accent px-[clamp(1.2rem,7vw,8rem)] py-[clamp(5rem,9vw,9rem)] text-ink">
-      <p className={`${eyebrowBaseClassName} motion-reveal`}>
+      <p className={cn(eyebrowBaseClassName, "motion-reveal")}>
         {t("closeEyebrow")}
       </p>
       <h2 className="motion-reveal m-0 text-[clamp(2.8rem,5vw,5.8rem)] leading-[0.93] font-bold tracking-[-0.055em]">

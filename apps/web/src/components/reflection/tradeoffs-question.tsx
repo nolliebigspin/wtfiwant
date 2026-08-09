@@ -6,6 +6,7 @@ import {
 } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import { tradeoffCardClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 import type { AnswerInputProps } from "./question-input.types";
 
 export function TradeoffsQuestion({
@@ -74,7 +75,10 @@ export function TradeoffsQuestion({
             <span>{labels.right}</span>
           </div>
           <p
-            className={`mt-3 text-xs font-bold ${touched[index] ? "text-ink/50" : "text-accent-ink"}`}
+            className={cn(
+              "mt-3 text-xs font-bold",
+              touched[index] ? "text-ink/50" : "text-accent-ink",
+            )}
           >
             {touched[index] ? labels.chosen : labels.untouched}
           </p>

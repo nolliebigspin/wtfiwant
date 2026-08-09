@@ -189,9 +189,13 @@ describe("results experience", () => {
       (await screen.findAllByText("I chose flexible work.")).length,
     ).toBeGreaterThan(0);
 
-    await userEvent.selectOptions(
-      screen.getByLabelText("What's most likely to stop you?"),
-      "I overthink things",
+    await userEvent.click(
+      screen.getByRole("combobox", {
+        name: "What's most likely to stop you?",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: "I overthink things" }),
     );
     await userEvent.type(
       screen.getByLabelText("If"),

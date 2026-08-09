@@ -4,6 +4,7 @@ import {
   primaryButtonClassName,
   secondaryButtonClassName,
 } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 import { questionInputClassName } from "./question-input.types";
 
 type FollowUpQuestionProps = {
@@ -38,7 +39,7 @@ export function FollowUpQuestion({
         {t("followUpDescription")}
       </p>
       <textarea
-        className={`${questionInputClassName} min-h-48 resize-y`}
+        className={cn(questionInputClassName, "min-h-48 resize-y")}
         value={response}
         aria-label={question}
         onChange={(event) => onResponseChange(event.target.value)}

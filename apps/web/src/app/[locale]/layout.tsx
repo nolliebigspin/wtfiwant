@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
+import { cn } from "@/lib/utils";
 import "../globals.css";
 
 const dmSans = DM_Sans({
@@ -46,7 +47,7 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   return (
-    <html className={`${dmSans.variable} ${newsreader.variable}`} lang={locale}>
+    <html className={cn(dmSans.variable, newsreader.variable)} lang={locale}>
       <body className="bg-paper font-sans text-ink antialiased">
         <NextIntlClientProvider messages={await getMessages()}>
           {children}

@@ -58,8 +58,10 @@ describe("language navigation", () => {
       name: "Sprache",
     });
 
-    expect((language as HTMLSelectElement).value).toBe("de");
-    await userEvent.selectOptions(language, "en");
+    expect(language.textContent).toContain("🇩🇪");
+    expect(language.textContent).toContain("Deutsch");
+    language.focus();
+    await userEvent.keyboard("{ArrowUp}{Enter}");
     expect(replacements).toEqual([
       ["/reflection/session-id", { locale: "en" }],
     ]);

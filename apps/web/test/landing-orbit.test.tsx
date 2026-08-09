@@ -22,7 +22,7 @@ describe("landing orbit", () => {
     expect(orbit?.textContent).toContain("FAMILY");
     expect(orbit?.textContent).toContain("FRIENDS");
     expect(orbit?.textContent).toContain("SOCIETY");
-    expect(orbit?.textContent).toContain("SOCIAL MEDIA");
+    expect(orbit?.textContent).toContain("SOCIALS");
     expect(orbit?.textContent).toContain("WORK");
     expect(orbit?.textContent).toContain("MONEY");
     expect(orbit?.textContent).toContain("CULTURE");

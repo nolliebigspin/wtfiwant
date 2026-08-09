@@ -11,6 +11,7 @@ import {
   questionCardClassName,
   textButtonClassName,
 } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 import {
   type AnswerInputProps,
   questionInputClassName,
@@ -52,7 +53,7 @@ export function MemoriesQuestion({
             {t("moment", { number: index + 1 })}
           </p>
           <textarea
-            className={`${questionInputClassName} min-h-32`}
+            className={cn(questionInputClassName, "min-h-32")}
             value={memory.story}
             aria-label={`${storyPrompt} ${t("moment", { number: index + 1 })}`}
             onChange={(event) => update(index, "story", event.target.value)}

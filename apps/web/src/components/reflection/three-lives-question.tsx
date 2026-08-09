@@ -7,6 +7,7 @@ import {
 } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import { eyebrowClassName, questionCardClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 import {
   type AnswerInputProps,
   questionInputClassName,
@@ -57,7 +58,7 @@ export function ThreeLivesQuestion({
                 {german?.threeLifePrompts.attracts ?? threeLifePrompts.attracts}
               </span>
               <textarea
-                className={`${questionInputClassName} min-h-28`}
+                className={cn(questionInputClassName, "min-h-28")}
                 value={lives[index].attracts}
                 onChange={(event) =>
                   update(life.id, "attracts", event.target.value)
@@ -69,7 +70,7 @@ export function ThreeLivesQuestion({
                 {german?.threeLifePrompts.repels ?? threeLifePrompts.repels}
               </span>
               <textarea
-                className={`${questionInputClassName} min-h-28`}
+                className={cn(questionInputClassName, "min-h-28")}
                 value={lives[index].repels}
                 onChange={(event) =>
                   update(life.id, "repels", event.target.value)
@@ -85,7 +86,7 @@ export function ThreeLivesQuestion({
           <span className="font-normal text-muted">{t("optional")}</span>
         </span>
         <textarea
-          className={`${questionInputClassName} min-h-28`}
+          className={cn(questionInputClassName, "min-h-28")}
           value={record.customLife ?? ""}
           onChange={(event) =>
             onChange({ ...record, lives, customLife: event.target.value })

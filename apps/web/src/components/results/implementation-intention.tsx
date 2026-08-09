@@ -1,6 +1,9 @@
 import type { ActionPlanInput } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
+import { useId } from "react";
+import { Select } from "@/components/ui/select";
 import { eyebrowClassName, fieldControlClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 type ImplementationIntentionProps = {
   form: ActionPlanInput;
@@ -13,30 +16,30 @@ export function ImplementationIntention({
 }: ImplementationIntentionProps) {
   const t = useTranslations("Results");
   const obstacles = t.raw("obstacles") as string[];
+  const obstacleLabelId = useId();
   return (
     <div className="motion-reveal motion-reveal-scale mt-12 rounded-[1.3rem] border border-ink/20 p-[clamp(1.2rem,4vw,3rem)]">
       <p className={eyebrowClassName}>{t("motivation")}</p>
-      <label>
-        <span className="mb-3 block font-extrabold">
+      <div>
+        <span className="mb-3 block font-extrabold" id={obstacleLabelId}>
           {t("obstacleQuestion")}
         </span>
-        <select
-          className={fieldControlClassName}
-          aria-label={t("obstacleQuestion")}
+        <Select
+          ariaLabelledBy={obstacleLabelId}
           value={form.obstacle}
-          onChange={(event) => onChange("obstacle", event.target.value)}
-        >
-          <option value="">{t("chooseObstacle")}</option>
-          {obstacles.map((obstacle) => (
-            <option key={obstacle}>{obstacle}</option>
-          ))}
-        </select>
-      </label>
+          placeholder={t("chooseObstacle")}
+          options={obstacles.map((obstacle) => ({
+            label: obstacle,
+            value: obstacle,
+          }))}
+          onValueChange={(obstacle) => onChange("obstacle", obstacle)}
+        />
+      </div>
       <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-[800px]:grid-cols-1">
         <label>
           <span className="mb-3 block font-extrabold">{t("if")}</span>
           <textarea
-            className={`${fieldControlClassName} min-h-32 resize-y`}
+            className={cn(fieldControlClassName, "min-h-32 resize-y")}
             aria-label={t("if")}
             value={form.ifCondition}
             onChange={(event) => onChange("ifCondition", event.target.value)}
@@ -49,7 +52,7 @@ export function ImplementationIntention({
         <label>
           <span className="mb-3 block font-extrabold">{t("then")}</span>
           <textarea
-            className={`${fieldControlClassName} min-h-32 resize-y`}
+            className={cn(fieldControlClassName, "min-h-32 resize-y")}
             aria-label={t("then")}
             value={form.thenAction}
             onChange={(event) => onChange("thenAction", event.target.value)}

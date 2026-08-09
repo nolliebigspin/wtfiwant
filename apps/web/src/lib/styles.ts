@@ -1,18 +1,26 @@
+import { cn } from "./utils";
+
 export const eyebrowBaseClassName =
   "mb-4 text-[0.68rem] font-black tracking-[0.19em] uppercase";
 
-export const eyebrowClassName = `${eyebrowBaseClassName} text-accent-ink`;
+export const eyebrowClassName = cn(eyebrowBaseClassName, "text-accent-ink");
 
-export const darkEyebrowClassName = `${eyebrowBaseClassName} text-accent`;
+export const darkEyebrowClassName = cn(eyebrowBaseClassName, "text-accent");
 
-export const lightEyebrowClassName = `${eyebrowBaseClassName} text-acid`;
+export const lightEyebrowClassName = cn(eyebrowBaseClassName, "text-acid");
 
 const primaryButtonBaseClassName =
   "motion-button inline-flex cursor-pointer items-center justify-center gap-8 rounded-full border-0 bg-ink font-extrabold text-white no-underline hover:bg-accent-ink hover:shadow-[0_12px_28px_rgb(22_23_19_/_0.14)] disabled:cursor-wait disabled:opacity-55 disabled:hover:shadow-none";
 
-export const primaryButtonClassName = `${primaryButtonBaseClassName} min-h-[3.2rem] px-[1.4rem] py-[0.85rem]`;
+export const primaryButtonClassName = cn(
+  primaryButtonBaseClassName,
+  "min-h-[3.2rem] px-[1.4rem] py-[0.85rem]",
+);
 
-export const largePrimaryButtonClassName = `${primaryButtonBaseClassName} min-h-16 px-[1.8rem] py-4`;
+export const largePrimaryButtonClassName = cn(
+  primaryButtonBaseClassName,
+  "min-h-16 px-[1.8rem] py-4",
+);
 
 export const secondaryButtonClassName =
   "motion-button-quiet cursor-pointer border-0 bg-transparent p-4 font-bold text-ink hover:text-accent-ink disabled:cursor-not-allowed disabled:opacity-25";
@@ -23,9 +31,15 @@ export const textButtonClassName =
 const horizontalHeaderBaseClassName =
   "flex items-center justify-between border-b border-ink/15 px-[clamp(1.2rem,4vw,4.5rem)]";
 
-export const horizontalHeaderClassName = `${horizontalHeaderBaseClassName} min-h-20`;
+export const horizontalHeaderClassName = cn(
+  horizontalHeaderBaseClassName,
+  "min-h-20",
+);
 
-export const compactHorizontalHeaderClassName = `${horizontalHeaderBaseClassName} min-h-16`;
+export const compactHorizontalHeaderClassName = cn(
+  horizontalHeaderBaseClassName,
+  "min-h-16",
+);
 
 export const resultSectionClassName =
   "px-[clamp(1.2rem,9vw,9rem)] py-[clamp(5rem,9vw,9rem)]";
@@ -51,6 +65,9 @@ export const fieldControlClassName =
 const questionCardBaseClassName =
   "motion-page-enter rounded-[1.4rem] border border-ink/16 bg-white/25";
 
-export const questionCardClassName = `${questionCardBaseClassName} p-[clamp(1rem,3vw,2rem)]`;
+export const questionCardClassName = cn(
+  questionCardBaseClassName,
+  "p-[clamp(1rem,3vw,2rem)]",
+);
 
-export const tradeoffCardClassName = `${questionCardBaseClassName} p-6`;
+export const tradeoffCardClassName = cn(questionCardBaseClassName, "p-6");

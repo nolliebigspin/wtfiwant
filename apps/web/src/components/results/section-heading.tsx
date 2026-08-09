@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { eyebrowClassName, lightEyebrowClassName } from "@/lib/styles";
+import { cn } from "@/lib/utils";
 
 type SectionHeadingProps = {
   eyebrow: string;
@@ -18,9 +19,12 @@ export function SectionHeading({
 }: SectionHeadingProps) {
   return (
     <div
-      className={`motion-reveal mb-12 max-w-3xl [&>p:last-child]:leading-relaxed ${
-        light ? "[&>p:last-child]:text-white/55" : "[&>p:last-child]:text-muted"
-      }`}
+      className={cn(
+        "motion-reveal mb-12 max-w-3xl [&>p:last-child]:leading-relaxed",
+        light
+          ? "[&>p:last-child]:text-white/55"
+          : "[&>p:last-child]:text-muted",
+      )}
     >
       <p className={light ? lightEyebrowClassName : eyebrowClassName}>
         {eyebrow}
