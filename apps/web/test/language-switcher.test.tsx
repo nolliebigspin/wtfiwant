@@ -24,6 +24,24 @@ afterEach(() => {
 });
 
 describe("language navigation", () => {
+  test("keeps the product question in English in the German locale", async () => {
+    const { LandingHero } = await import(
+      "../src/components/landing/landing-hero"
+    );
+
+    render(
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <LandingHero />
+      </NextIntlClientProvider>,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "What the fuck do I actually want?",
+      }),
+    ).toBeTruthy();
+  });
+
   test("offers a language dropdown in the navigation and keeps the current route", async () => {
     const { LandingNav } = await import(
       "../src/components/landing/landing-nav"
