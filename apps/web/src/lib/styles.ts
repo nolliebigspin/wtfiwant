@@ -29,7 +29,7 @@ export const textButtonClassName =
   "motion-button-quiet cursor-pointer border-0 bg-transparent px-0 py-2 font-extrabold text-accent-ink underline-offset-4 hover:underline";
 
 const horizontalHeaderBaseClassName =
-  "flex items-center justify-between border-b border-ink/15 px-[clamp(1.2rem,4vw,4.5rem)]";
+  "relative z-50 flex items-center justify-between border-b border-ink/15 px-[clamp(1.2rem,4vw,4.5rem)]";
 
 export const horizontalHeaderClassName = cn(
   horizontalHeaderBaseClassName,
