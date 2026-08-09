@@ -16,7 +16,7 @@ export function LandingClose() {
         </em>
       </h2>
       <a
-        className="mt-12 inline-flex items-center gap-12 rounded-full bg-paper px-[1.8rem] py-[1.2rem] font-black text-ink no-underline transition-transform hover:-translate-y-0.5 active:translate-y-0"
+        className="mt-12 inline-flex items-center gap-12 rounded-full bg-paper px-[1.8rem] py-[1.2rem] font-black text-ink no-underline transition-transform hover:-translate-y-0.5 focus-visible:outline-ink active:translate-y-0"
         href="/commitment"
       >
         Give it twenty minutes <span>→</span>
