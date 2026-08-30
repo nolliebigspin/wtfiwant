@@ -36,7 +36,13 @@ export function SafetyResult({ message }: { message: string }) {
   );
 }
 
-export function ResultLoading() {
+export function ResultLoading({
+  title,
+  copy,
+}: {
+  title?: string;
+  copy?: string;
+} = {}) {
   const t = useTranslations("Results");
   return (
     <ResultShell>
@@ -47,8 +53,8 @@ export function ResultLoading() {
         >
           ✦
         </div>
-        <h1>{t("loadingTitle")}</h1>
-        <p>{t("loadingCopy")}</p>
+        <h1>{title ?? t("loadingTitle")}</h1>
+        <p>{copy ?? t("loadingCopy")}</p>
       </main>
     </ResultShell>
   );

@@ -4,6 +4,7 @@ export type FullCompassEmail = {
   to: string;
   locale: Locale;
   analysis: StoredAnalysis;
+  evidence: Record<string, unknown>;
   resultUrl: string;
   idempotencyKey: string;
 };

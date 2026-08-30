@@ -8,7 +8,10 @@ import type {
   StoredAnalysis,
 } from "@wtfiwant/shared";
 
-export type AssessmentRecord = Omit<SessionView, "preview"> & {
+export type AssessmentRecord = Omit<
+  SessionView,
+  "preview" | "checkoutAvailable" | "legalLinks"
+> & {
   analysis: StoredAnalysis | null;
 };
 
@@ -59,6 +62,9 @@ export interface AssessmentRepository {
     response: string | null,
   ): Promise<boolean>;
   getPurchaseForSession(id: string): Promise<ReportPurchase | null>;
+  getPurchaseByCheckout(
+    checkoutSessionId: string,
+  ): Promise<ReportPurchase | null>;
   saveCheckout(
     sessionId: string,
     checkout: { id: string; url: string },
@@ -75,6 +81,8 @@ export interface AssessmentRepository {
     status: "failed" | "expired",
   ): Promise<boolean>;
   claimWebhookEvent(provider: string, eventId: string): Promise<boolean>;
+  completeWebhookEvent(provider: string, eventId: string): Promise<void>;
+  releaseWebhookEvent(provider: string, eventId: string): Promise<void>;
   claimInitialDelivery(purchaseId: string): Promise<string | null>;
   prepareDeliveryRetry(
     purchaseId: string,

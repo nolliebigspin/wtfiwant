@@ -12,7 +12,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "db:migrate": "bun src/db/migrate.ts"
+    "db:migrate": "bun src/db/migrate.ts",
+    "commerce:reconcile": "bun src/commerce/reconcile.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.2",

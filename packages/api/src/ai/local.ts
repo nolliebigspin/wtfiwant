@@ -1,4 +1,8 @@
-import type { Analysis, Locale } from "@wtfiwant/shared";
+import {
+  type Analysis,
+  COACH_PROMPT_VERSION,
+  type Locale,
+} from "@wtfiwant/shared";
 import type { AIProvider } from "./provider";
 
 function textOf(value: unknown): string {
@@ -33,6 +37,7 @@ export class LocalAIProvider implements AIProvider {
           ? `Was ist an „${subject}“ für dich am wichtigsten?`
           : `What matters most to you about “${subject}”?`,
       evidenceQuestionIds: [questionId],
+      promptVersion: COACH_PROMPT_VERSION,
     };
   }
 

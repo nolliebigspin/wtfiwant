@@ -38,18 +38,28 @@ export class OpenAIProvider implements AIProvider {
     safetyIdentifier?: string,
     locale: Locale = "en",
   ) {
-    const response = await this.client.responses.parse({
-      model: this.followUpModel,
-      instructions: COACH_SYSTEM_PROMPT,
-      input: buildCoachInput(answers, locale),
-      max_output_tokens: 220,
-      text: {
-        format: zodTextFormat(generatedCoachPromptSchema, "coach_prompt"),
-      },
-      store: false,
-      safety_identifier: safetyIdentifier,
-    });
-    return generatedCoachPromptSchema.parse(response.output_parsed);
+    let failure: unknown;
+    for (const repair of [false, true]) {
+      try {
+        const response = await this.client.responses.parse({
+          model: this.followUpModel,
+          instructions: repair
+            ? `${COACH_SYSTEM_PROMPT}\nYour previous response was invalid. Return only a value matching the schema exactly.`
+            : COACH_SYSTEM_PROMPT,
+          input: buildCoachInput(answers, locale),
+          max_output_tokens: 220,
+          text: {
+            format: zodTextFormat(generatedCoachPromptSchema, "coach_prompt"),
+          },
+          store: false,
+          safety_identifier: safetyIdentifier,
+        });
+        return generatedCoachPromptSchema.parse(response.output_parsed);
+      } catch (error) {
+        failure = error;
+      }
+    }
+    throw failure;
   }
 
   async generateFollowUp(

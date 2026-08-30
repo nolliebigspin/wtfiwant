@@ -45,6 +45,8 @@ function session(overrides: Partial<SessionView> = {}): SessionView {
     preview: null,
     actionPlan: null,
     entitlements: ["assessment"],
+    checkoutAvailable: false,
+    legalLinks: null,
     ...overrides,
   };
 }

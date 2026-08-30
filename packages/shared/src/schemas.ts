@@ -10,10 +10,12 @@ export const questionIdSchema = z
   .max(120)
   .regex(/^[a-z0-9_.:-]+$/);
 export const generatedFollowUpSchema = z.string().trim().min(5).max(300);
+export const COACH_PROMPT_VERSION = "v1-chapter-evidence" as const;
 export const generatedCoachPromptSchema = z
   .object({
     question: z.string().trim().min(5).max(300),
     evidenceQuestionIds: z.array(questionIdSchema).min(1).max(3),
+    promptVersion: z.literal(COACH_PROMPT_VERSION),
   })
   .strict();
 export const entitlementSchema = z.enum(["assessment", "full_analysis"]);
@@ -193,7 +195,7 @@ export const coachPromptSchema = z
     chapter: chapterIdSchema,
     question: generatedCoachPromptSchema.shape.question,
     evidenceQuestionIds: generatedCoachPromptSchema.shape.evidenceQuestionIds,
-    promptVersion: z.string().min(1),
+    promptVersion: z.literal(COACH_PROMPT_VERSION),
     locale: localeSchema.default("en"),
     userResponse: z.string().nullable(),
     resolvedAt: z.iso.datetime().nullable(),
@@ -225,6 +227,11 @@ export const sessionViewSchema = z
     preview: analysisPreviewSchema.nullable(),
     actionPlan: actionPlanSchema.nullable(),
     entitlements: z.array(entitlementSchema),
+    checkoutAvailable: z.boolean(),
+    legalLinks: z
+      .object({ termsUrl: z.url(), refundPolicyUrl: z.url() })
+      .strict()
+      .nullable(),
   })
   .strict();
 
@@ -265,6 +272,31 @@ export const checkoutInputSchema = z
   .object({ locale: localeSchema.default("en") })
   .strict();
 
+export const checkoutSessionIdSchema = z
+  .string()
+  .trim()
+  .min(6)
+  .max(255)
+  .regex(/^cs_[A-Za-z0-9_-]+$/);
+
+export const paymentEventSchema = z
+  .object({
+    id: z
+      .string()
+      .trim()
+      .min(6)
+      .max(255)
+      .regex(/^evt_[A-Za-z0-9_-]+$/),
+    type: z.enum([
+      "checkout.session.completed",
+      "checkout.session.async_payment_succeeded",
+      "checkout.session.async_payment_failed",
+      "checkout.session.expired",
+    ]),
+    checkoutSessionId: checkoutSessionIdSchema,
+  })
+  .strict();
+
 export const checkoutResponseSchema = z.union([
   z
     .object({
@@ -281,6 +313,18 @@ export const compassResponseSchema = z
     analysis: storedAnalysisSchema,
     actionPlan: actionPlanSchema.nullable(),
   })
+  .strict();
+
+export const coachPromptResponseSchema = z
+  .object({ coachPrompt: coachPromptSchema })
+  .strict();
+
+export const fulfillmentResponseSchema = z
+  .object({ status: z.enum(["paid", "processing", "failed"]) })
+  .strict();
+
+export const webhookResponseSchema = z
+  .object({ received: z.literal(true) })
   .strict();
 
 export const followUpResponseInputSchema = z
@@ -328,3 +372,7 @@ export type CoachPrompt = z.infer<typeof coachPromptSchema>;
 export type GeneratedCoachPrompt = z.infer<typeof generatedCoachPromptSchema>;
 export type CheckoutResponse = z.infer<typeof checkoutResponseSchema>;
 export type CompassResponse = z.infer<typeof compassResponseSchema>;
+export type FulfillmentStatus = z.infer<
+  typeof fulfillmentResponseSchema
+>["status"];
+export type PaymentEvent = z.infer<typeof paymentEventSchema>;

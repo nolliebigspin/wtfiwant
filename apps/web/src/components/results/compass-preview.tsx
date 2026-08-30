@@ -1,17 +1,25 @@
 import type { AnalysisPreview } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import { primaryButtonClassName } from "@/lib/styles";
+import { EvidenceDrawer } from "./evidence-drawer";
 import { ResultShell } from "./result-shell";
+import type { EvidenceAnswers } from "./results.types";
 
 export function CompassPreview({
   preview,
   purchasing,
   error,
+  answers,
+  checkoutAvailable,
+  legalLinks,
   onPurchase,
 }: {
   preview: AnalysisPreview;
   purchasing: boolean;
   error: string | null;
+  answers: EvidenceAnswers;
+  checkoutAvailable: boolean;
+  legalLinks: { termsUrl: string; refundPolicyUrl: string } | null;
   onPurchase: () => void;
 }) {
   const t = useTranslations("Results");
@@ -39,6 +47,10 @@ export function CompassPreview({
           <p className="max-w-[42rem] text-lg leading-relaxed text-muted">
             {preview.coreDriver.explanation}
           </p>
+          <EvidenceDrawer
+            ids={preview.coreDriver.evidenceQuestionIds}
+            answers={answers}
+          />
         </section>
         <section className="mx-auto w-[min(100%-2rem,58rem)] py-24 text-center">
           <p className="mb-3 text-xs tracking-[0.16em] text-accent uppercase">
@@ -57,17 +69,35 @@ export function CompassPreview({
               </li>
             ))}
           </ul>
-          <button
-            className={primaryButtonClassName}
-            type="button"
-            disabled={purchasing}
-            onClick={onPurchase}
-          >
-            {purchasing ? t("openingCheckout") : t("purchase")}
-          </button>
-          <p className="mx-auto mt-5 max-w-[34rem] text-xs leading-relaxed text-muted">
-            {t("emailWarning")}
-          </p>
+          {checkoutAvailable ? (
+            <>
+              <button
+                className={primaryButtonClassName}
+                type="button"
+                disabled={purchasing}
+                onClick={onPurchase}
+              >
+                {purchasing ? t("openingCheckout") : t("purchase")}
+              </button>
+              <p className="mx-auto mt-5 max-w-[34rem] text-xs leading-relaxed text-muted">
+                {t("emailWarning")}
+              </p>
+              <p className="mx-auto mt-2 max-w-[34rem] text-xs leading-relaxed text-muted">
+                {t("purchaseTerms")}{" "}
+                <a href={legalLinks?.termsUrl} rel="noreferrer">
+                  {t("termsLink")}
+                </a>{" "}
+                ·{" "}
+                <a href={legalLinks?.refundPolicyUrl} rel="noreferrer">
+                  {t("refundLink")}
+                </a>
+              </p>
+            </>
+          ) : (
+            <p className="mx-auto max-w-[34rem] text-sm leading-relaxed text-muted">
+              {t("paymentsUnavailable")}
+            </p>
+          )}
           {error ? (
             <p className="mt-4 text-sm font-bold text-[#a22d19]">{error}</p>
           ) : null}

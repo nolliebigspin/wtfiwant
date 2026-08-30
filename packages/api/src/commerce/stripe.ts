@@ -1,3 +1,4 @@
+import { paymentEventSchema } from "@wtfiwant/shared";
 import Stripe from "stripe";
 import type {
   CheckoutDetails,
@@ -38,7 +39,7 @@ export class StripePaymentProvider implements PaymentProvider {
         automatic_tax: { enabled: this.automaticTax },
       },
       {
-        idempotencyKey: `checkout/${input.sessionId}/${Math.floor(Date.now() / 3_600_000)}`,
+        idempotencyKey: input.idempotencyKey,
       },
     );
     if (!session.url) throw new Error("Stripe Checkout has no redirect URL");
@@ -60,6 +61,12 @@ export class StripePaymentProvider implements PaymentProvider {
         session.client_reference_id ??
         session.metadata?.reflection_session_id ??
         "",
+      checkoutStatus:
+        session.status === "complete"
+          ? "complete"
+          : session.status === "expired"
+            ? "expired"
+            : "open",
       paymentStatus,
       recipientEmail: session.customer_details?.email ?? null,
       paymentIntentId:
@@ -79,11 +86,12 @@ export class StripePaymentProvider implements PaymentProvider {
     );
     if (!supportedEvents.has(event.type as PaymentEvent["type"]))
       throw new Error("Unsupported Stripe event");
-    const session = event.data.object as Stripe.Checkout.Session;
-    return {
+    const checkoutSessionId =
+      "id" in event.data.object ? event.data.object.id : "";
+    return paymentEventSchema.parse({
       id: event.id,
-      type: event.type as PaymentEvent["type"],
-      checkoutSessionId: session.id,
-    };
+      type: event.type,
+      checkoutSessionId,
+    });
   }
 }

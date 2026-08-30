@@ -109,6 +109,11 @@ function view(): SessionView {
     preview: null,
     actionPlan: null,
     entitlements: ["assessment", "full_analysis"],
+    checkoutAvailable: true,
+    legalLinks: {
+      termsUrl: "https://wtfiwant.test/terms",
+      refundPolicyUrl: "https://wtfiwant.test/refunds",
+    },
   };
 }
 
@@ -167,6 +172,8 @@ describe("results experience", () => {
       await screen.findByRole("button", { name: "Get my Full Compass" }),
     ).toBeTruthy();
     expect(screen.getByText(analysis.summary)).toBeTruthy();
+    fireEvent.click(screen.getByText("Why do you think this?"));
+    expect(await screen.findByText("I chose flexible work.")).toBeTruthy();
     expect(screen.queryByText("Directions worth exploring")).toBeNull();
   });
 

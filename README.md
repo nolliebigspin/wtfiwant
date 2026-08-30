@@ -72,6 +72,8 @@ Open [http://localhost:3000](http://localhost:3000). The API health endpoint is 
 | `AI_MODEL` | Server | Structured analysis model |
 | `AI_FOLLOWUP_MODEL` | Server | Targeted follow-up model |
 | `PAYMENTS_ENABLED` | Server | `true` enables paid Full Compass Checkout; otherwise the app remains preview-only |
+| `EMAIL_PROVIDER` | Server | `resend` sends reports; `local` captures them in memory outside production |
+| `TERMS_URL`, `REFUND_POLICY_URL` | Server | Public merchant policies linked beside the purchase action; required when payments are enabled |
 | `PUBLIC_APP_URL` | Server | Canonical HTTPS origin used for Stripe returns and private report links |
 | `STRIPE_SECRET_KEY` | Server | Stripe secret key |
 | `STRIPE_PRICE_ID` | Server | One-time Price for a Full Compass |
@@ -183,11 +185,13 @@ Create an application in Dokploy, point it at this repository, choose **Docker C
 | `POSTGRES_DB`, `POSTGRES_USER` | no | Default to `wtfiwant`. |
 | `AI_MODEL`, `AI_FOLLOWUP_MODEL` | no | Default to `gpt-5-mini`. |
 | `PAYMENTS_ENABLED` | no | `false` keeps the deployment preview-only. |
-| `PUBLIC_APP_URL`, `STRIPE_*`, `RESEND_API_KEY`, `REPORT_EMAIL_FROM` | when payments are enabled | Checkout, webhook, and report-delivery configuration. |
+| `PUBLIC_APP_URL`, `STRIPE_*`, `RESEND_API_KEY`, `REPORT_EMAIL_FROM`, `TERMS_URL`, `REFUND_POLICY_URL` | when payments are enabled | Checkout, webhook, report-delivery, and merchant-policy configuration. |
 
 Add a domain pointing at the `web` service on port 3000. `DATABASE_URL` is assembled from the PostgreSQL variables, so it should not be set by hand.
 
 To enable purchases, create a one-time Stripe Product/Price, configure a Stripe webhook destination at `https://YOUR_DOMAIN/api/stripe/webhook` for Checkout completion, delayed success/failure, and expiration events, verify the Resend sending domain, then set all payment/email variables from the table above. Leave `STRIPE_AUTOMATIC_TAX=false` until the merchant's registrations and product tax code are configured.
+
+Run `mise exec -- bun run commerce:reconcile` with `DATABASE_URL` set to list paid purchases that are missing an analysis or report delivery. The output contains only purchase/session IDs and outcome codes—never answers or recipient email addresses.
 
 Migrations run as their own service rather than from the web container's entrypoint: `web` depends on it with `service_completed_successfully`, so a release that expects a new column never serves traffic against the old schema, and a failed migration aborts the rollout. Reruns are idempotent — already-applied versions are skipped.
 

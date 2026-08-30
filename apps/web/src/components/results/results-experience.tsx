@@ -42,6 +42,7 @@ export function ResultsExperience({
   const [error, setError] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -50,13 +51,39 @@ export function ResultsExperience({
       .then(async (restored) => {
         if (!active) return;
         let current = restored;
+        if (current.session.status === "safety_paused") {
+          const paused = await client.analyze(sessionId, locale);
+          if (paused.status === "safety_paused")
+            setSafetyMessage(paused.message);
+          else setError(t("generateError"));
+          return;
+        }
         const checkoutSessionId = new URLSearchParams(
           window.location.search,
         ).get("checkout_session_id");
         if (checkoutSessionId) {
-          const status = await client.fulfillCheckout(checkoutSessionId);
-          if (status === "processing") {
-            setError(t("paymentProcessing"));
+          setPaymentProcessing(true);
+          let paid = false;
+          for (let attempt = 0; attempt < 4; attempt += 1) {
+            const status = await client.fulfillCheckout(checkoutSessionId);
+            if (!active) return;
+            if (status === "paid") {
+              paid = true;
+              break;
+            }
+            if (status === "failed") {
+              setPaymentProcessing(false);
+              setError(t("paymentFailed"));
+              return;
+            }
+            if (attempt < 3)
+              await new Promise((resolve) =>
+                window.setTimeout(resolve, 1_000 * 2 ** attempt),
+              );
+          }
+          setPaymentProcessing(false);
+          if (!paid) {
+            setError(t("paymentStillProcessing"));
             return;
           }
           current = await client.getSession(sessionId);
@@ -96,12 +123,22 @@ export function ResultsExperience({
 
   if (error) return <ResultError message={error} />;
   if (safetyMessage) return <SafetyResult message={safetyMessage} />;
+  if (paymentProcessing)
+    return (
+      <ResultLoading
+        title={t("paymentProcessingTitle")}
+        copy={t("paymentProcessing")}
+      />
+    );
   if (!view || (!analysis && !preview)) return <ResultLoading />;
 
   if (!analysis && preview)
     return (
       <CompassPreview
         preview={preview}
+        answers={buildEvidenceAnswers(view, locale, t("additionalFollowUp"))}
+        checkoutAvailable={view.checkoutAvailable}
+        legalLinks={view.legalLinks}
         purchasing={purchasing}
         error={purchaseError}
         onPurchase={() => {

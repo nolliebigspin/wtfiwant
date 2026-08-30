@@ -1,6 +1,9 @@
-import { generatedCoachPromptSchema } from "@wtfiwant/shared";
+import {
+  COACH_PROMPT_VERSION,
+  generatedCoachPromptSchema,
+} from "@wtfiwant/shared";
 
-export const COACH_PROMPT_VERSION = "v1-chapter-evidence";
+export { COACH_PROMPT_VERSION };
 
 export const COACH_SYSTEM_PROMPT = `Write one concise clarification question about the supplied reflection answers.
 Do not diagnose, advise, praise, summarize the person, write an empathy paragraph, or suggest an answer.

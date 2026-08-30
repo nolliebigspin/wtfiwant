@@ -20,15 +20,21 @@ function copy<T>(value: T): T {
 export class InMemoryAssessmentRepository implements AssessmentRepository {
   private readonly sessions = new Map<string, AssessmentRecord>();
   private readonly purchases = new Map<string, ReportPurchase>();
-  private readonly webhookEvents = new Set<string>();
+  private readonly webhookEvents = new Map<
+    string,
+    { status: "processing" | "processed"; updatedAt: number }
+  >();
   private readonly deliveries = new Map<
     string,
     {
       id: string;
       status: "pending" | "sent" | "failed";
       attemptCount: number;
+      updatedAt: number;
     }
   >();
+
+  constructor(private readonly now: () => number = Date.now) {}
 
   async createSession(): Promise<AssessmentRecord> {
     const now = new Date().toISOString();
@@ -59,7 +65,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     if (!view) return null;
     const purchase = this.purchases.get(id);
     view.entitlements =
-      purchase?.status === "paid"
+      purchase?.status === "paid" && view.session.status !== "safety_paused"
         ? ["assessment", "full_analysis"]
         : ["assessment"];
     return copy(view);
@@ -147,6 +153,15 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     return purchase ? copy(purchase) : null;
   }
 
+  async getPurchaseByCheckout(
+    checkoutSessionId: string,
+  ): Promise<ReportPurchase | null> {
+    const purchase = [...this.purchases.values()].find(
+      (candidate) => candidate.checkoutSessionId === checkoutSessionId,
+    );
+    return purchase ? copy(purchase) : null;
+  }
+
   async saveCheckout(
     sessionId: string,
     checkout: { id: string; url: string },
@@ -202,18 +217,53 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
 
   async claimWebhookEvent(provider: string, eventId: string): Promise<boolean> {
     const key = `${provider}:${eventId}`;
-    if (this.webhookEvents.has(key)) return false;
-    this.webhookEvents.add(key);
+    const existing = this.webhookEvents.get(key);
+    if (
+      existing &&
+      (existing.status === "processed" ||
+        this.now() - existing.updatedAt < 300_000)
+    )
+      return false;
+    this.webhookEvents.set(key, {
+      status: "processing",
+      updatedAt: this.now(),
+    });
     return true;
   }
 
+  async completeWebhookEvent(provider: string, eventId: string): Promise<void> {
+    this.webhookEvents.set(`${provider}:${eventId}`, {
+      status: "processed",
+      updatedAt: this.now(),
+    });
+  }
+
+  async releaseWebhookEvent(provider: string, eventId: string): Promise<void> {
+    const key = `${provider}:${eventId}`;
+    if (this.webhookEvents.get(key)?.status === "processing")
+      this.webhookEvents.delete(key);
+  }
+
   async claimInitialDelivery(purchaseId: string): Promise<string | null> {
-    if (this.deliveries.has(purchaseId)) return null;
+    const existing = this.deliveries.get(purchaseId);
+    if (existing) {
+      const retryable =
+        (existing.status === "pending" &&
+          this.now() - existing.updatedAt >= 300_000) ||
+        (existing.status === "failed" &&
+          this.now() - existing.updatedAt >= 60_000);
+      if (!retryable || existing.attemptCount >= 5) return null;
+      existing.status = "pending";
+      existing.attemptCount += 1;
+      existing.updatedAt = this.now();
+      return existing.id;
+    }
     const id = crypto.randomUUID();
     this.deliveries.set(purchaseId, {
       id,
       status: "pending",
       attemptCount: 1,
+      updatedAt: this.now(),
     });
     return id;
   }
@@ -222,9 +272,15 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     purchaseId: string,
   ): Promise<{ deliveryId: string; attemptCount: number } | null> {
     const delivery = this.deliveries.get(purchaseId);
-    if (!delivery || delivery.attemptCount >= 5) return null;
+    if (
+      !delivery ||
+      delivery.attemptCount >= 5 ||
+      this.now() - delivery.updatedAt < 60_000
+    )
+      return null;
     delivery.attemptCount += 1;
     delivery.status = "pending";
+    delivery.updatedAt = this.now();
     return { deliveryId: delivery.id, attemptCount: delivery.attemptCount };
   }
 
@@ -232,7 +288,10 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     const delivery = [...this.deliveries.values()].find(
       (candidate) => candidate.id === deliveryId,
     );
-    if (delivery) delivery.status = "sent";
+    if (delivery) {
+      delivery.status = "sent";
+      delivery.updatedAt = this.now();
+    }
   }
 
   async markDeliveryFailed(
@@ -242,7 +301,10 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     const delivery = [...this.deliveries.values()].find(
       (candidate) => candidate.id === deliveryId,
     );
-    if (delivery) delivery.status = "failed";
+    if (delivery) {
+      delivery.status = "failed";
+      delivery.updatedAt = this.now();
+    }
   }
 
   async saveAnalysis(id: string, analysis: StoredAnalysis): Promise<boolean> {

@@ -4,35 +4,35 @@ import {
   analysisInputSchema,
   assessmentQuestions,
   checkoutInputSchema,
+  checkoutSessionIdSchema,
   coachPromptInputSchema,
   coachPromptResponseInputSchema,
+  coachPromptResponseSchema,
   followUpIdSchema,
-  followUpInputSchema,
-  followUpResponseInputSchema,
+  fulfillmentResponseSchema,
   generatedCoachPromptSchema,
-  generatedFollowUpSchema,
-  getQuestionById,
+  paymentEventSchema,
   saveAnswerInputSchema,
   seedPersonaSchema,
   sessionIdSchema,
   sessionViewSchema,
-  stringifyAnswerForFollowUp,
   updateSessionInputSchema,
   validateQuestionAnswer,
+  webhookResponseSchema,
 } from "@wtfiwant/shared";
 import { type Context, Hono, type Next } from "hono";
 import { LocalAIProvider } from "./ai/local";
 import { type AIProvider, analyzeAnswers } from "./ai/provider";
-import { fulfillCheckout } from "./commerce/fulfillment";
+import { buildReportEvidence, fulfillCheckout } from "./commerce/fulfillment";
 import type { PaymentEvent, PaymentProvider } from "./commerce/payment";
 import { createSeedSession } from "./dev/personas";
 import type { EmailDeliveryProvider } from "./email/provider";
 import { ANALYSIS_PROMPT_VERSION } from "./prompts/analysis";
-import { COACH_PROMPT_VERSION } from "./prompts/coach";
 import type {
   AssessmentRecord,
   AssessmentRepository,
 } from "./repositories/types";
+import { buildSafetyAnswers } from "./safety/answers";
 import { classifySafety, SAFETY_MESSAGE } from "./safety/classifier";
 
 type AppDependencies = {
@@ -41,6 +41,7 @@ type AppDependencies = {
   paymentProvider?: PaymentProvider;
   emailProvider?: EmailDeliveryProvider;
   publicAppUrl?: string;
+  legalLinks?: { termsUrl: string; refundPolicyUrl: string };
   /**
    * Path the app is mounted under. Next.js serves it from `/api`; tests mount
    * it at the root so request paths stay identical to the route definitions.
@@ -66,16 +67,23 @@ function createPreview(record: AssessmentRecord): AnalysisPreview | null {
   };
 }
 
-function toSessionView(record: AssessmentRecord) {
+function toSessionView(
+  record: AssessmentRecord,
+  checkoutAvailable: boolean,
+  legalLinks: AppDependencies["legalLinks"],
+) {
   const full = record.entitlements.includes("full_analysis");
   return sessionViewSchema.parse({
     session: record.session,
     answers: record.answers,
     followUps: record.followUps,
     coachPrompts: record.coachPrompts,
-    preview: createPreview(record),
+    preview:
+      record.session.status === "safety_paused" ? null : createPreview(record),
     actionPlan: full ? record.actionPlan : null,
     entitlements: record.entitlements,
+    checkoutAvailable,
+    legalLinks: legalLinks ?? null,
   });
 }
 
@@ -85,9 +93,29 @@ export function createApp({
   paymentProvider,
   emailProvider,
   publicAppUrl = "http://localhost:3000",
+  legalLinks,
   basePath = "/",
 }: AppDependencies) {
   const app = new Hono().basePath(basePath);
+  const checkoutAvailable = Boolean(
+    paymentProvider && emailProvider && legalLinks,
+  );
+
+  const isSafetyPaused = async (record: AssessmentRecord) => {
+    if (
+      record.session.status !== "safety_paused" &&
+      classifySafety(buildSafetyAnswers(record)) !== "immediate_self_harm_risk"
+    )
+      return false;
+    if (record.session.status !== "safety_paused")
+      await repository.setStatus(record.session.id, "safety_paused");
+    return true;
+  };
+
+  const safetyMessage = (locale: "en" | "de") =>
+    locale === "de"
+      ? "Deine Antwort deutet darauf hin, dass du in unmittelbarer Gefahr sein könntest. Deshalb wurde diese Reflexion pausiert. Wenn du diese Gedanken jetzt in die Tat umsetzen könntest, rufe den örtlichen Notruf oder gehe in die nächste Notaufnahme. Kontaktiere wenn möglich eine vertraute Person und bleibe nicht allein. Diese App kann keine Krisenhilfe leisten."
+      : SAFETY_MESSAGE;
 
   app.get("/health", (context) => context.json({ status: "ok" }));
 
@@ -101,14 +129,18 @@ export function createApp({
   app.use("/sessions/:id/*", validateSessionId);
 
   app.post("/sessions", async (context) => {
-    const session = toSessionView(await repository.createSession());
+    const session = toSessionView(
+      await repository.createSession(),
+      checkoutAvailable,
+      legalLinks,
+    );
     return context.json(session, 201);
   });
 
   app.get("/sessions/:id", async (context) => {
     const session = await repository.getSession(context.req.param("id"));
     if (!session) return context.json({ error: "Reflection not found" }, 404);
-    return context.json(toSessionView(session));
+    return context.json(toSessionView(session, checkoutAvailable, legalLinks));
   });
 
   app.patch("/sessions/:id", async (context) => {
@@ -162,14 +194,6 @@ export function createApp({
     const id = context.req.param("id");
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
-    if (view.analysis?.locale === input.data.locale)
-      return view.entitlements.includes("full_analysis")
-        ? context.json({ status: "complete", analysis: view.analysis })
-        : context.json({
-            status: "preview_ready",
-            preview: createPreview(view),
-          });
-
     const analysisAnswers = {
       ...view.answers,
       ...Object.fromEntries(
@@ -214,16 +238,24 @@ export function createApp({
       ),
     };
 
-    if (classifySafety(analysisAnswers) === "immediate_self_harm_risk") {
+    if (
+      view.session.status === "safety_paused" ||
+      classifySafety(analysisAnswers) === "immediate_self_harm_risk"
+    ) {
       await repository.setStatus(id, "safety_paused");
       return context.json({
         status: "safety_paused",
-        message:
-          input.data.locale === "de"
-            ? "Deine Antwort deutet darauf hin, dass du in unmittelbarer Gefahr sein könntest. Deshalb wurde diese Reflexion pausiert. Wenn du diese Gedanken jetzt in die Tat umsetzen könntest, rufe den örtlichen Notruf oder gehe in die nächste Notaufnahme. Kontaktiere wenn möglich eine vertraute Person und bleibe nicht allein. Diese App kann keine Krisenhilfe leisten."
-            : SAFETY_MESSAGE,
+        message: safetyMessage(input.data.locale),
       });
     }
+
+    if (view.analysis?.locale === input.data.locale)
+      return view.entitlements.includes("full_analysis")
+        ? context.json({ status: "complete", analysis: view.analysis })
+        : context.json({
+            status: "preview_ready",
+            preview: createPreview(view),
+          });
 
     const missing = assessmentQuestions
       .filter((question) => question.required && !(question.id in view.answers))
@@ -266,20 +298,29 @@ export function createApp({
       return context.json({ error: "Invalid Coach Prompt request" }, 400);
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
-    if (view.session.status === "safety_paused")
+    if (await isSafetyPaused(view))
       return context.json({ error: "Reflection paused for safety" }, 409);
     const existing = view.coachPrompts.find(
       (prompt) => prompt.chapter === input.data.chapter,
     );
     if (existing) return context.json({ coachPrompt: existing });
+    const chapterQuestions = assessmentQuestions.filter(
+      (question) => question.chapter === input.data.chapter,
+    );
+    const atChapterBoundary =
+      view.session.currentChapter === input.data.chapter &&
+      view.session.currentQuestionId === chapterQuestions.at(-1)?.id;
+    const complete = chapterQuestions
+      .filter((question) => question.required)
+      .every((question) => question.id in view.answers);
+    if (!atChapterBoundary || !complete)
+      return context.json({ error: "Current chapter is incomplete" }, 409);
     const chapterAnswers = Object.fromEntries(
-      assessmentQuestions
-        .filter((question) => question.chapter === input.data.chapter)
-        .flatMap((question) =>
-          question.id in view.answers
-            ? [[question.id, view.answers[question.id]]]
-            : [],
-        ),
+      chapterQuestions.flatMap((question) =>
+        question.id in view.answers
+          ? [[question.id, view.answers[question.id]]]
+          : [],
+      ),
     );
     if (Object.keys(chapterAnswers).length === 0)
       return context.json({ error: "Chapter has no saved answers" }, 409);
@@ -309,14 +350,14 @@ export function createApp({
       chapter: input.data.chapter,
       question: generated.question,
       evidenceQuestionIds: generated.evidenceQuestionIds,
-      promptVersion: COACH_PROMPT_VERSION,
+      promptVersion: generated.promptVersion,
       locale: input.data.locale,
       userResponse: null,
       resolvedAt: null,
       createdAt: new Date().toISOString(),
     };
     await repository.saveCoachPrompt(id, coachPrompt);
-    return context.json({ coachPrompt }, 201);
+    return context.json(coachPromptResponseSchema.parse({ coachPrompt }), 201);
   });
 
   app.put("/sessions/:id/coach-prompt/:promptId", async (context) => {
@@ -333,12 +374,17 @@ export function createApp({
       input.data.response,
     );
     if (!saved) return context.json({ error: "Coach Prompt not found" }, 404);
+    const record = await repository.getSession(context.req.param("id"));
+    if (record && (await isSafetyPaused(record)))
+      return context.json({ saved: true, status: "safety_paused" });
     return context.json({ saved: true });
   });
 
   app.get("/sessions/:id/analysis", async (context) => {
     const view = await repository.getSession(context.req.param("id"));
     if (!view) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(view))
+      return context.json({ error: "Reflection paused for safety" }, 409);
     if (!view.analysis)
       return context.json({ error: "Analysis is not ready" }, 404);
     if (!view.entitlements.includes("full_analysis"))
@@ -349,6 +395,8 @@ export function createApp({
   app.get("/sessions/:id/compass", async (context) => {
     const view = await repository.getSession(context.req.param("id"));
     if (!view) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(view))
+      return context.json({ error: "Reflection paused for safety" }, 409);
     if (!view.analysis)
       return context.json({ error: "Compass is not ready" }, 404);
     if (!view.entitlements.includes("full_analysis"))
@@ -362,7 +410,7 @@ export function createApp({
   app.get("/sessions/:id/preview", async (context) => {
     const record = await repository.getSession(context.req.param("id"));
     if (!record) return context.json({ error: "Reflection not found" }, 404);
-    if (record.session.status === "safety_paused")
+    if (await isSafetyPaused(record))
       return context.json({ error: "Reflection paused for safety" }, 409);
     const preview = createPreview(record);
     if (!preview) return context.json({ error: "Compass is not ready" }, 404);
@@ -370,8 +418,11 @@ export function createApp({
   });
 
   app.post("/sessions/:id/checkout", async (context) => {
-    if (!paymentProvider)
-      return context.json({ error: "Payments are not configured" }, 503);
+    if (!paymentProvider || !emailProvider || !legalLinks)
+      return context.json(
+        { error: "Payments and email delivery are not configured" },
+        503,
+      );
     const input = checkoutInputSchema.safeParse(
       await context.req.json().catch(() => ({})),
     );
@@ -380,11 +431,7 @@ export function createApp({
     const id = context.req.param("id");
     const record = await repository.getSession(id);
     if (!record) return context.json({ error: "Reflection not found" }, 404);
-    if (
-      record.session.status === "safety_paused" ||
-      classifySafety(record.answers) === "immediate_self_harm_risk"
-    ) {
-      await repository.setStatus(id, "safety_paused");
+    if (await isSafetyPaused(record)) {
       return context.json({ error: "Reflection paused for safety" }, 409);
     }
     if (!record.analysis)
@@ -403,6 +450,7 @@ export function createApp({
       locale: input.data.locale,
       successUrl: `${origin}/${input.data.locale}/result/${id}?checkout_session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}/${input.data.locale}/result/${id}?checkout=cancelled`,
+      idempotencyKey: `checkout/${id}/${existing?.checkoutSessionId ?? "initial"}`,
     });
     await repository.saveCheckout(id, checkout);
     return context.json(
@@ -418,14 +466,19 @@ export function createApp({
   app.post("/checkout/:checkoutSessionId/fulfill", async (context) => {
     if (!paymentProvider)
       return context.json({ error: "Payments are not configured" }, 503);
+    const checkoutSessionId = checkoutSessionIdSchema.safeParse(
+      context.req.param("checkoutSessionId"),
+    );
+    if (!checkoutSessionId.success)
+      return context.json({ error: "Invalid Checkout Session ID" }, 400);
     const status = await fulfillCheckout({
-      checkoutSessionId: context.req.param("checkoutSessionId"),
+      checkoutSessionId: checkoutSessionId.data,
       repository,
       paymentProvider,
       emailProvider,
       publicAppUrl: publicAppUrl.replace(/\/$/, ""),
     });
-    return context.json({ status });
+    return context.json(fulfillmentResponseSchema.parse({ status }));
   });
 
   app.post("/stripe/webhook", async (context) => {
@@ -436,29 +489,39 @@ export function createApp({
       return context.json({ error: "Missing Stripe signature" }, 400);
     let event: PaymentEvent;
     try {
-      event = paymentProvider.parseWebhook(await context.req.text(), signature);
+      event = paymentEventSchema.parse(
+        paymentProvider.parseWebhook(await context.req.text(), signature),
+      );
     } catch {
       return context.json({ error: "Invalid Stripe signature" }, 400);
     }
-    if (
-      event.type === "checkout.session.completed" ||
-      event.type === "checkout.session.async_payment_succeeded"
-    ) {
-      await fulfillCheckout({
-        checkoutSessionId: event.checkoutSessionId,
-        repository,
-        paymentProvider,
-        emailProvider,
-        publicAppUrl: publicAppUrl.replace(/\/$/, ""),
-      });
-    } else {
-      await repository.setPurchaseStatusByCheckout(
-        event.checkoutSessionId,
-        event.type === "checkout.session.expired" ? "expired" : "failed",
-      );
+    const claimed = await repository.claimWebhookEvent("stripe", event.id);
+    if (!claimed)
+      return context.json(webhookResponseSchema.parse({ received: true }));
+    try {
+      if (
+        event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded"
+      ) {
+        await fulfillCheckout({
+          checkoutSessionId: event.checkoutSessionId,
+          repository,
+          paymentProvider,
+          emailProvider,
+          publicAppUrl: publicAppUrl.replace(/\/$/, ""),
+        });
+      } else {
+        await repository.setPurchaseStatusByCheckout(
+          event.checkoutSessionId,
+          event.type === "checkout.session.expired" ? "expired" : "failed",
+        );
+      }
+      await repository.completeWebhookEvent("stripe", event.id);
+    } catch (error) {
+      await repository.releaseWebhookEvent("stripe", event.id);
+      throw error;
     }
-    await repository.claimWebhookEvent("stripe", event.id);
-    return context.json({ received: true });
+    return context.json(webhookResponseSchema.parse({ received: true }));
   });
 
   app.post("/sessions/:id/report-email", async (context) => {
@@ -466,6 +529,8 @@ export function createApp({
       return context.json({ error: "Email delivery is not configured" }, 503);
     const record = await repository.getSession(context.req.param("id"));
     if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({ error: "Reflection paused for safety" }, 409);
     if (!record.entitlements.includes("full_analysis") || !record.analysis)
       return context.json({ error: "Full Compass requires payment" }, 402);
     const purchase = await repository.getPurchaseForSession(record.session.id);
@@ -482,6 +547,7 @@ export function createApp({
         to: purchase.recipientEmail,
         locale: record.analysis.locale,
         analysis: record.analysis,
+        evidence: buildReportEvidence(record),
         resultUrl: `${publicAppUrl.replace(/\/$/, "")}/${record.analysis.locale}/result/${record.session.id}`,
         idempotencyKey: `full-compass/${purchase.id}/resend/${retry.attemptCount}`,
       });
@@ -496,89 +562,6 @@ export function createApp({
     }
   });
 
-  app.post("/sessions/:id/follow-up", async (context) => {
-    const id = context.req.param("id");
-    const input = followUpInputSchema.safeParse(
-      await context.req.json().catch(() => null),
-    );
-    if (!input.success)
-      return context.json({ error: "Invalid follow-up request" }, 400);
-    const view = await repository.getSession(id);
-    if (!view) return context.json({ error: "Reflection not found" }, 404);
-    const question = getQuestionById(input.data.questionId);
-    if (!question) return context.json({ error: "Unknown question" }, 400);
-    const chapterFollowUps = view.followUps.filter(
-      (followUp) =>
-        getQuestionById(followUp.questionId)?.chapter === question.chapter,
-    );
-    if (chapterFollowUps.length >= 2) {
-      return context.json(
-        { error: "Follow-up limit reached for this chapter" },
-        409,
-      );
-    }
-    if (classifySafety(view.answers) === "immediate_self_harm_risk") {
-      await repository.setStatus(id, "safety_paused");
-      return context.json({ error: "Reflection paused for safety" }, 409);
-    }
-    const savedAnswer = view.answers[input.data.questionId];
-    if (savedAnswer === undefined) {
-      return context.json(
-        { error: "Answer must be saved before a follow-up" },
-        409,
-      );
-    }
-    const userAnswer = stringifyAnswerForFollowUp(
-      savedAnswer,
-      input.data.locale,
-    );
-    const generatedQuestion = generatedFollowUpSchema.parse(
-      await aiProvider.generateFollowUp(
-        input.data.questionId,
-        userAnswer,
-        id,
-        input.data.locale,
-      ),
-    );
-    const storedFollowUp = {
-      id: crypto.randomUUID(),
-      questionId: input.data.questionId,
-      userAnswer,
-      generatedQuestion,
-      locale: input.data.locale,
-      userResponse: null,
-      createdAt: new Date().toISOString(),
-    };
-    await repository.saveFollowUp(id, storedFollowUp);
-    const followUp = {
-      id: storedFollowUp.id,
-      questionId: storedFollowUp.questionId,
-      generatedQuestion: storedFollowUp.generatedQuestion,
-      locale: storedFollowUp.locale,
-      userResponse: storedFollowUp.userResponse,
-      createdAt: storedFollowUp.createdAt,
-    };
-    return context.json({ followUp }, 201);
-  });
-
-  app.put("/sessions/:id/follow-up/:followUpId", async (context) => {
-    if (!followUpIdSchema.safeParse(context.req.param("followUpId")).success) {
-      return context.json({ error: "Invalid follow-up ID" }, 400);
-    }
-    const input = followUpResponseInputSchema.safeParse(
-      await context.req.json().catch(() => null),
-    );
-    if (!input.success)
-      return context.json({ error: "Invalid follow-up response" }, 400);
-    const saved = await repository.saveFollowUpResponse(
-      context.req.param("id"),
-      context.req.param("followUpId"),
-      input.data.response,
-    );
-    if (!saved) return context.json({ error: "Follow-up not found" }, 404);
-    return context.json({ saved: true });
-  });
-
   app.put("/sessions/:id/action-plan", async (context) => {
     const input = actionPlanInputSchema.safeParse(
       await context.req.json().catch(() => null),
@@ -587,6 +570,8 @@ export function createApp({
       return context.json({ error: "Invalid action plan" }, 400);
     const entitled = await repository.getSession(context.req.param("id"));
     if (!entitled) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(entitled))
+      return context.json({ error: "Reflection paused for safety" }, 409);
     if (!entitled.entitlements.includes("full_analysis"))
       return context.json({ error: "Full Compass requires payment" }, 402);
     const saved = await repository.saveActionPlan(
@@ -604,7 +589,10 @@ export function createApp({
       if (!persona.success)
         return context.json({ error: "Unknown seed persona" }, 400);
       const view = await createSeedSession(repository, persona.data);
-      return context.json(toSessionView(view), 201);
+      return context.json(
+        toSessionView(view, checkoutAvailable, legalLinks),
+        201,
+      );
     });
   }
 

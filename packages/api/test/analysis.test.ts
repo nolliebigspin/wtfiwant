@@ -3,6 +3,7 @@ import {
   type Analysis,
   analysisResponseSchema,
   assessmentQuestions,
+  COACH_PROMPT_VERSION,
   coachPromptSchema,
   sessionViewSchema,
   threeLives,
@@ -120,6 +121,7 @@ describe("analysis validation", () => {
         return {
           question: "What would that give you?",
           evidenceQuestionIds: ["goals.current"],
+          promptVersion: COACH_PROMPT_VERSION,
         };
       },
       async analyzeAssessment(answers, repair, _safetyIdentifier, locale) {
@@ -193,6 +195,14 @@ describe("analysis validation", () => {
       );
       expect(response.status).toBe(200);
     }
+    await app.request(`/sessions/${created.session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        currentChapter: "goals",
+        currentQuestionId: "goals.current",
+      }),
+    });
 
     const generatedResponse = await app.request(
       `/sessions/${created.session.id}/coach-prompt`,

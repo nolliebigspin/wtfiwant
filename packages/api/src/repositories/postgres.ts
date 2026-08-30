@@ -2,6 +2,7 @@ import {
   type ActionPlanInput,
   assessmentQuestions,
   type ChapterId,
+  coachPromptSchema,
   type Session,
   type StoredAnalysis,
 } from "@wtfiwant/shared";
@@ -187,17 +188,19 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         userResponse: followUp.user_response,
         createdAt: followUp.created_at.toISOString(),
       })),
-      coachPrompts: coachPromptRows.map((prompt) => ({
-        id: prompt.id,
-        chapter: prompt.chapter,
-        question: prompt.question,
-        evidenceQuestionIds: prompt.evidence_question_ids,
-        promptVersion: prompt.prompt_version,
-        locale: prompt.locale,
-        userResponse: prompt.user_response,
-        resolvedAt: prompt.resolved_at?.toISOString() ?? null,
-        createdAt: prompt.created_at.toISOString(),
-      })),
+      coachPrompts: coachPromptRows.map((prompt) =>
+        coachPromptSchema.parse({
+          id: prompt.id,
+          chapter: prompt.chapter,
+          question: prompt.question,
+          evidenceQuestionIds: prompt.evidence_question_ids,
+          promptVersion: prompt.prompt_version,
+          locale: prompt.locale,
+          userResponse: prompt.user_response,
+          resolvedAt: prompt.resolved_at?.toISOString() ?? null,
+          createdAt: prompt.created_at.toISOString(),
+        }),
+      ),
       analysis: analysisRow
         ? {
             version: analysisRow.version,
@@ -219,7 +222,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
           }
         : null,
       entitlements:
-        purchaseRows[0]?.status === "paid"
+        purchaseRows[0]?.status === "paid" && row.status !== "safety_paused"
           ? ["assessment", "full_analysis"]
           : ["assessment"],
     };
@@ -314,6 +317,16 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     return rows[0] ? mapPurchase(rows[0]) : null;
   }
 
+  async getPurchaseByCheckout(
+    checkoutSessionId: string,
+  ): Promise<ReportPurchase | null> {
+    const rows = await this.sql<PurchaseRow[]>`
+      SELECT * FROM report_purchases
+      WHERE stripe_checkout_session_id = ${checkoutSessionId}
+    `;
+    return rows[0] ? mapPurchase(rows[0]) : null;
+  }
+
   async saveCheckout(
     sessionId: string,
     checkout: { id: string; url: string },
@@ -351,19 +364,27 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     currency: string | null;
     amountTotal: number | null;
   }): Promise<ReportPurchase | null> {
-    const rows = await this.sql<PurchaseRow[]>`
-      UPDATE report_purchases SET
-        status = 'paid',
-        stripe_payment_intent_id = ${input.paymentIntentId},
-        recipient_email = ${input.recipientEmail},
-        currency = ${input.currency},
-        amount_total = ${input.amountTotal},
-        paid_at = COALESCE(paid_at, now()),
-        updated_at = now()
-      WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
-      RETURNING *
-    `;
-    return rows[0] ? mapPurchase(rows[0]) : null;
+    return this.sql.begin(async (transaction) => {
+      const locked = await transaction<PurchaseRow[]>`
+        SELECT * FROM report_purchases
+        WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
+        FOR UPDATE
+      `;
+      if (!locked[0]) return null;
+      const rows = await transaction<PurchaseRow[]>`
+        UPDATE report_purchases SET
+          status = 'paid',
+          stripe_payment_intent_id = ${input.paymentIntentId},
+          recipient_email = ${input.recipientEmail},
+          currency = ${input.currency},
+          amount_total = ${input.amountTotal},
+          paid_at = COALESCE(paid_at, now()),
+          updated_at = now()
+        WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
+        RETURNING *
+      `;
+      return rows[0] ? mapPurchase(rows[0]) : null;
+    });
   }
 
   async setPurchaseStatusByCheckout(
@@ -380,19 +401,46 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
 
   async claimWebhookEvent(provider: string, eventId: string): Promise<boolean> {
     const rows = await this.sql<Array<{ event_id: string }>>`
-      INSERT INTO processed_webhook_events (provider, event_id)
-      VALUES (${provider}, ${eventId})
-      ON CONFLICT DO NOTHING
+      INSERT INTO processed_webhook_events (provider, event_id, status)
+      VALUES (${provider}, ${eventId}, 'processing')
+      ON CONFLICT (provider, event_id) DO UPDATE SET
+        status = 'processing', updated_at = now()
+      WHERE processed_webhook_events.status = 'processing'
+        AND processed_webhook_events.updated_at <= now() - interval '5 minutes'
       RETURNING event_id
     `;
     return rows.length > 0;
+  }
+
+  async completeWebhookEvent(provider: string, eventId: string): Promise<void> {
+    await this.sql`
+      UPDATE processed_webhook_events
+      SET status = 'processed', processed_at = now(), updated_at = now()
+      WHERE provider = ${provider} AND event_id = ${eventId}
+    `;
+  }
+
+  async releaseWebhookEvent(provider: string, eventId: string): Promise<void> {
+    await this.sql`
+      DELETE FROM processed_webhook_events
+      WHERE provider = ${provider} AND event_id = ${eventId}
+        AND status = 'processing'
+    `;
   }
 
   async claimInitialDelivery(purchaseId: string): Promise<string | null> {
     const rows = await this.sql<Array<{ id: string }>>`
       INSERT INTO report_deliveries (purchase_id, status)
       VALUES (${purchaseId}, 'pending')
-      ON CONFLICT (purchase_id, delivery_kind) DO NOTHING
+      ON CONFLICT (purchase_id, delivery_kind) DO UPDATE SET
+        status = 'pending', attempt_count = report_deliveries.attempt_count + 1,
+        last_error_code = NULL, updated_at = now()
+      WHERE report_deliveries.attempt_count < 5 AND (
+        (report_deliveries.status = 'pending'
+          AND report_deliveries.updated_at <= now() - interval '5 minutes')
+        OR (report_deliveries.status = 'failed'
+          AND report_deliveries.updated_at <= now() - interval '60 seconds')
+      )
       RETURNING id
     `;
     return rows[0]?.id ?? null;
@@ -407,6 +455,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         last_error_code = NULL, updated_at = now()
       WHERE purchase_id = ${purchaseId} AND delivery_kind = 'full_compass'
         AND attempt_count < 5
+        AND updated_at <= now() - interval '60 seconds'
       RETURNING id, attempt_count
     `;
     const row = rows[0];

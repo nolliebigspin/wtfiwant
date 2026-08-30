@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { coachPromptSchema, sessionViewSchema } from "@wtfiwant/shared";
+import {
+  COACH_PROMPT_VERSION,
+  coachPromptSchema,
+  sessionViewSchema,
+} from "@wtfiwant/shared";
 import { LocalAIProvider } from "../src/ai/local";
 import { createApp } from "../src/app";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
@@ -20,6 +24,7 @@ describe("assessment API", () => {
           return {
             question: "Which part of that drift costs you the most energy?",
             evidenceQuestionIds: ["life.drifted"],
+            promptVersion: COACH_PROMPT_VERSION,
           };
         },
         async generateFollowUp() {
@@ -47,6 +52,14 @@ describe("assessment API", () => {
         },
       );
     }
+    await app.request(`/sessions/${created.session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        currentChapter: "you",
+        currentQuestionId: "life.drifted",
+      }),
+    });
 
     const response = await app.request(
       `/sessions/${created.session.id}/coach-prompt`,
@@ -62,7 +75,34 @@ describe("assessment API", () => {
     expect(response.status).toBe(201);
     expect(prompt.question).toContain("drift");
     expect(prompt.evidenceQuestionIds).toEqual(["life.drifted"]);
-    expect(prompt.promptVersion).toBeTruthy();
+    expect(prompt.promptVersion).toBe(COACH_PROMPT_VERSION);
+  });
+
+  test("rejects a Coach Prompt before the current chapter is complete", async () => {
+    const repository = new InMemoryAssessmentRepository();
+    const app = createApp({ repository });
+    const created = sessionViewSchema.parse(
+      await (await app.request("/sessions", { method: "POST" })).json(),
+    );
+    await app.request(`/sessions/${created.session.id}/answers/life.energy`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ value: ["Work"] }),
+    });
+
+    const response = await app.request(
+      `/sessions/${created.session.id}/coach-prompt`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chapter: "you", locale: "en" }),
+      },
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "Current chapter is incomplete",
+    });
   });
 
   test("creates an anonymous session ready at the first question", async () => {
@@ -76,6 +116,7 @@ describe("assessment API", () => {
     expect(body.session.currentQuestionId).toBe("life.energy");
     expect(body.answers).toEqual({});
     expect(body.entitlements).toEqual(["assessment"]);
+    expect(body.checkoutAvailable).toBe(false);
   });
 
   test("returns only a Compass Preview until the Full Compass is entitled", async () => {
@@ -145,15 +186,6 @@ describe("assessment API", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ value: "I plan to end my life today" }),
     });
-    const followUp = await app.request(
-      `/sessions/${created.session.id}/follow-up`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ questionId: "life.chosen" }),
-      },
-    );
-
     const response = await app.request(
       `/sessions/${created.session.id}/analyze`,
       {
@@ -162,10 +194,42 @@ describe("assessment API", () => {
     );
     const body = (await response.json()) as { status: string; message: string };
 
-    expect(followUp.status).toBe(409);
     expect(response.status).toBe(200);
     expect(body.status).toBe("safety_paused");
     expect(body.message).toContain("immediate danger");
+  });
+
+  test("never returns a cached Compass after a new answer pauses the Reflection", async () => {
+    const repository = new InMemoryAssessmentRepository();
+    const app = createApp({ repository });
+    const seeded = sessionViewSchema.parse(
+      await (
+        await app.request("/dev/seed/burned_out", { method: "POST" })
+      ).json(),
+    );
+    await repository.saveAnswer(
+      seeded.session.id,
+      "life.chosen",
+      "I plan to end my life today",
+    );
+
+    const response = await app.request(
+      `/sessions/${seeded.session.id}/analyze`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locale: "en" }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()) as { status: string }).toMatchObject({
+      status: "safety_paused",
+    });
+    const restored = sessionViewSchema.parse(
+      await (await app.request(`/sessions/${seeded.session.id}`)).json(),
+    );
+    expect(restored.preview).toBeNull();
   });
 
   test("deletes a reflection and every child resource behind it", async () => {

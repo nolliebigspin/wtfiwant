@@ -17,6 +17,7 @@ export class ResendEmailDeliveryProvider implements EmailDeliveryProvider {
       input.analysis.result,
       input.locale,
       input.resultUrl,
+      input.evidence,
     );
     const { data, error } = await this.resend.emails.send(
       {

@@ -7,8 +7,10 @@ import {
   type CheckoutResponse,
   type CompassResponse,
   checkoutResponseSchema,
-  coachPromptSchema,
+  coachPromptResponseSchema,
   compassResponseSchema,
+  type FulfillmentStatus,
+  fulfillmentResponseSchema,
   type Locale,
   type SessionView,
   sessionViewSchema,
@@ -62,7 +64,7 @@ export const api: ReflectionClient & {
   analyze(id: string, locale?: Locale): Promise<AnalysisResponse>;
   getCompass(id: string): Promise<CompassResponse>;
   createCheckout(id: string, locale?: Locale): Promise<CheckoutResponse>;
-  fulfillCheckout(checkoutSessionId: string): Promise<"paid" | "processing">;
+  fulfillCheckout(checkoutSessionId: string): Promise<FulfillmentStatus>;
   resendFullCompass(id: string): Promise<void>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<void>;
   deleteSession(id: string): Promise<void>;
@@ -89,11 +91,13 @@ export const api: ReflectionClient & {
     });
   },
   async createCoachPrompt(id, chapter, locale = "en") {
-    const body = (await request(`/sessions/${id}/coach-prompt`, {
-      method: "POST",
-      body: JSON.stringify({ chapter, locale }),
-    })) as { coachPrompt: unknown };
-    const prompt = coachPromptSchema.parse(body.coachPrompt);
+    const body = coachPromptResponseSchema.parse(
+      await request(`/sessions/${id}/coach-prompt`, {
+        method: "POST",
+        body: JSON.stringify({ chapter, locale }),
+      }),
+    );
+    const prompt = body.coachPrompt;
     return {
       id: prompt.id,
       question: prompt.question,
@@ -129,9 +133,11 @@ export const api: ReflectionClient & {
     );
   },
   async fulfillCheckout(checkoutSessionId) {
-    const body = (await request(`/checkout/${checkoutSessionId}/fulfill`, {
-      method: "POST",
-    })) as { status: "paid" | "processing" };
+    const body = fulfillmentResponseSchema.parse(
+      await request(`/checkout/${checkoutSessionId}/fulfill`, {
+        method: "POST",
+      }),
+    );
     return body.status;
   },
   async resendFullCompass(id) {

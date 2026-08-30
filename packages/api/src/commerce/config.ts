@@ -1,3 +1,4 @@
+import { LocalEmailDeliveryProvider } from "../email/local";
 import { ResendEmailDeliveryProvider } from "../email/resend";
 import { StripePaymentProvider } from "./stripe";
 
@@ -17,10 +18,17 @@ export function createCommerceProviders(env = process.env) {
       required("STRIPE_WEBHOOK_SECRET"),
       env.STRIPE_AUTOMATIC_TAX === "true",
     ),
-    emailProvider: new ResendEmailDeliveryProvider(
-      required("RESEND_API_KEY"),
-      required("REPORT_EMAIL_FROM"),
-    ),
+    emailProvider:
+      env.EMAIL_PROVIDER === "local" && env.NODE_ENV !== "production"
+        ? new LocalEmailDeliveryProvider()
+        : new ResendEmailDeliveryProvider(
+            required("RESEND_API_KEY"),
+            required("REPORT_EMAIL_FROM"),
+          ),
     publicAppUrl: required("PUBLIC_APP_URL"),
+    legalLinks: {
+      termsUrl: required("TERMS_URL"),
+      refundPolicyUrl: required("REFUND_POLICY_URL"),
+    },
   };
 }
