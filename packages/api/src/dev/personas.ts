@@ -119,5 +119,7 @@ export async function createSeedSession(
     result,
     createdAt: new Date().toISOString(),
   });
-  return repository.getSession(view.session.id);
+  const completed = await repository.getSession(view.session.id);
+  if (!completed) throw new Error("Seeded Reflection disappeared");
+  return completed;
 }

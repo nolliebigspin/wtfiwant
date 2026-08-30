@@ -1,5 +1,8 @@
 import type { Locale } from "@wtfiwant/shared";
+import type { Metadata } from "next";
 import { ReflectionJourney } from "@/components/reflection/reflection-journey";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function ReflectionPage({
   params,

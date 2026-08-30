@@ -105,30 +105,94 @@ function view(): SessionView {
       "anti_life.description": "Waiting for weekends.",
     },
     followUps: [],
-    analysis: {
-      version: "v1",
-      model: "test",
-      locale: "en",
-      result: analysis,
-      createdAt: "2026-08-08T10:30:00.000Z",
-    },
+    coachPrompts: [],
+    preview: null,
     actionPlan: null,
     entitlements: ["assessment", "full_analysis"],
   };
 }
 
+const storedAnalysis = {
+  version: "v1",
+  model: "test",
+  locale: "en" as const,
+  result: analysis,
+  createdAt: "2026-08-08T10:30:00.000Z",
+};
+
 describe("results experience", () => {
+  test("shows only a Compass Preview before payment", async () => {
+    const unpaid: SessionView = {
+      ...view(),
+      entitlements: ["assessment"],
+      preview: {
+        locale: "en",
+        summary: analysis.summary,
+        coreDriver: analysis.coreDrivers[0],
+        lockedSections: ["drivers", "tensions", "directions", "action_plan"],
+      },
+    };
+    const client: ResultsClient = {
+      async getSession() {
+        return unpaid;
+      },
+      async analyze() {
+        throw new Error("not used");
+      },
+      async getCompass() {
+        throw new Error("unpaid clients cannot fetch the Full Compass");
+      },
+      async createCheckout() {
+        return {
+          status: "checkout_open",
+          checkoutSessionId: "cs_test_preview",
+          url: "https://checkout.stripe.test/cs_test_preview",
+        };
+      },
+      async fulfillCheckout() {
+        return "processing";
+      },
+      async resendFullCompass() {},
+      async saveActionPlan() {},
+      async deleteSession() {},
+    };
+
+    render(
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <ResultsExperience sessionId={view().session.id} client={client} />
+      </NextIntlClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Get my Full Compass" }),
+    ).toBeTruthy();
+    expect(screen.getByText(analysis.summary)).toBeTruthy();
+    expect(screen.queryByText("Directions worth exploring")).toBeNull();
+  });
+
   test("shows the results interface in German", async () => {
     const client: ResultsClient = {
       async getSession() {
         const restored = view();
-        if (restored.analysis) restored.analysis.locale = "de";
         restored.answers["life.chosen"] = ["Work"];
         return restored;
+      },
+      async getCompass() {
+        return {
+          analysis: { ...storedAnalysis, locale: "de" },
+          actionPlan: null,
+        };
       },
       async analyze(): Promise<AnalysisResponse> {
         throw new Error("not used");
       },
+      async createCheckout() {
+        throw new Error("not used");
+      },
+      async fulfillCheckout() {
+        return "paid";
+      },
+      async resendFullCompass() {},
       async saveActionPlan() {},
       async deleteSession() {},
     };
@@ -159,11 +223,19 @@ describe("results experience", () => {
       async getSession() {
         return view();
       },
-      async analyze(): Promise<AnalysisResponse> {
-        const stored = view().analysis;
-        if (!stored) throw new Error("Fixture analysis is missing");
-        return { status: "complete", analysis: stored };
+      async getCompass() {
+        return { analysis: storedAnalysis, actionPlan: null };
       },
+      async analyze(): Promise<AnalysisResponse> {
+        return { status: "complete", analysis: storedAnalysis };
+      },
+      async createCheckout() {
+        throw new Error("not used");
+      },
+      async fulfillCheckout() {
+        return "paid";
+      },
+      async resendFullCompass() {},
       async saveActionPlan(_id, input) {
         saved.push(input);
       },

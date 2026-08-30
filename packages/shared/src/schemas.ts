@@ -10,6 +10,12 @@ export const questionIdSchema = z
   .max(120)
   .regex(/^[a-z0-9_.:-]+$/);
 export const generatedFollowUpSchema = z.string().trim().min(5).max(300);
+export const generatedCoachPromptSchema = z
+  .object({
+    question: z.string().trim().min(5).max(300),
+    evidenceQuestionIds: z.array(questionIdSchema).min(1).max(3),
+  })
+  .strict();
 export const entitlementSchema = z.enum(["assessment", "full_analysis"]);
 export const seedPersonaSchema = z.enum([
   "burned_out",
@@ -151,6 +157,25 @@ export const storedAnalysisSchema = z
   })
   .strict();
 
+export const analysisPreviewSchema = z
+  .object({
+    locale: localeSchema,
+    summary: analysisSchema.shape.summary,
+    coreDriver: analysisSchema.shape.coreDrivers.element,
+    lockedSections: z.array(
+      z.enum([
+        "drivers",
+        "tensions",
+        "anti_life",
+        "influences",
+        "directions",
+        "goals",
+        "action_plan",
+      ]),
+    ),
+  })
+  .strict();
+
 export const followUpSchema = z
   .object({
     id: followUpIdSchema,
@@ -158,6 +183,20 @@ export const followUpSchema = z
     generatedQuestion: generatedFollowUpSchema,
     locale: localeSchema.default("en"),
     userResponse: z.string().nullable(),
+    createdAt: z.iso.datetime(),
+  })
+  .strict();
+
+export const coachPromptSchema = z
+  .object({
+    id: followUpIdSchema,
+    chapter: chapterIdSchema,
+    question: generatedCoachPromptSchema.shape.question,
+    evidenceQuestionIds: generatedCoachPromptSchema.shape.evidenceQuestionIds,
+    promptVersion: z.string().min(1),
+    locale: localeSchema.default("en"),
+    userResponse: z.string().nullable(),
+    resolvedAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
   })
   .strict();
@@ -182,7 +221,8 @@ export const sessionViewSchema = z
     session: sessionSchema,
     answers: z.record(z.string(), answerValueSchema),
     followUps: z.array(followUpSchema),
-    analysis: storedAnalysisSchema.nullable(),
+    coachPrompts: z.array(coachPromptSchema),
+    preview: analysisPreviewSchema.nullable(),
     actionPlan: actionPlanSchema.nullable(),
     entitlements: z.array(entitlementSchema),
   })
@@ -206,8 +246,41 @@ export const followUpInputSchema = z
   })
   .strict();
 
+export const coachPromptInputSchema = z
+  .object({
+    chapter: chapterIdSchema,
+    locale: localeSchema.default("en"),
+  })
+  .strict();
+
+export const coachPromptResponseInputSchema = z
+  .object({ response: z.string().trim().min(1).max(5000).nullable() })
+  .strict();
+
 export const analysisInputSchema = z
   .object({ locale: localeSchema.default("en") })
+  .strict();
+
+export const checkoutInputSchema = z
+  .object({ locale: localeSchema.default("en") })
+  .strict();
+
+export const checkoutResponseSchema = z.union([
+  z
+    .object({
+      status: z.literal("checkout_open"),
+      checkoutSessionId: z.string().min(1),
+      url: z.url(),
+    })
+    .strict(),
+  z.object({ status: z.literal("paid") }).strict(),
+]);
+
+export const compassResponseSchema = z
+  .object({
+    analysis: storedAnalysisSchema,
+    actionPlan: actionPlanSchema.nullable(),
+  })
   .strict();
 
 export const followUpResponseInputSchema = z
@@ -225,6 +298,12 @@ export const analysisResponseSchema = z.union([
   z
     .object({ status: z.literal("complete"), analysis: storedAnalysisSchema })
     .strict(),
+  z
+    .object({
+      status: z.literal("preview_ready"),
+      preview: analysisPreviewSchema,
+    })
+    .strict(),
   safetyResponseSchema,
 ]);
 
@@ -240,7 +319,12 @@ export type Session = z.infer<typeof sessionSchema>;
 export type SessionView = z.infer<typeof sessionViewSchema>;
 export type Analysis = z.infer<typeof analysisSchema>;
 export type StoredAnalysis = z.infer<typeof storedAnalysisSchema>;
+export type AnalysisPreview = z.infer<typeof analysisPreviewSchema>;
 export type ActionPlanInput = z.infer<typeof actionPlanInputSchema>;
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 export type Entitlement = z.infer<typeof entitlementSchema>;
 export type SeedPersona = z.infer<typeof seedPersonaSchema>;
+export type CoachPrompt = z.infer<typeof coachPromptSchema>;
+export type GeneratedCoachPrompt = z.infer<typeof generatedCoachPromptSchema>;
+export type CheckoutResponse = z.infer<typeof checkoutResponseSchema>;
+export type CompassResponse = z.infer<typeof compassResponseSchema>;

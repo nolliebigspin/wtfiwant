@@ -10,7 +10,7 @@
     "de": "German"
   },
   "Common": {
-    "privacy": "Your reflections can be deeply personal. We only use them to generate your result."
+    "privacy": "Your reflections can be deeply personal. We use them only to generate and deliver your result; Stripe handles payment details."
   },
   "Landing": {
     "nav": "What this is",
@@ -130,6 +130,25 @@
     "loadingTitle": "Reading for patterns.",
     "loadingCopy": "Separating evidence from interpretation…",
     "generateError": "We couldn't generate your Compass. Your answers are still saved; try again.",
+    "paymentProcessing": "Your payment is still processing. We'll unlock your Compass as soon as Stripe confirms it.",
+    "previewEyebrow": "YOUR COMPASS PREVIEW",
+    "previewSignal": "ONE SIGNAL FROM YOUR ANSWERS",
+    "unlockEyebrow": "THE COMPLETE REFLECTION",
+    "unlockTitle": "Get your Full Compass",
+    "unlockCopy": "Unlock every pattern, tension, direction, evidence link, and your reversible action plan with one payment.",
+    "purchase": "Get my Full Compass",
+    "openingCheckout": "Opening secure checkout…",
+    "emailWarning": "Stripe collects your email and payment details. Your email will contain sensitive personal reflection content and a private result link.",
+    "checkoutError": "We couldn't open secure checkout. Try again in a moment.",
+    "locked": {
+      "drivers": "All core drivers",
+      "tensions": "Your useful tensions",
+      "anti_life": "Your complete Anti-Life",
+      "influences": "Outside influences",
+      "directions": "Directions worth testing",
+      "goals": "What may sit beneath your goals",
+      "action_plan": "A reversible action plan"
+    },
     "heroEyebrow": "YOUR ANSWERS, READ BACK CAREFULLY",
     "heroTitle": "Your Compass",
     "heroCopy": "This isn't who you are. It's our best interpretation of what you told us. Keep what feels true. Challenge what doesn't.",
@@ -214,6 +233,10 @@
     "incompletePlan": "Make each part concrete before you start.",
     "planError": "That didn't save. Nothing was lost — try again.",
     "deleteConfirm": "Delete this reflection and every answer? This cannot be undone.",
+    "resend": "Email my Compass again",
+    "resending": "Sending…",
+    "resent": "Email sent",
+    "resendError": "Email failed — try again",
     "delete": "Delete my reflection"
   },
   "NotFound": { "title": "Nothing to reflect on here.", "home": "Go home" }

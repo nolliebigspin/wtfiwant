@@ -1,6 +1,8 @@
 import type {
   ActionPlanInput,
   AnalysisResponse,
+  CheckoutResponse,
+  CompassResponse,
   Locale,
   SessionView,
 } from "@wtfiwant/shared";
@@ -8,6 +10,10 @@ import type {
 export interface ResultsClient {
   getSession(id: string): Promise<SessionView>;
   analyze(id: string, locale?: Locale): Promise<AnalysisResponse>;
+  getCompass(id: string): Promise<CompassResponse>;
+  createCheckout(id: string, locale?: Locale): Promise<CheckoutResponse>;
+  fulfillCheckout(checkoutSessionId: string): Promise<"paid" | "processing">;
+  resendFullCompass(id: string): Promise<void>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<void>;
   deleteSession(id: string): Promise<void>;
 }

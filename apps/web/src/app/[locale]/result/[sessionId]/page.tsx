@@ -1,5 +1,8 @@
 import type { Locale } from "@wtfiwant/shared";
+import type { Metadata } from "next";
 import { ResultsExperience } from "@/components/results/results-experience";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function ResultPage({
   params,

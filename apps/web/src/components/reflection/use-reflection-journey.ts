@@ -41,6 +41,14 @@ export function useReflectionJourney({
           (question) => question.id === view.session.currentQuestionId,
         );
         setIndex(restoredIndex >= 0 ? restoredIndex : 0);
+        const restoredQuestion =
+          assessmentQuestions[restoredIndex >= 0 ? restoredIndex : 0];
+        const activePrompt = view.coachPrompts.find(
+          (prompt) =>
+            prompt.chapter === restoredQuestion.chapter && !prompt.resolvedAt,
+        );
+        if (activePrompt)
+          setFollowUp({ id: activePrompt.id, question: activePrompt.question });
         localStorage.setItem("wtfiwant.sessionId", sessionId);
         setLoading(false);
       })
@@ -65,6 +73,16 @@ export function useReflectionJourney({
     window.location.assign(`/${locale}/result/${sessionId}`);
   };
 
+  const advance = async () => {
+    const next = assessmentQuestions[index + 1];
+    if (!next) return complete();
+    await client.updateProgress(sessionId, next.chapter, next.id);
+    setFollowUp(null);
+    setFollowUpResponse("");
+    setIndex(index + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const goBack = () => {
     if (index === 0) return;
     const previous = assessmentQuestions[index - 1];
@@ -84,26 +102,21 @@ export function useReflectionJourney({
     try {
       await client.saveAnswer(sessionId, question.id, value);
       setSaved(true);
-      if (index < assessmentQuestions.length - 1) {
-        const next = assessmentQuestions[index + 1];
-        await client.updateProgress(sessionId, next.chapter, next.id);
-        setIndex(index + 1);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
+      const next = assessmentQuestions[index + 1];
+      const chapterComplete = !next || next.chapter !== question.chapter;
+      if (chapterComplete) {
         try {
-          const generated = await client.createFollowUp(
+          const generated = await client.createCoachPrompt(
             sessionId,
-            question.id,
+            question.chapter,
             locale as "en" | "de",
           );
-          setFollowUp({
-            id: generated.id,
-            question: generated.generatedQuestion,
-          });
+          if (generated.resolvedAt) await advance();
+          else setFollowUp({ id: generated.id, question: generated.question });
         } catch {
-          complete();
+          await advance();
         }
-      }
+      } else await advance();
     } catch {
       setError(t("saveError"));
     } finally {
@@ -112,17 +125,28 @@ export function useReflectionJourney({
   };
 
   const submitFollowUp = async () => {
-    if (!followUpResponse.trim()) return complete();
     setSaving(true);
     try {
-      await client.saveFollowUpResponse(
+      await client.resolveCoachPrompt(
         sessionId,
         followUp?.id ?? "",
-        followUpResponse,
+        followUpResponse.trim() || null,
       );
-      complete();
+      await advance();
     } catch {
       setError(t("followUpSaveError"));
+      setSaving(false);
+    }
+  };
+
+  const skipFollowUp = async () => {
+    setSaving(true);
+    try {
+      await client.resolveCoachPrompt(sessionId, followUp?.id ?? "", null);
+      await advance();
+    } catch {
+      setError(t("followUpSaveError"));
+    } finally {
       setSaving(false);
     }
   };
@@ -150,6 +174,7 @@ export function useReflectionJourney({
     saving,
     setFollowUpResponse,
     submitFollowUp,
+    skipFollowUp,
     value,
   };
 }

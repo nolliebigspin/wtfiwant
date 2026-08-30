@@ -4,7 +4,11 @@ import {
   actionPlanSchema,
   analysisResponseSchema,
   type ChapterId,
-  followUpSchema,
+  type CheckoutResponse,
+  type CompassResponse,
+  checkoutResponseSchema,
+  coachPromptSchema,
+  compassResponseSchema,
   type Locale,
   type SessionView,
   sessionViewSchema,
@@ -36,21 +40,30 @@ export interface ReflectionClient {
     chapter: ChapterId,
     questionId: string,
   ): Promise<void>;
-  createFollowUp(
+  createCoachPrompt(
     id: string,
-    questionId: string,
+    chapter: ChapterId,
     locale?: Locale,
-  ): Promise<{ id: string; generatedQuestion: string }>;
-  saveFollowUpResponse(
+  ): Promise<{
+    id: string;
+    question: string;
+    userResponse: string | null;
+    resolvedAt: string | null;
+  }>;
+  resolveCoachPrompt(
     id: string,
-    followUpId: string,
-    response: string,
+    promptId: string,
+    response: string | null,
   ): Promise<void>;
 }
 
 export const api: ReflectionClient & {
   createSession(): Promise<SessionView>;
   analyze(id: string, locale?: Locale): Promise<AnalysisResponse>;
+  getCompass(id: string): Promise<CompassResponse>;
+  createCheckout(id: string, locale?: Locale): Promise<CheckoutResponse>;
+  fulfillCheckout(checkoutSessionId: string): Promise<"paid" | "processing">;
+  resendFullCompass(id: string): Promise<void>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<void>;
   deleteSession(id: string): Promise<void>;
   seed(persona: string): Promise<SessionView>;
@@ -75,16 +88,21 @@ export const api: ReflectionClient & {
       body: JSON.stringify({ currentChapter, currentQuestionId }),
     });
   },
-  async createFollowUp(id, questionId, locale = "en") {
-    const body = (await request(`/sessions/${id}/follow-up`, {
+  async createCoachPrompt(id, chapter, locale = "en") {
+    const body = (await request(`/sessions/${id}/coach-prompt`, {
       method: "POST",
-      body: JSON.stringify({ questionId, locale }),
-    })) as { followUp: unknown };
-    const followUp = followUpSchema.parse(body.followUp);
-    return { id: followUp.id, generatedQuestion: followUp.generatedQuestion };
+      body: JSON.stringify({ chapter, locale }),
+    })) as { coachPrompt: unknown };
+    const prompt = coachPromptSchema.parse(body.coachPrompt);
+    return {
+      id: prompt.id,
+      question: prompt.question,
+      userResponse: prompt.userResponse,
+      resolvedAt: prompt.resolvedAt,
+    };
   },
-  async saveFollowUpResponse(id, followUpId, response) {
-    await request(`/sessions/${id}/follow-up/${followUpId}`, {
+  async resolveCoachPrompt(id, promptId, response) {
+    await request(`/sessions/${id}/coach-prompt/${promptId}`, {
       method: "PUT",
       body: JSON.stringify({ response }),
     });
@@ -96,6 +114,28 @@ export const api: ReflectionClient & {
         body: JSON.stringify({ locale }),
       }),
     );
+  },
+  async getCompass(id) {
+    return compassResponseSchema.parse(
+      await request(`/sessions/${id}/compass`),
+    );
+  },
+  async createCheckout(id, locale = "en") {
+    return checkoutResponseSchema.parse(
+      await request(`/sessions/${id}/checkout`, {
+        method: "POST",
+        body: JSON.stringify({ locale }),
+      }),
+    );
+  },
+  async fulfillCheckout(checkoutSessionId) {
+    const body = (await request(`/checkout/${checkoutSessionId}/fulfill`, {
+      method: "POST",
+    })) as { status: "paid" | "processing" };
+    return body.status;
+  },
+  async resendFullCompass(id) {
+    await request(`/sessions/${id}/report-email`, { method: "POST" });
   },
   async saveActionPlan(id, input) {
     const body = (await request(`/sessions/${id}/action-plan`, {

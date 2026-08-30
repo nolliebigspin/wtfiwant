@@ -3,22 +3,37 @@ import {
   assessmentQuestions,
   type ChapterId,
   type Session,
-  type SessionView,
   type StoredAnalysis,
 } from "@wtfiwant/shared";
-import type { AssessmentRepository, NewFollowUp } from "./types";
+import type {
+  AssessmentRecord,
+  AssessmentRepository,
+  NewCoachPrompt,
+  NewFollowUp,
+  ReportPurchase,
+} from "./types";
 
 function copy<T>(value: T): T {
   return structuredClone(value);
 }
 
 export class InMemoryAssessmentRepository implements AssessmentRepository {
-  private readonly sessions = new Map<string, SessionView>();
+  private readonly sessions = new Map<string, AssessmentRecord>();
+  private readonly purchases = new Map<string, ReportPurchase>();
+  private readonly webhookEvents = new Set<string>();
+  private readonly deliveries = new Map<
+    string,
+    {
+      id: string;
+      status: "pending" | "sent" | "failed";
+      attemptCount: number;
+    }
+  >();
 
-  async createSession(): Promise<SessionView> {
+  async createSession(): Promise<AssessmentRecord> {
     const now = new Date().toISOString();
     const first = assessmentQuestions[0];
-    const view: SessionView = {
+    const view: AssessmentRecord = {
       session: {
         id: crypto.randomUUID(),
         status: "in_progress",
@@ -30,17 +45,24 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
       },
       answers: {},
       followUps: [],
+      coachPrompts: [],
       analysis: null,
       actionPlan: null,
-      entitlements: ["assessment", "full_analysis"],
+      entitlements: ["assessment"],
     };
     this.sessions.set(view.session.id, view);
     return copy(view);
   }
 
-  async getSession(id: string): Promise<SessionView | null> {
+  async getSession(id: string): Promise<AssessmentRecord | null> {
     const view = this.sessions.get(id);
-    return view ? copy(view) : null;
+    if (!view) return null;
+    const purchase = this.purchases.get(id);
+    view.entitlements =
+      purchase?.status === "paid"
+        ? ["assessment", "full_analysis"]
+        : ["assessment"];
+    return copy(view);
   }
 
   async updateProgress(
@@ -63,7 +85,9 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
   ): Promise<boolean> {
     const view = this.sessions.get(id);
     if (!view) return false;
-    view.answers[questionId] = copy(value) as SessionView["answers"][string];
+    view.answers[questionId] = copy(
+      value,
+    ) as AssessmentRecord["answers"][string];
     view.session.updatedAt = new Date().toISOString();
     return true;
   }
@@ -97,6 +121,130 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     return true;
   }
 
+  async saveCoachPrompt(id: string, prompt: NewCoachPrompt): Promise<boolean> {
+    const view = this.sessions.get(id);
+    if (!view) return false;
+    view.coachPrompts.push(copy(prompt));
+    return true;
+  }
+
+  async resolveCoachPrompt(
+    id: string,
+    promptId: string,
+    response: string | null,
+  ): Promise<boolean> {
+    const prompt = this.sessions
+      .get(id)
+      ?.coachPrompts.find((candidate) => candidate.id === promptId);
+    if (!prompt) return false;
+    prompt.userResponse = response;
+    prompt.resolvedAt = new Date().toISOString();
+    return true;
+  }
+
+  async getPurchaseForSession(id: string): Promise<ReportPurchase | null> {
+    const purchase = this.purchases.get(id);
+    return purchase ? copy(purchase) : null;
+  }
+
+  async saveCheckout(
+    sessionId: string,
+    checkout: { id: string; url: string },
+  ): Promise<ReportPurchase> {
+    const existing = this.purchases.get(sessionId);
+    const purchase: ReportPurchase = {
+      id: existing?.id ?? crypto.randomUUID(),
+      sessionId,
+      status: "checkout_open",
+      checkoutSessionId: checkout.id,
+      checkoutUrl: checkout.url,
+      paymentIntentId: null,
+      recipientEmail: null,
+      currency: null,
+      amountTotal: null,
+      paidAt: null,
+    };
+    this.purchases.set(sessionId, purchase);
+    return copy(purchase);
+  }
+
+  async markPurchasePaid(input: {
+    checkoutSessionId: string;
+    paymentIntentId: string | null;
+    recipientEmail: string;
+    currency: string | null;
+    amountTotal: number | null;
+  }): Promise<ReportPurchase | null> {
+    const purchase = [...this.purchases.values()].find(
+      (candidate) => candidate.checkoutSessionId === input.checkoutSessionId,
+    );
+    if (!purchase) return null;
+    purchase.status = "paid";
+    purchase.paymentIntentId = input.paymentIntentId;
+    purchase.recipientEmail = input.recipientEmail;
+    purchase.currency = input.currency;
+    purchase.amountTotal = input.amountTotal;
+    purchase.paidAt ??= new Date().toISOString();
+    return copy(purchase);
+  }
+
+  async setPurchaseStatusByCheckout(
+    checkoutSessionId: string,
+    status: "failed" | "expired",
+  ): Promise<boolean> {
+    const purchase = [...this.purchases.values()].find(
+      (candidate) => candidate.checkoutSessionId === checkoutSessionId,
+    );
+    if (!purchase || purchase.status === "paid") return false;
+    purchase.status = status;
+    return true;
+  }
+
+  async claimWebhookEvent(provider: string, eventId: string): Promise<boolean> {
+    const key = `${provider}:${eventId}`;
+    if (this.webhookEvents.has(key)) return false;
+    this.webhookEvents.add(key);
+    return true;
+  }
+
+  async claimInitialDelivery(purchaseId: string): Promise<string | null> {
+    if (this.deliveries.has(purchaseId)) return null;
+    const id = crypto.randomUUID();
+    this.deliveries.set(purchaseId, {
+      id,
+      status: "pending",
+      attemptCount: 1,
+    });
+    return id;
+  }
+
+  async prepareDeliveryRetry(
+    purchaseId: string,
+  ): Promise<{ deliveryId: string; attemptCount: number } | null> {
+    const delivery = this.deliveries.get(purchaseId);
+    if (!delivery || delivery.attemptCount >= 5) return null;
+    delivery.attemptCount += 1;
+    delivery.status = "pending";
+    return { deliveryId: delivery.id, attemptCount: delivery.attemptCount };
+  }
+
+  async markDeliverySent(deliveryId: string): Promise<void> {
+    const delivery = [...this.deliveries.values()].find(
+      (candidate) => candidate.id === deliveryId,
+    );
+    if (delivery) delivery.status = "sent";
+  }
+
+  async markDeliveryFailed(
+    deliveryId: string,
+    _errorCode: string,
+  ): Promise<void> {
+    const delivery = [...this.deliveries.values()].find(
+      (candidate) => candidate.id === deliveryId,
+    );
+    if (delivery) delivery.status = "failed";
+  }
+
   async saveAnalysis(id: string, analysis: StoredAnalysis): Promise<boolean> {
     const view = this.sessions.get(id);
     if (!view) return false;
@@ -123,6 +271,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
   }
 
   async deleteSession(id: string): Promise<boolean> {
+    this.purchases.delete(id);
     return this.sessions.delete(id);
   }
 }

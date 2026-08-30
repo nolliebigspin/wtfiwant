@@ -1,10 +1,15 @@
-import { analysisSchema, type Locale } from "@wtfiwant/shared";
+import {
+  analysisSchema,
+  generatedCoachPromptSchema,
+  type Locale,
+} from "@wtfiwant/shared";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import {
   ANALYSIS_SYSTEM_PROMPT,
   buildAnalysisInput,
 } from "../prompts/analysis";
+import { buildCoachInput, COACH_SYSTEM_PROMPT } from "../prompts/coach";
 import {
   buildFollowUpInput,
   FOLLOW_UP_SYSTEM_PROMPT,
@@ -26,6 +31,25 @@ export class OpenAIProvider implements AIProvider {
     this.client = new OpenAI({ apiKey: options.apiKey });
     this.name = options.analysisModel;
     this.followUpModel = options.followUpModel;
+  }
+
+  async generateCoachPrompt(
+    answers: Record<string, unknown>,
+    safetyIdentifier?: string,
+    locale: Locale = "en",
+  ) {
+    const response = await this.client.responses.parse({
+      model: this.followUpModel,
+      instructions: COACH_SYSTEM_PROMPT,
+      input: buildCoachInput(answers, locale),
+      max_output_tokens: 220,
+      text: {
+        format: zodTextFormat(generatedCoachPromptSchema, "coach_prompt"),
+      },
+      store: false,
+      safety_identifier: safetyIdentifier,
+    });
+    return generatedCoachPromptSchema.parse(response.output_parsed);
   }
 
   async generateFollowUp(

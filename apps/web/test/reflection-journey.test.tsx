@@ -41,14 +41,61 @@ function session(overrides: Partial<SessionView> = {}): SessionView {
     },
     answers: {},
     followUps: [],
-    analysis: null,
+    coachPrompts: [],
+    preview: null,
     actionPlan: null,
-    entitlements: ["assessment", "full_analysis"],
+    entitlements: ["assessment"],
     ...overrides,
   };
 }
 
 describe("reflection journey", () => {
+  test("offers and resolves an optional Coach Prompt at a chapter boundary", async () => {
+    const resolved: Array<[string, string | null]> = [];
+    const progress: string[] = [];
+    const client: ReflectionClient = {
+      async getSession() {
+        return session({
+          session: { ...session().session, currentQuestionId: "life.drifted" },
+          answers: { "life.drifted": "My calendar filled itself." },
+        });
+      },
+      async saveAnswer() {},
+      async updateProgress(_id, _chapter, questionId) {
+        progress.push(questionId);
+      },
+      async createCoachPrompt() {
+        return {
+          id: "4b129da1-e739-46d8-8898-5fed6f81885a",
+          question: "Which part of that drift costs the most energy?",
+          userResponse: null,
+          resolvedAt: null,
+        };
+      },
+      async resolveCoachPrompt(_id, promptId, response) {
+        resolved.push([promptId, response]);
+      },
+    };
+
+    renderJourney(
+      <ReflectionJourney sessionId={session().session.id} client={client} />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "Which part of that drift costs the most energy?",
+      }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+
+    await waitFor(() =>
+      expect(resolved).toEqual([
+        ["4b129da1-e739-46d8-8898-5fed6f81885a", null],
+      ]),
+    );
+    expect(progress).toEqual(["alive.memories"]);
+  });
+
   test("shows German copy while saving canonical assessment values", async () => {
     const saves: Array<[string, unknown]> = [];
     const client: ReflectionClient = {
@@ -59,10 +106,10 @@ describe("reflection journey", () => {
         saves.push([questionId, value]);
       },
       async updateProgress() {},
-      async createFollowUp() {
+      async createCoachPrompt() {
         throw new Error("not used");
       },
-      async saveFollowUpResponse() {},
+      async resolveCoachPrompt() {},
     };
 
     renderJourney(
@@ -99,10 +146,10 @@ describe("reflection journey", () => {
         saves.push([questionId, value]);
       },
       async updateProgress() {},
-      async createFollowUp() {
+      async createCoachPrompt() {
         throw new Error("not used");
       },
-      async saveFollowUpResponse() {},
+      async resolveCoachPrompt() {},
     };
 
     renderJourney(

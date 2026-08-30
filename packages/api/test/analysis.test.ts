@@ -3,7 +3,7 @@ import {
   type Analysis,
   analysisResponseSchema,
   assessmentQuestions,
-  followUpSchema,
+  coachPromptSchema,
   sessionViewSchema,
   threeLives,
   tradeoffPairs,
@@ -115,6 +115,13 @@ describe("analysis validation", () => {
         receivedLocales.push(locale ?? "missing");
         return "What would that give you?";
       },
+      async generateCoachPrompt(_answers, _safetyIdentifier, locale) {
+        receivedLocales.push(locale ?? "missing");
+        return {
+          question: "What would that give you?",
+          evidenceQuestionIds: ["goals.current"],
+        };
+      },
       async analyzeAssessment(answers, repair, _safetyIdentifier, locale) {
         receivedLocales.push(locale ?? "missing");
         attempts += 1;
@@ -188,19 +195,19 @@ describe("analysis validation", () => {
     }
 
     const generatedResponse = await app.request(
-      `/sessions/${created.session.id}/follow-up`,
+      `/sessions/${created.session.id}/coach-prompt`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ questionId: "goals.current", locale: "de" }),
+        body: JSON.stringify({ chapter: "goals", locale: "de" }),
       },
     );
     const generatedBody = (await generatedResponse.json()) as {
-      followUp: unknown;
+      coachPrompt: unknown;
     };
-    const followUp = followUpSchema.parse(generatedBody.followUp);
+    const coachPrompt = coachPromptSchema.parse(generatedBody.coachPrompt);
     await app.request(
-      `/sessions/${created.session.id}/follow-up/${followUp.id}`,
+      `/sessions/${created.session.id}/coach-prompt/${coachPrompt.id}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -222,9 +229,9 @@ describe("analysis validation", () => {
     const result = analysisResponseSchema.parse(await response.json());
 
     expect(response.status).toBe(200);
-    expect(result.status).toBe("complete");
-    if (result.status === "complete")
-      expect(result.analysis.result).toEqual(validAnalysis);
+    expect(result.status).toBe("preview_ready");
+    if (result.status === "preview_ready")
+      expect(result.preview.summary).toEqual(validAnalysis.summary);
     expect(attempts).toBe(2);
     expect(receivedLocales).toEqual(["de", "de", "de"]);
     expect(
@@ -246,9 +253,7 @@ describe("analysis validation", () => {
     const translated = analysisResponseSchema.parse(
       await translatedResponse.json(),
     );
-    expect(translated.status).toBe("complete");
-    if (translated.status === "complete")
-      expect(translated.analysis.locale).toBe("en");
+    expect(translated.status).toBe("preview_ready");
     expect(receivedLocales).toEqual(["de", "de", "de", "en", "en"]);
     expect(
       Object.values(receivedAnswers).some((value) =>

@@ -63,7 +63,7 @@ export function ReflectionJourney({
             error={journey.error}
             saving={journey.saving}
             onResponseChange={journey.setFollowUpResponse}
-            onSkip={journey.complete}
+            onSkip={journey.skipFollowUp}
             onSubmit={journey.submitFollowUp}
           />
         ) : (

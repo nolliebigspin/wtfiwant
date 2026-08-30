@@ -1,7 +1,17 @@
-import { type Analysis, analysisSchema, type Locale } from "@wtfiwant/shared";
+import {
+  type Analysis,
+  analysisSchema,
+  type GeneratedCoachPrompt,
+  type Locale,
+} from "@wtfiwant/shared";
 
 export interface AIProvider {
   readonly name: string;
+  generateCoachPrompt(
+    answers: Record<string, unknown>,
+    safetyIdentifier?: string,
+    locale?: Locale,
+  ): Promise<GeneratedCoachPrompt>;
   generateFollowUp(
     questionId: string,
     answer: string,

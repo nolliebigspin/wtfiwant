@@ -1,10 +1,70 @@
 import { describe, expect, test } from "bun:test";
-import { sessionViewSchema } from "@wtfiwant/shared";
+import { coachPromptSchema, sessionViewSchema } from "@wtfiwant/shared";
 import { LocalAIProvider } from "../src/ai/local";
 import { createApp } from "../src/app";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
 
 describe("assessment API", () => {
+  test("offers one evidence-linked Coach Prompt for a completed chapter", async () => {
+    const repository = new InMemoryAssessmentRepository();
+    const app = createApp({
+      repository,
+      aiProvider: {
+        name: "coach-test",
+        async generateCoachPrompt(answers) {
+          expect(Object.keys(answers)).toEqual([
+            "life.energy",
+            "life.chosen",
+            "life.drifted",
+          ]);
+          return {
+            question: "Which part of that drift costs you the most energy?",
+            evidenceQuestionIds: ["life.drifted"],
+          };
+        },
+        async generateFollowUp() {
+          throw new Error("not used");
+        },
+        async analyzeAssessment() {
+          throw new Error("not used");
+        },
+      },
+    });
+    const created = sessionViewSchema.parse(
+      await (await app.request("/sessions", { method: "POST" })).json(),
+    );
+    for (const [questionId, value] of [
+      ["life.energy", ["Work"]],
+      ["life.chosen", "I chose the people around me."],
+      ["life.drifted", "My calendar filled itself."],
+    ] as const) {
+      await app.request(
+        `/sessions/${created.session.id}/answers/${questionId}`,
+        {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ value }),
+        },
+      );
+    }
+
+    const response = await app.request(
+      `/sessions/${created.session.id}/coach-prompt`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chapter: "you", locale: "en" }),
+      },
+    );
+    const body = (await response.json()) as { coachPrompt: unknown };
+    const prompt = coachPromptSchema.parse(body.coachPrompt);
+
+    expect(response.status).toBe(201);
+    expect(prompt.question).toContain("drift");
+    expect(prompt.evidenceQuestionIds).toEqual(["life.drifted"]);
+    expect(prompt.promptVersion).toBeTruthy();
+  });
+
   test("creates an anonymous session ready at the first question", async () => {
     const app = createApp({ repository: new InMemoryAssessmentRepository() });
 
@@ -15,7 +75,25 @@ describe("assessment API", () => {
     expect(body.session.status).toBe("in_progress");
     expect(body.session.currentQuestionId).toBe("life.energy");
     expect(body.answers).toEqual({});
-    expect(body.entitlements).toEqual(["assessment", "full_analysis"]);
+    expect(body.entitlements).toEqual(["assessment"]);
+  });
+
+  test("returns only a Compass Preview until the Full Compass is entitled", async () => {
+    const app = createApp({ repository: new InMemoryAssessmentRepository() });
+    const seededResponse = await app.request("/dev/seed/burned_out", {
+      method: "POST",
+    });
+    const seeded = sessionViewSchema.parse(await seededResponse.json());
+
+    expect(seeded.preview?.summary).toBeTruthy();
+    expect(seeded.preview?.coreDriver.name).toBeTruthy();
+    expect("analysis" in seeded).toBe(false);
+
+    const full = await app.request(`/sessions/${seeded.session.id}/compass`);
+    expect(full.status).toBe(402);
+    expect(await full.json()).toEqual({
+      error: "Full Compass requires payment",
+    });
   });
 
   test("validates and persists an answer through the session interface", async () => {

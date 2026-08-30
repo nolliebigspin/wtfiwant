@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
   // packages and their dependencies (postgres, openai) from the standalone
   // build. The monorepo root is the real dependency boundary.
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
+  async headers() {
+    return [
+      {
+        source: "/:locale/reflection/:path*",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+      {
+        source: "/:locale/result/:path*",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+    ];
+  },
 };
 
 const withNextIntl = createNextIntlPlugin();

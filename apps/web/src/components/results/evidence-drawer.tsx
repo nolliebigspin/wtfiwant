@@ -33,6 +33,24 @@ export function buildEvidenceAnswers(
           : [],
       ),
     ),
+    ...Object.fromEntries(
+      view.coachPrompts.flatMap((prompt) =>
+        prompt.userResponse
+          ? [
+              [
+                `coach:${prompt.chapter}:${prompt.id}`,
+                {
+                  question:
+                    prompt.locale === locale
+                      ? prompt.question
+                      : additionalFollowUp,
+                  answer: prompt.userResponse,
+                },
+              ],
+            ]
+          : [],
+      ),
+    ),
   };
 }
 

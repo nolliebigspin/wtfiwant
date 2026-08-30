@@ -20,6 +20,22 @@ function evidence(
 export class LocalAIProvider implements AIProvider {
   readonly name = "local-patterns-v1";
 
+  async generateCoachPrompt(
+    answers: Record<string, unknown>,
+    _safetyIdentifier?: string,
+    locale: Locale = "en",
+  ) {
+    const [questionId, value] = Object.entries(answers).at(-1) ?? ["", ""];
+    const subject = textOf(value).trim().split(/\s+/).slice(0, 8).join(" ");
+    return {
+      question:
+        locale === "de"
+          ? `Was ist an „${subject}“ für dich am wichtigsten?`
+          : `What matters most to you about “${subject}”?`,
+      evidenceQuestionIds: [questionId],
+    };
+  }
+
   async generateFollowUp(
     _questionId: string,
     answer: string,

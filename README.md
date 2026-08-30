@@ -9,11 +9,15 @@ This is not a personality test, therapy app, happiness score, chatbot, or produc
 - Anonymous UUID sessions with server-side resume and cascade deletion
 - A seven-chapter, one-screen-at-a-time reflection that works on mobile and desktop
 - Data-defined questions and interaction types: text, choices, memories, Three Lives, trade-offs, and goals
+- Optional evidence-linked AI Coach Prompts at chapter boundaries
 - Replaceable AI providers with backend-only credentials, versioned prompts, strict output validation, and one repair attempt
 - A credential-free local analysis provider for private development
 - A pre-analysis safety layer that pauses ordinary motivational analysis for possible immediate self-harm danger
 - Explainable Compass, Tensions, Anti-Life, possible directions, and evidence drawers tied to saved question IDs
 - Direction → Experiment → Now planning and an editable If → Then intention
+- A server-enforced Compass Preview / Full Compass boundary
+- One-time Stripe-hosted Checkout with idempotent webhook fulfillment
+- Paid Full Compass delivery and explicit resend through a replaceable email provider
 - Three development-only completed personas
 - PostgreSQL migrations, Docker Compose, a production Dockerfile, and behavior tests
 
@@ -67,6 +71,14 @@ Open [http://localhost:3000](http://localhost:3000). The API health endpoint is 
 | `AI_API_KEY` | Server | Required only for `AI_PROVIDER=openai` |
 | `AI_MODEL` | Server | Structured analysis model |
 | `AI_FOLLOWUP_MODEL` | Server | Targeted follow-up model |
+| `PAYMENTS_ENABLED` | Server | `true` enables paid Full Compass Checkout; otherwise the app remains preview-only |
+| `PUBLIC_APP_URL` | Server | Canonical HTTPS origin used for Stripe returns and private report links |
+| `STRIPE_SECRET_KEY` | Server | Stripe secret key |
+| `STRIPE_PRICE_ID` | Server | One-time Price for a Full Compass |
+| `STRIPE_WEBHOOK_SECRET` | Server | Signing secret for `/api/stripe/webhook` |
+| `STRIPE_AUTOMATIC_TAX` | Server | Enables Stripe Tax after registrations and product tax code are configured |
+| `RESEND_API_KEY` | Server | Transactional report-email credential |
+| `REPORT_EMAIL_FROM` | Server | Verified sender, for example `wtfiwant <compass@example.com>` |
 
 All of these are server-only and read inside route handlers. None is exposed as `NEXT_PUBLIC_*`.
 
@@ -105,6 +117,7 @@ Prompts are not scattered through routes:
 ```text
 packages/api/src/prompts/
   analysis.ts
+  coach.ts
   follow-up.ts
   action-plan.ts
 ```
@@ -121,7 +134,7 @@ In development, open `/commitment` and use one of the three development shortcut
 2. Freedom-oriented but afraid of losing relationships
 3. Stable life but unsure whether they want more adventure
 
-Or call the development endpoint directly:
+Or call the development endpoint directly. Seeded sessions show the same unpaid Compass Preview as a completed reflection, so payment remains a real server-enforced boundary:
 
 ```bash
 curl -X POST http://localhost:3000/api/dev/seed/burned_out
@@ -169,8 +182,12 @@ Create an application in Dokploy, point it at this repository, choose **Docker C
 | `AI_API_KEY` | when `AI_PROVIDER=openai` | The API refuses to start otherwise. |
 | `POSTGRES_DB`, `POSTGRES_USER` | no | Default to `wtfiwant`. |
 | `AI_MODEL`, `AI_FOLLOWUP_MODEL` | no | Default to `gpt-5-mini`. |
+| `PAYMENTS_ENABLED` | no | `false` keeps the deployment preview-only. |
+| `PUBLIC_APP_URL`, `STRIPE_*`, `RESEND_API_KEY`, `REPORT_EMAIL_FROM` | when payments are enabled | Checkout, webhook, and report-delivery configuration. |
 
 Add a domain pointing at the `web` service on port 3000. `DATABASE_URL` is assembled from the PostgreSQL variables, so it should not be set by hand.
+
+To enable purchases, create a one-time Stripe Product/Price, configure a Stripe webhook destination at `https://YOUR_DOMAIN/api/stripe/webhook` for Checkout completion, delayed success/failure, and expiration events, verify the Resend sending domain, then set all payment/email variables from the table above. Leave `STRIPE_AUTOMATIC_TAX=false` until the merchant's registrations and product tax code are configured.
 
 Migrations run as their own service rather than from the web container's entrypoint: `web` depends on it with `service_completed_successfully`, so a release that expects a new column never serves traffic against the old schema, and a failed migration aborts the rollout. Reruns are idempotent — already-applied versions are skipped.
 
@@ -179,5 +196,5 @@ Migrations run as their own service rather than from the web container's entrypo
 - Anonymous session URLs are bearer access: anyone with the UUID can open that reflection. Accounts and stronger per-session secrets are future work.
 - The local provider is intentionally heuristic. It proves the private end-to-end flow but is not a substitute for evaluating production prompt quality.
 - The safety classifier is deliberately conservative and minimal; it is a clear architecture seam, not a clinical moderation system.
-- There is no payment provider. Every development session receives `assessment` and `full_analysis` entitlements behind the entitlement-shaped response.
-- There are no notifications, streaks, analytics, social features, subscriptions, public profiles, or generic chat.
+- A Full Compass email cannot be recalled after delivery. Refund state is recorded for future policy automation, but refunds do not automatically revoke an already-delivered report.
+- There are no recurring notifications, streaks, analytics, social features, subscriptions, public profiles, or generic chat.

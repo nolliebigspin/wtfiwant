@@ -1,5 +1,6 @@
 import { createApp } from "@wtfiwant/api";
 import { createAIProvider } from "@wtfiwant/api/ai";
+import { createCommerceProviders } from "@wtfiwant/api/commerce";
 import { PostgresAssessmentRepository } from "@wtfiwant/api/repositories";
 
 /**
@@ -29,6 +30,7 @@ function getApp(): App {
   app = createApp({
     repository: PostgresAssessmentRepository.connect(databaseUrl),
     aiProvider: createAIProvider(),
+    ...createCommerceProviders(),
     basePath: "/api",
   });
   return app;

@@ -10,7 +10,7 @@
     "de": "Deutsch"
   },
   "Common": {
-    "privacy": "Deine Gedanken können sehr persönlich sein. Wir verwenden sie nur, um dein Ergebnis zu erstellen."
+    "privacy": "Deine Gedanken können sehr persönlich sein. Wir verwenden sie nur, um dein Ergebnis zu erstellen und zuzustellen; Stripe verarbeitet die Zahlungsdaten."
   },
   "Landing": {
     "nav": "Worum es geht",
@@ -130,6 +130,25 @@
     "loadingTitle": "Wir suchen nach Mustern.",
     "loadingCopy": "Hinweise werden von Interpretationen getrennt …",
     "generateError": "Wir konnten deinen Kompass nicht erstellen. Deine Antworten sind noch gespeichert; versuche es erneut.",
+    "paymentProcessing": "Deine Zahlung wird noch verarbeitet. Wir schalten deinen Kompass frei, sobald Stripe sie bestätigt.",
+    "previewEyebrow": "DEINE KOMPASS-VORSCHAU",
+    "previewSignal": "EIN SIGNAL AUS DEINEN ANTWORTEN",
+    "unlockEyebrow": "DIE VOLLSTÄNDIGE REFLEXION",
+    "unlockTitle": "Hol dir deinen vollständigen Kompass",
+    "unlockCopy": "Schalte mit einer einmaligen Zahlung alle Muster, Spannungen, Richtungen, Belege und deinen umkehrbaren Aktionsplan frei.",
+    "purchase": "Meinen vollständigen Kompass erhalten",
+    "openingCheckout": "Sicherer Checkout wird geöffnet …",
+    "emailWarning": "Stripe erfasst deine E-Mail- und Zahlungsdaten. Die E-Mail enthält persönliche Reflexionsinhalte und einen privaten Ergebnislink.",
+    "checkoutError": "Der sichere Checkout konnte nicht geöffnet werden. Versuche es gleich noch einmal.",
+    "locked": {
+      "drivers": "Alle zentralen Antreiber",
+      "tensions": "Deine nützlichen Spannungen",
+      "anti_life": "Dein vollständiges Anti-Leben",
+      "influences": "Äußere Einflüsse",
+      "directions": "Richtungen zum Ausprobieren",
+      "goals": "Was unter deinen Zielen liegen könnte",
+      "action_plan": "Ein umkehrbarer Aktionsplan"
+    },
     "heroEyebrow": "DEINE ANTWORTEN, SORGFÄLTIG ZURÜCKGESPIEGELT",
     "heroTitle": "Dein Kompass",
     "heroCopy": "Das ist nicht, wer du bist. Es ist unsere beste Interpretation dessen, was du uns erzählt hast. Behalte, was sich wahr anfühlt. Hinterfrage, was nicht passt.",
@@ -214,6 +233,10 @@
     "incompletePlan": "Mach jeden Teil konkret, bevor du anfängst.",
     "planError": "Das wurde nicht gespeichert. Nichts ist verloren – versuche es erneut.",
     "deleteConfirm": "Diese Reflexion und alle Antworten löschen? Das kann nicht rückgängig gemacht werden.",
+    "resend": "Meinen Kompass erneut mailen",
+    "resending": "Wird gesendet …",
+    "resent": "E-Mail gesendet",
+    "resendError": "E-Mail fehlgeschlagen – erneut versuchen",
     "delete": "Meine Reflexion löschen"
   },
   "NotFound": {

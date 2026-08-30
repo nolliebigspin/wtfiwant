@@ -3,11 +3,44 @@ import {
   assessmentQuestions,
   type ChapterId,
   type Session,
-  type SessionView,
   type StoredAnalysis,
 } from "@wtfiwant/shared";
 import postgres, { type Sql } from "postgres";
-import type { AssessmentRepository, NewFollowUp } from "./types";
+import type {
+  AssessmentRecord,
+  AssessmentRepository,
+  NewCoachPrompt,
+  NewFollowUp,
+  ReportPurchase,
+} from "./types";
+
+type PurchaseRow = {
+  id: string;
+  session_id: string;
+  status: ReportPurchase["status"];
+  stripe_checkout_session_id: string;
+  checkout_url: string;
+  stripe_payment_intent_id: string | null;
+  recipient_email: string | null;
+  currency: string | null;
+  amount_total: number | null;
+  paid_at: Date | null;
+};
+
+function mapPurchase(row: PurchaseRow): ReportPurchase {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    status: row.status,
+    checkoutSessionId: row.stripe_checkout_session_id,
+    checkoutUrl: row.checkout_url,
+    paymentIntentId: row.stripe_payment_intent_id,
+    recipientEmail: row.recipient_email,
+    currency: row.currency,
+    amountTotal: row.amount_total,
+    paidAt: row.paid_at?.toISOString() ?? null,
+  };
+}
 
 type SessionRow = {
   id: string;
@@ -38,7 +71,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     return new PostgresAssessmentRepository(postgres(databaseUrl));
   }
 
-  async createSession(): Promise<SessionView> {
+  async createSession(): Promise<AssessmentRecord> {
     const first = assessmentQuestions[0];
     const [row] = await this.sql<SessionRow[]>`
       INSERT INTO assessment_sessions (status, current_chapter, current_question_id)
@@ -49,66 +82,95 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
       session: mapSession(row),
       answers: {},
       followUps: [],
+      coachPrompts: [],
       analysis: null,
       actionPlan: null,
-      entitlements: ["assessment", "full_analysis"],
+      entitlements: ["assessment"],
     };
   }
 
-  async getSession(id: string): Promise<SessionView | null> {
+  async getSession(id: string): Promise<AssessmentRecord | null> {
     const sessionRows = await this.sql<SessionRow[]>`
       SELECT * FROM assessment_sessions WHERE id = ${id}
     `;
     const row = sessionRows[0];
     if (!row) return null;
 
-    const [answerRows, followUpRows, analysisRows, actionRows] =
-      await Promise.all([
-        this.sql<
-          Array<{ question_id: string; answer: SessionView["answers"][string] }>
-        >`
+    const [
+      answerRows,
+      followUpRows,
+      coachPromptRows,
+      analysisRows,
+      actionRows,
+      purchaseRows,
+    ] = await Promise.all([
+      this.sql<
+        Array<{
+          question_id: string;
+          answer: AssessmentRecord["answers"][string];
+        }>
+      >`
         SELECT question_id, answer FROM assessment_answers WHERE session_id = ${id}
       `,
-        this.sql<
-          Array<{
-            id: string;
-            question_id: string;
-            generated_question: string;
-            locale: StoredAnalysis["locale"];
-            user_response: string | null;
-            created_at: Date;
-          }>
-        >`
+      this.sql<
+        Array<{
+          id: string;
+          question_id: string;
+          generated_question: string;
+          locale: StoredAnalysis["locale"];
+          user_response: string | null;
+          created_at: Date;
+        }>
+      >`
         SELECT id, question_id, generated_question, locale, user_response, created_at
         FROM ai_followups WHERE session_id = ${id} ORDER BY created_at
       `,
-        this.sql<
-          Array<{
-            version: string;
-            model: string;
-            locale: StoredAnalysis["locale"];
-            result: StoredAnalysis["result"];
-            created_at: Date;
-          }>
-        >`
+      this.sql<
+        Array<{
+          id: string;
+          chapter: ChapterId;
+          question: string;
+          evidence_question_ids: string[];
+          prompt_version: string;
+          locale: StoredAnalysis["locale"];
+          user_response: string | null;
+          resolved_at: Date | null;
+          created_at: Date;
+        }>
+      >`
+        SELECT id, chapter, question, evidence_question_ids, prompt_version, locale, user_response, resolved_at, created_at
+        FROM ai_coach_prompts WHERE session_id = ${id} ORDER BY created_at
+      `,
+      this.sql<
+        Array<{
+          version: string;
+          model: string;
+          locale: StoredAnalysis["locale"];
+          result: StoredAnalysis["result"];
+          created_at: Date;
+        }>
+      >`
         SELECT version, model, locale, result, created_at
         FROM assessment_analyses WHERE session_id = ${id} ORDER BY created_at DESC LIMIT 1
       `,
-        this.sql<
-          Array<{
-            direction: string;
-            experiment: string;
-            immediate_action: string;
-            obstacle: string;
-            if_condition: string;
-            then_action: string;
-            updated_at: Date;
-          }>
-        >`
+      this.sql<
+        Array<{
+          direction: string;
+          experiment: string;
+          immediate_action: string;
+          obstacle: string;
+          if_condition: string;
+          then_action: string;
+          updated_at: Date;
+        }>
+      >`
         SELECT direction, experiment, immediate_action, obstacle, if_condition, then_action, updated_at
         FROM action_plans WHERE session_id = ${id}
       `,
-      ]);
+      this.sql<Array<{ status: ReportPurchase["status"] }>>`
+        SELECT status FROM report_purchases WHERE session_id = ${id}
+      `,
+    ]);
 
     const analysisRow = analysisRows[0];
     const actionRow = actionRows[0];
@@ -124,6 +186,17 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         locale: followUp.locale,
         userResponse: followUp.user_response,
         createdAt: followUp.created_at.toISOString(),
+      })),
+      coachPrompts: coachPromptRows.map((prompt) => ({
+        id: prompt.id,
+        chapter: prompt.chapter,
+        question: prompt.question,
+        evidenceQuestionIds: prompt.evidence_question_ids,
+        promptVersion: prompt.prompt_version,
+        locale: prompt.locale,
+        userResponse: prompt.user_response,
+        resolvedAt: prompt.resolved_at?.toISOString() ?? null,
+        createdAt: prompt.created_at.toISOString(),
       })),
       analysis: analysisRow
         ? {
@@ -145,7 +218,10 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
             updatedAt: actionRow.updated_at.toISOString(),
           }
         : null,
-      entitlements: ["assessment", "full_analysis"],
+      entitlements:
+        purchaseRows[0]?.status === "paid"
+          ? ["assessment", "full_analysis"]
+          : ["assessment"],
     };
   }
 
@@ -203,6 +279,157 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
       RETURNING id
     `;
     return rows.length > 0;
+  }
+
+  async saveCoachPrompt(id: string, prompt: NewCoachPrompt): Promise<boolean> {
+    const rows = await this.sql<Array<{ id: string }>>`
+      INSERT INTO ai_coach_prompts (
+        id, session_id, chapter, question, evidence_question_ids, prompt_version, locale, user_response, resolved_at, created_at
+      ) SELECT ${prompt.id}, ${id}, ${prompt.chapter}, ${prompt.question}, ${prompt.evidenceQuestionIds},
+        ${prompt.promptVersion}, ${prompt.locale}, ${prompt.userResponse}, ${prompt.resolvedAt}, ${prompt.createdAt}
+      WHERE EXISTS (SELECT 1 FROM assessment_sessions WHERE id = ${id})
+      RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
+  async resolveCoachPrompt(
+    id: string,
+    promptId: string,
+    response: string | null,
+  ): Promise<boolean> {
+    const rows = await this.sql<Array<{ id: string }>>`
+      UPDATE ai_coach_prompts
+      SET user_response = ${response}, resolved_at = now()
+      WHERE session_id = ${id} AND id = ${promptId}
+      RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
+  async getPurchaseForSession(id: string): Promise<ReportPurchase | null> {
+    const rows = await this.sql<PurchaseRow[]>`
+      SELECT * FROM report_purchases WHERE session_id = ${id}
+    `;
+    return rows[0] ? mapPurchase(rows[0]) : null;
+  }
+
+  async saveCheckout(
+    sessionId: string,
+    checkout: { id: string; url: string },
+  ): Promise<ReportPurchase> {
+    const rows = await this.sql<PurchaseRow[]>`
+      INSERT INTO report_purchases (
+        session_id, status, stripe_checkout_session_id, checkout_url
+      ) VALUES (${sessionId}, 'checkout_open', ${checkout.id}, ${checkout.url})
+      ON CONFLICT (session_id) DO UPDATE SET
+        status = 'checkout_open',
+        stripe_checkout_session_id = EXCLUDED.stripe_checkout_session_id,
+        checkout_url = EXCLUDED.checkout_url,
+        stripe_payment_intent_id = NULL,
+        recipient_email = NULL,
+        currency = NULL,
+        amount_total = NULL,
+        paid_at = NULL,
+        updated_at = now()
+      WHERE report_purchases.status <> 'paid'
+      RETURNING *
+    `;
+    const row = rows[0];
+    if (!row) {
+      const existing = await this.getPurchaseForSession(sessionId);
+      if (!existing) throw new Error("Could not persist Checkout");
+      return existing;
+    }
+    return mapPurchase(row);
+  }
+
+  async markPurchasePaid(input: {
+    checkoutSessionId: string;
+    paymentIntentId: string | null;
+    recipientEmail: string;
+    currency: string | null;
+    amountTotal: number | null;
+  }): Promise<ReportPurchase | null> {
+    const rows = await this.sql<PurchaseRow[]>`
+      UPDATE report_purchases SET
+        status = 'paid',
+        stripe_payment_intent_id = ${input.paymentIntentId},
+        recipient_email = ${input.recipientEmail},
+        currency = ${input.currency},
+        amount_total = ${input.amountTotal},
+        paid_at = COALESCE(paid_at, now()),
+        updated_at = now()
+      WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
+      RETURNING *
+    `;
+    return rows[0] ? mapPurchase(rows[0]) : null;
+  }
+
+  async setPurchaseStatusByCheckout(
+    checkoutSessionId: string,
+    status: "failed" | "expired",
+  ): Promise<boolean> {
+    const rows = await this.sql<Array<{ id: string }>>`
+      UPDATE report_purchases SET status = ${status}, updated_at = now()
+      WHERE stripe_checkout_session_id = ${checkoutSessionId} AND status <> 'paid'
+      RETURNING id
+    `;
+    return rows.length > 0;
+  }
+
+  async claimWebhookEvent(provider: string, eventId: string): Promise<boolean> {
+    const rows = await this.sql<Array<{ event_id: string }>>`
+      INSERT INTO processed_webhook_events (provider, event_id)
+      VALUES (${provider}, ${eventId})
+      ON CONFLICT DO NOTHING
+      RETURNING event_id
+    `;
+    return rows.length > 0;
+  }
+
+  async claimInitialDelivery(purchaseId: string): Promise<string | null> {
+    const rows = await this.sql<Array<{ id: string }>>`
+      INSERT INTO report_deliveries (purchase_id, status)
+      VALUES (${purchaseId}, 'pending')
+      ON CONFLICT (purchase_id, delivery_kind) DO NOTHING
+      RETURNING id
+    `;
+    return rows[0]?.id ?? null;
+  }
+
+  async prepareDeliveryRetry(
+    purchaseId: string,
+  ): Promise<{ deliveryId: string; attemptCount: number } | null> {
+    const rows = await this.sql<Array<{ id: string; attempt_count: number }>>`
+      UPDATE report_deliveries
+      SET status = 'pending', attempt_count = attempt_count + 1,
+        last_error_code = NULL, updated_at = now()
+      WHERE purchase_id = ${purchaseId} AND delivery_kind = 'full_compass'
+        AND attempt_count < 5
+      RETURNING id, attempt_count
+    `;
+    const row = rows[0];
+    return row ? { deliveryId: row.id, attemptCount: row.attempt_count } : null;
+  }
+
+  async markDeliverySent(deliveryId: string, messageId: string): Promise<void> {
+    await this.sql`
+      UPDATE report_deliveries
+      SET status = 'sent', provider_message_id = ${messageId}, updated_at = now()
+      WHERE id = ${deliveryId}
+    `;
+  }
+
+  async markDeliveryFailed(
+    deliveryId: string,
+    errorCode: string,
+  ): Promise<void> {
+    await this.sql`
+      UPDATE report_deliveries
+      SET status = 'failed', last_error_code = ${errorCode}, updated_at = now()
+      WHERE id = ${deliveryId}
+    `;
   }
 
   async saveAnalysis(id: string, analysis: StoredAnalysis): Promise<boolean> {

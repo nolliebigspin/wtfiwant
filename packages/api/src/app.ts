@@ -1,10 +1,15 @@
 import {
+  type AnalysisPreview,
   actionPlanInputSchema,
   analysisInputSchema,
   assessmentQuestions,
+  checkoutInputSchema,
+  coachPromptInputSchema,
+  coachPromptResponseInputSchema,
   followUpIdSchema,
   followUpInputSchema,
   followUpResponseInputSchema,
+  generatedCoachPromptSchema,
   generatedFollowUpSchema,
   getQuestionById,
   saveAnswerInputSchema,
@@ -18,14 +23,24 @@ import {
 import { type Context, Hono, type Next } from "hono";
 import { LocalAIProvider } from "./ai/local";
 import { type AIProvider, analyzeAnswers } from "./ai/provider";
+import { fulfillCheckout } from "./commerce/fulfillment";
+import type { PaymentEvent, PaymentProvider } from "./commerce/payment";
 import { createSeedSession } from "./dev/personas";
+import type { EmailDeliveryProvider } from "./email/provider";
 import { ANALYSIS_PROMPT_VERSION } from "./prompts/analysis";
-import type { AssessmentRepository } from "./repositories/types";
+import { COACH_PROMPT_VERSION } from "./prompts/coach";
+import type {
+  AssessmentRecord,
+  AssessmentRepository,
+} from "./repositories/types";
 import { classifySafety, SAFETY_MESSAGE } from "./safety/classifier";
 
 type AppDependencies = {
   repository: AssessmentRepository;
   aiProvider?: AIProvider;
+  paymentProvider?: PaymentProvider;
+  emailProvider?: EmailDeliveryProvider;
+  publicAppUrl?: string;
   /**
    * Path the app is mounted under. Next.js serves it from `/api`; tests mount
    * it at the root so request paths stay identical to the route definitions.
@@ -33,9 +48,43 @@ type AppDependencies = {
   basePath?: string;
 };
 
+function createPreview(record: AssessmentRecord): AnalysisPreview | null {
+  if (!record.analysis) return null;
+  return {
+    locale: record.analysis.locale,
+    summary: record.analysis.result.summary,
+    coreDriver: record.analysis.result.coreDrivers[0],
+    lockedSections: [
+      "drivers",
+      "tensions",
+      "anti_life",
+      "influences",
+      "directions",
+      "goals",
+      "action_plan",
+    ],
+  };
+}
+
+function toSessionView(record: AssessmentRecord) {
+  const full = record.entitlements.includes("full_analysis");
+  return sessionViewSchema.parse({
+    session: record.session,
+    answers: record.answers,
+    followUps: record.followUps,
+    coachPrompts: record.coachPrompts,
+    preview: createPreview(record),
+    actionPlan: full ? record.actionPlan : null,
+    entitlements: record.entitlements,
+  });
+}
+
 export function createApp({
   repository,
   aiProvider = new LocalAIProvider(),
+  paymentProvider,
+  emailProvider,
+  publicAppUrl = "http://localhost:3000",
   basePath = "/",
 }: AppDependencies) {
   const app = new Hono().basePath(basePath);
@@ -52,14 +101,14 @@ export function createApp({
   app.use("/sessions/:id/*", validateSessionId);
 
   app.post("/sessions", async (context) => {
-    const session = sessionViewSchema.parse(await repository.createSession());
+    const session = toSessionView(await repository.createSession());
     return context.json(session, 201);
   });
 
   app.get("/sessions/:id", async (context) => {
     const session = await repository.getSession(context.req.param("id"));
     if (!session) return context.json({ error: "Reflection not found" }, 404);
-    return context.json(sessionViewSchema.parse(session));
+    return context.json(toSessionView(session));
   });
 
   app.patch("/sessions/:id", async (context) => {
@@ -114,7 +163,12 @@ export function createApp({
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
     if (view.analysis?.locale === input.data.locale)
-      return context.json({ status: "complete", analysis: view.analysis });
+      return view.entitlements.includes("full_analysis")
+        ? context.json({ status: "complete", analysis: view.analysis })
+        : context.json({
+            status: "preview_ready",
+            preview: createPreview(view),
+          });
 
     const analysisAnswers = {
       ...view.answers,
@@ -132,6 +186,26 @@ export function createApp({
                           ? "Zusätzliche Antwort aus der Reflexion"
                           : "Additional answer from the reflection",
                     answer: followUp.userResponse,
+                  },
+                ],
+              ]
+            : [],
+        ),
+      ),
+      ...Object.fromEntries(
+        view.coachPrompts.flatMap((prompt) =>
+          prompt.userResponse
+            ? [
+                [
+                  `coach:${prompt.chapter}:${prompt.id}`,
+                  {
+                    question:
+                      prompt.locale === input.data.locale
+                        ? prompt.question
+                        : input.data.locale === "de"
+                          ? "Zusätzliche Antwort aus der Reflexion"
+                          : "Additional answer from the reflection",
+                    answer: prompt.userResponse,
                   },
                 ],
               ]
@@ -175,7 +249,91 @@ export function createApp({
       createdAt: new Date().toISOString(),
     };
     await repository.saveAnalysis(id, analysis);
-    return context.json({ status: "complete", analysis });
+    return view.entitlements.includes("full_analysis")
+      ? context.json({ status: "complete", analysis })
+      : context.json({
+          status: "preview_ready",
+          preview: createPreview({ ...view, analysis }),
+        });
+  });
+
+  app.post("/sessions/:id/coach-prompt", async (context) => {
+    const id = context.req.param("id");
+    const input = coachPromptInputSchema.safeParse(
+      await context.req.json().catch(() => null),
+    );
+    if (!input.success)
+      return context.json({ error: "Invalid Coach Prompt request" }, 400);
+    const view = await repository.getSession(id);
+    if (!view) return context.json({ error: "Reflection not found" }, 404);
+    if (view.session.status === "safety_paused")
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    const existing = view.coachPrompts.find(
+      (prompt) => prompt.chapter === input.data.chapter,
+    );
+    if (existing) return context.json({ coachPrompt: existing });
+    const chapterAnswers = Object.fromEntries(
+      assessmentQuestions
+        .filter((question) => question.chapter === input.data.chapter)
+        .flatMap((question) =>
+          question.id in view.answers
+            ? [[question.id, view.answers[question.id]]]
+            : [],
+        ),
+    );
+    if (Object.keys(chapterAnswers).length === 0)
+      return context.json({ error: "Chapter has no saved answers" }, 409);
+    if (classifySafety(chapterAnswers) === "immediate_self_harm_risk") {
+      await repository.setStatus(id, "safety_paused");
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    }
+    const generated = generatedCoachPromptSchema.parse(
+      await aiProvider.generateCoachPrompt(
+        chapterAnswers,
+        id,
+        input.data.locale,
+      ),
+    );
+    const allowedIds = new Set(Object.keys(chapterAnswers));
+    if (
+      !generated.evidenceQuestionIds.every((answerId) =>
+        allowedIds.has(answerId),
+      )
+    )
+      return context.json(
+        { error: "Coach Prompt cited unknown evidence" },
+        502,
+      );
+    const coachPrompt = {
+      id: crypto.randomUUID(),
+      chapter: input.data.chapter,
+      question: generated.question,
+      evidenceQuestionIds: generated.evidenceQuestionIds,
+      promptVersion: COACH_PROMPT_VERSION,
+      locale: input.data.locale,
+      userResponse: null,
+      resolvedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    await repository.saveCoachPrompt(id, coachPrompt);
+    return context.json({ coachPrompt }, 201);
+  });
+
+  app.put("/sessions/:id/coach-prompt/:promptId", async (context) => {
+    if (!followUpIdSchema.safeParse(context.req.param("promptId")).success)
+      return context.json({ error: "Invalid Coach Prompt ID" }, 400);
+    const input = coachPromptResponseInputSchema.safeParse(
+      await context.req.json().catch(() => null),
+    );
+    if (!input.success)
+      return context.json({ error: "Invalid Coach Prompt response" }, 400);
+    const saved = await repository.resolveCoachPrompt(
+      context.req.param("id"),
+      context.req.param("promptId"),
+      input.data.response,
+    );
+    if (!saved) return context.json({ error: "Coach Prompt not found" }, 404);
+    return context.json({ saved: true });
   });
 
   app.get("/sessions/:id/analysis", async (context) => {
@@ -183,7 +341,159 @@ export function createApp({
     if (!view) return context.json({ error: "Reflection not found" }, 404);
     if (!view.analysis)
       return context.json({ error: "Analysis is not ready" }, 404);
+    if (!view.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
     return context.json({ analysis: view.analysis });
+  });
+
+  app.get("/sessions/:id/compass", async (context) => {
+    const view = await repository.getSession(context.req.param("id"));
+    if (!view) return context.json({ error: "Reflection not found" }, 404);
+    if (!view.analysis)
+      return context.json({ error: "Compass is not ready" }, 404);
+    if (!view.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    return context.json({
+      analysis: view.analysis,
+      actionPlan: view.actionPlan,
+    });
+  });
+
+  app.get("/sessions/:id/preview", async (context) => {
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (record.session.status === "safety_paused")
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    const preview = createPreview(record);
+    if (!preview) return context.json({ error: "Compass is not ready" }, 404);
+    return context.json({ preview });
+  });
+
+  app.post("/sessions/:id/checkout", async (context) => {
+    if (!paymentProvider)
+      return context.json({ error: "Payments are not configured" }, 503);
+    const input = checkoutInputSchema.safeParse(
+      await context.req.json().catch(() => ({})),
+    );
+    if (!input.success)
+      return context.json({ error: "Invalid Checkout request" }, 400);
+    const id = context.req.param("id");
+    const record = await repository.getSession(id);
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (
+      record.session.status === "safety_paused" ||
+      classifySafety(record.answers) === "immediate_self_harm_risk"
+    ) {
+      await repository.setStatus(id, "safety_paused");
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    }
+    if (!record.analysis)
+      return context.json({ error: "Compass is not ready" }, 409);
+    const existing = await repository.getPurchaseForSession(id);
+    if (existing?.status === "paid") return context.json({ status: "paid" });
+    if (existing?.status === "checkout_open")
+      return context.json({
+        status: "checkout_open",
+        checkoutSessionId: existing.checkoutSessionId,
+        url: existing.checkoutUrl,
+      });
+    const origin = publicAppUrl.replace(/\/$/, "");
+    const checkout = await paymentProvider.createCheckout({
+      sessionId: id,
+      locale: input.data.locale,
+      successUrl: `${origin}/${input.data.locale}/result/${id}?checkout_session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${origin}/${input.data.locale}/result/${id}?checkout=cancelled`,
+    });
+    await repository.saveCheckout(id, checkout);
+    return context.json(
+      {
+        status: "checkout_open",
+        checkoutSessionId: checkout.id,
+        url: checkout.url,
+      },
+      201,
+    );
+  });
+
+  app.post("/checkout/:checkoutSessionId/fulfill", async (context) => {
+    if (!paymentProvider)
+      return context.json({ error: "Payments are not configured" }, 503);
+    const status = await fulfillCheckout({
+      checkoutSessionId: context.req.param("checkoutSessionId"),
+      repository,
+      paymentProvider,
+      emailProvider,
+      publicAppUrl: publicAppUrl.replace(/\/$/, ""),
+    });
+    return context.json({ status });
+  });
+
+  app.post("/stripe/webhook", async (context) => {
+    if (!paymentProvider)
+      return context.json({ error: "Payments are not configured" }, 503);
+    const signature = context.req.header("stripe-signature");
+    if (!signature)
+      return context.json({ error: "Missing Stripe signature" }, 400);
+    let event: PaymentEvent;
+    try {
+      event = paymentProvider.parseWebhook(await context.req.text(), signature);
+    } catch {
+      return context.json({ error: "Invalid Stripe signature" }, 400);
+    }
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
+      await fulfillCheckout({
+        checkoutSessionId: event.checkoutSessionId,
+        repository,
+        paymentProvider,
+        emailProvider,
+        publicAppUrl: publicAppUrl.replace(/\/$/, ""),
+      });
+    } else {
+      await repository.setPurchaseStatusByCheckout(
+        event.checkoutSessionId,
+        event.type === "checkout.session.expired" ? "expired" : "failed",
+      );
+    }
+    await repository.claimWebhookEvent("stripe", event.id);
+    return context.json({ received: true });
+  });
+
+  app.post("/sessions/:id/report-email", async (context) => {
+    if (!emailProvider)
+      return context.json({ error: "Email delivery is not configured" }, 503);
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (!record.entitlements.includes("full_analysis") || !record.analysis)
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    const purchase = await repository.getPurchaseForSession(record.session.id);
+    if (!purchase?.recipientEmail)
+      return context.json({ error: "Report recipient is unavailable" }, 409);
+    const retry = await repository.prepareDeliveryRetry(purchase.id);
+    if (!retry)
+      return context.json(
+        { error: "Initial report delivery is unavailable" },
+        409,
+      );
+    try {
+      const sent = await emailProvider.sendFullCompass({
+        to: purchase.recipientEmail,
+        locale: record.analysis.locale,
+        analysis: record.analysis,
+        resultUrl: `${publicAppUrl.replace(/\/$/, "")}/${record.analysis.locale}/result/${record.session.id}`,
+        idempotencyKey: `full-compass/${purchase.id}/resend/${retry.attemptCount}`,
+      });
+      await repository.markDeliverySent(retry.deliveryId, sent.messageId);
+      return context.json({ sent: true });
+    } catch (error) {
+      await repository.markDeliveryFailed(
+        retry.deliveryId,
+        error instanceof Error ? error.name : "EmailDeliveryError",
+      );
+      return context.json({ error: "Report email could not be sent" }, 502);
+    }
   });
 
   app.post("/sessions/:id/follow-up", async (context) => {
@@ -275,6 +585,10 @@ export function createApp({
     );
     if (!input.success)
       return context.json({ error: "Invalid action plan" }, 400);
+    const entitled = await repository.getSession(context.req.param("id"));
+    if (!entitled) return context.json({ error: "Reflection not found" }, 404);
+    if (!entitled.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
     const saved = await repository.saveActionPlan(
       context.req.param("id"),
       input.data,
@@ -290,7 +604,7 @@ export function createApp({
       if (!persona.success)
         return context.json({ error: "Unknown seed persona" }, 400);
       const view = await createSeedSession(repository, persona.data);
-      return context.json(view, 201);
+      return context.json(toSessionView(view), 201);
     });
   }
 
