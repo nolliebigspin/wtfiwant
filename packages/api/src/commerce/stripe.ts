@@ -15,16 +15,13 @@ const supportedEvents = new Set<PaymentEvent["type"]>([
 ]);
 
 export class StripePaymentProvider implements PaymentProvider {
-  private readonly stripe: Stripe;
-
   constructor(
     apiKey: string,
     private readonly priceId: string,
     private readonly webhookSecret: string,
     private readonly automaticTax: boolean,
-  ) {
-    this.stripe = new Stripe(apiKey);
-  }
+    private readonly stripe: Stripe = new Stripe(apiKey),
+  ) {}
 
   async createCheckout(input: CheckoutRequest) {
     const session = await this.stripe.checkout.sessions.create(
@@ -32,7 +29,20 @@ export class StripePaymentProvider implements PaymentProvider {
         mode: "payment",
         line_items: [{ price: this.priceId, quantity: 1 }],
         client_reference_id: input.sessionId,
-        metadata: { reflection_session_id: input.sessionId },
+        metadata: {
+          reflection_session_id: input.sessionId,
+          agreement_version: input.agreement.version,
+        },
+        consent_collection: { terms_of_service: "required" },
+        custom_text: {
+          terms_of_service_acceptance: { message: input.agreement.statement },
+          submit: {
+            message:
+              input.locale === "de"
+                ? `Premium-Kauf ohne freiwillige Erstattung. Gesetzliche Rechte bleiben unberührt. [Nutzungsbedingungen](${input.termsUrl}) · [Widerruf und Erstattungen](${input.refundPolicyUrl})`
+                : `Premium purchase with no voluntary refunds. Statutory rights remain unaffected. [Terms of service](${input.termsUrl}) · [Withdrawal and refunds](${input.refundPolicyUrl})`,
+          },
+        },
         locale: input.locale,
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
@@ -75,6 +85,7 @@ export class StripePaymentProvider implements PaymentProvider {
           : (paymentIntent?.id ?? null),
       currency: session.currency,
       amountTotal: session.amount_total,
+      consentAccepted: session.consent?.terms_of_service === "accepted",
     };
   }
 

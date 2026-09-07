@@ -3,6 +3,7 @@ import { DM_Sans, Newsreader } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
+import { LegalFooter } from "@/components/legal/legal-footer";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import "../globals.css";
@@ -51,6 +52,7 @@ export default async function LocaleLayout({
       <body className="bg-paper font-sans text-ink antialiased">
         <NextIntlClientProvider messages={await getMessages()}>
           {children}
+          <LegalFooter />
         </NextIntlClientProvider>
       </body>
     </html>

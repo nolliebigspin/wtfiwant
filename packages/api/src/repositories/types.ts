@@ -2,10 +2,13 @@ import type {
   ActionPlanInput,
   ChapterId,
   CoachPrompt,
+  DigitalPurchaseAgreement,
   Locale,
   Session,
   SessionView,
   StoredAnalysis,
+  WithdrawalInput,
+  WithdrawalReceipt,
 } from "@wtfiwant/shared";
 
 export type AssessmentRecord = Omit<
@@ -38,6 +41,8 @@ export type ReportPurchase = {
   currency: string | null;
   amountTotal: number | null;
   paidAt: string | null;
+  agreement: DigitalPurchaseAgreement | null;
+  consentRecordedAt: string | null;
 };
 
 export interface AssessmentRepository {
@@ -68,6 +73,7 @@ export interface AssessmentRepository {
   saveCheckout(
     sessionId: string,
     checkout: { id: string; url: string },
+    agreement?: DigitalPurchaseAgreement,
   ): Promise<ReportPurchase>;
   markPurchasePaid(input: {
     checkoutSessionId: string;
@@ -75,6 +81,7 @@ export interface AssessmentRepository {
     recipientEmail: string;
     currency: string | null;
     amountTotal: number | null;
+    consentRecordedAt: string | null;
   }): Promise<ReportPurchase | null>;
   setPurchaseStatusByCheckout(
     checkoutSessionId: string,
@@ -93,4 +100,6 @@ export interface AssessmentRepository {
   setStatus(id: string, status: Session["status"]): Promise<boolean>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<boolean>;
   deleteSession(id: string): Promise<boolean>;
+  saveWithdrawal(input: WithdrawalInput): Promise<WithdrawalReceipt>;
+  markWithdrawalConfirmationSent(requestId: string): Promise<void>;
 }

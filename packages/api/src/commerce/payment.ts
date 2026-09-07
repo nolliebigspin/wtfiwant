@@ -1,4 +1,8 @@
-import type { Locale, PaymentEvent } from "@wtfiwant/shared";
+import type {
+  DigitalPurchaseAgreement,
+  Locale,
+  PaymentEvent,
+} from "@wtfiwant/shared";
 
 export type CheckoutRequest = {
   sessionId: string;
@@ -6,6 +10,9 @@ export type CheckoutRequest = {
   successUrl: string;
   cancelUrl: string;
   idempotencyKey: string;
+  agreement: DigitalPurchaseAgreement;
+  termsUrl: string;
+  refundPolicyUrl: string;
 };
 
 export type CheckoutDetails = {
@@ -17,6 +24,7 @@ export type CheckoutDetails = {
   paymentIntentId: string | null;
   currency: string | null;
   amountTotal: number | null;
+  consentAccepted: boolean;
 };
 
 export type { PaymentEvent } from "@wtfiwant/shared";

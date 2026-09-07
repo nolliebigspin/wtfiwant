@@ -142,7 +142,7 @@
     "purchase": "Get my Full Compass",
     "openingCheckout": "Opening secure checkout…",
     "emailWarning": "Stripe collects your email and payment details. Your email will contain sensitive personal reflection content and a private result link.",
-    "purchaseTerms": "This is a one-time digital purchase delivered immediately after confirmed payment. Refund requests follow the merchant's published refund policy.",
+    "purchaseTerms": "One-time premium digital purchase, delivered after confirmed payment. No voluntary refunds. Statutory rights remain unaffected. Checkout requires your express consent to early delivery and acknowledgement of the loss of your withdrawal right.",
     "termsLink": "Terms",
     "refundLink": "Refund policy",
     "checkoutError": "We couldn't open secure checkout. Try again in a moment.",
@@ -246,5 +246,23 @@
     "resendError": "Email failed — try again",
     "delete": "Delete my reflection"
   },
-  "NotFound": { "title": "Nothing to reflect on here.", "home": "Go home" }
+  "NotFound": {
+    "title": "Nothing to reflect on here.",
+    "home": "Go home"
+  },
+  "PaymentTest": {
+    "title": "Test payment",
+    "description": "Skip the reflection and open Stripe Checkout with a completed sample Compass. This uses the configured Stripe account and Price; use test credentials to avoid a real charge.",
+    "persona": "Sample reflection",
+    "submit": "Open Stripe Checkout",
+    "loading": "Opening Checkout…",
+    "unavailable": "Payments are unavailable. Enable PAYMENTS_ENABLED and configure Stripe, email delivery, and policy URLs, then restart the app.",
+    "error": "Could not open Checkout. Check the payment configuration and try again."
+  },
+  "LegalNavigation": {
+    "label": "Legal information",
+    "terms": "Terms of service",
+    "refunds": "Refund policy",
+    "withdraw": "Withdraw from contract"
+  }
 }

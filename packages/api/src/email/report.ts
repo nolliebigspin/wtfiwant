@@ -1,4 +1,5 @@
 import type { Analysis, Locale } from "@wtfiwant/shared";
+import type { ReportPurchase } from "../repositories/types";
 
 function escapeHtml(value: string): string {
   return value
@@ -73,10 +74,12 @@ export function renderFullCompassEmail(
   locale: Locale,
   resultUrl: string,
   evidenceAnswers: Record<string, unknown> = {},
+  purchase?: ReportPurchase,
 ): { subject: string; html: string; text: string } {
   const de = locale === "de";
   const section = (title: string, body: string) =>
     `<section><h2>${escapeHtml(title)}</h2>${body}</section>`;
+  const confirmation = purchaseConfirmation(purchase);
   const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.55;color:#201d18;max-width:720px;margin:auto;padding:32px">
     <p style="font-size:12px;letter-spacing:.12em">${de ? "DEIN VOLLSTÄNDIGER KOMPASS" : "YOUR FULL COMPASS"}</p>
     <h1>${escapeHtml(analysis.summary)}</h1>
@@ -88,10 +91,24 @@ export function renderFullCompassEmail(
     ${section(de ? "Unter deinen Zielen" : "Beneath your goals", analysis.goals.map((goal) => `<h3>${escapeHtml(goal.originalGoal)}</h3><p>${escapeHtml(goal.possibleUnderlyingNeed)}</p><p>${escapeHtml(goal.interpretation)}</p>${evidence(goal.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
     ${section(de ? "Erste Schritte" : "First steps", analysis.firstSteps.map((step) => `<h3>${escapeHtml(step.direction)}</h3><p><strong>${de ? "Experiment" : "Experiment"}:</strong> ${escapeHtml(step.experiment)}</p><p><strong>${de ? "Jetzt" : "Now"}:</strong> ${escapeHtml(step.immediateAction)}</p>${evidence(step.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
     <p><a href="${escapeHtml(resultUrl)}">${de ? "Privaten Kompass öffnen, Belege prüfen oder Reflexion löschen" : "Open your private Compass, inspect evidence, or delete this reflection"}</a></p>
+    ${
+      confirmation
+        ? section(
+            purchase?.agreement?.locale === "de"
+              ? "Kaufbestätigung und digitale Bereitstellung"
+              : "Purchase confirmation and digital delivery",
+            confirmation
+              .split("\n\n")
+              .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+              .join(""),
+          )
+        : ""
+    }
     <hr><p style="font-size:12px;color:#68635b">${de ? "Dies ist eine geführte Reflexion, keine Diagnose, Therapie oder Krisenhilfe." : "This is guided reflection, not diagnosis, therapy, or crisis support."}</p>
   </body></html>`;
   const text = [
     analysis.summary,
+    ...(confirmation ? [confirmation] : []),
     ...analysis.coreDrivers.flatMap((driver) => [
       driver.name,
       driver.explanation,
@@ -135,4 +152,36 @@ export function renderFullCompassEmail(
     html,
     text,
   };
+}
+
+function purchaseConfirmation(purchase?: ReportPurchase): string {
+  if (!purchase?.agreement || !purchase.consentRecordedAt) return "";
+  const { agreement } = purchase;
+  const de = agreement.locale === "de";
+  const total =
+    purchase.amountTotal !== null && purchase.currency
+      ? new Intl.NumberFormat(de ? "de-DE" : "en-US", {
+          style: "currency",
+          currency: purchase.currency,
+        }).format(purchase.amountTotal / 100)
+      : "";
+  return [
+    de
+      ? "Kaufbestätigung: Vollständiger Kompass, einmaliger Premium-Kauf."
+      : "Purchase confirmation: Full Compass, one-time premium purchase.",
+    `${de ? "Bestellreferenz" : "Order reference"}: ${purchase.checkoutSessionId}`,
+    `${de ? "Zahlung bestätigt (UTC)" : "Payment confirmed (UTC)"}: ${purchase.paidAt}`,
+    `${de ? "Gesamtbetrag" : "Total paid"}: ${total}`,
+    de
+      ? "Du hast vor der Zahlung ausdrücklich folgende Erklärung bestätigt:"
+      : "Before payment, you expressly confirmed the following statement:",
+    agreement.statement,
+    `${de ? "Textfassung" : "Text version"}: ${agreement.version}`,
+    `${de ? "Zustimmung von Stripe abgerufen (UTC)" : "Consent retrieved from Stripe (UTC)"}: ${purchase.consentRecordedAt}`,
+    de
+      ? "Mit dieser E-Mail erhältst du den digitalen Inhalt und die Bestätigung deiner Zustimmung und Kenntnisnahme. Mit Beginn der Bereitstellung und Erhalt dieser Vertragsbestätigung erlischt dein Widerrufsrecht, soweit die gesetzlichen Voraussetzungen erfüllt sind. Andere zwingende gesetzliche Rechte, insbesondere bei Mängeln, bleiben unberührt."
+      : "This email delivers the digital content and confirms your consent and acknowledgement. Once delivery has begun and you have received this contract confirmation, your withdrawal right expires where the statutory conditions are met. Other mandatory rights, including remedies for defects, remain unaffected.",
+    agreement.terms,
+    agreement.refundPolicy,
+  ].join("\n\n");
 }

@@ -72,6 +72,7 @@ Open [http://localhost:3000](http://localhost:3000). The API health endpoint is 
 | `AI_MODEL` | Server | Structured analysis model |
 | `AI_FOLLOWUP_MODEL` | Server | Targeted follow-up model |
 | `PAYMENTS_ENABLED` | Server | `true` enables paid Full Compass Checkout; otherwise the app remains preview-only |
+| `PAYMENT_TEST_ENABLED` | Server | `true` shows the instant payment test form on `/commitment` in development; default `false`, ignored in production |
 | `EMAIL_PROVIDER` | Server | `resend` sends reports; `local` captures them in memory outside production |
 | `TERMS_URL`, `REFUND_POLICY_URL` | Server | Public merchant policies linked beside the purchase action; required when payments are enabled |
 | `PUBLIC_APP_URL` | Server | Canonical HTTPS origin used for Stripe returns and private report links |
@@ -146,6 +147,49 @@ curl -X POST http://localhost:3000/api/dev/seed/stable_adventure
 
 The endpoints and UI shortcuts do not exist when `NODE_ENV=production`.
 
+### Test payment without completing the reflection
+
+Set these variables in your root `.env`, using a Stripe test secret key and a
+one-time Price from the same Stripe test account:
+
+```dotenv
+PAYMENT_TEST_ENABLED=true
+PAYMENTS_ENABLED=true
+STRIPE_SECRET_KEY=sk_test_REPLACE_ME
+STRIPE_PRICE_ID=price_REPLACE_ME
+STRIPE_WEBHOOK_SECRET=whsec_REPLACE_ME
+STRIPE_AUTOMATIC_TAX=false
+PUBLIC_APP_URL=http://localhost:3000
+EMAIL_PROVIDER=local
+TERMS_URL=http://localhost:3000/terms
+REFUND_POLICY_URL=http://localhost:3000/refunds
+```
+
+Keep your normal `DATABASE_URL` configured and run migrations. For local webhook
+delivery, sign in with `stripe login`, then leave this listener running:
+
+```bash
+stripe listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copy the listener's signing secret into `STRIPE_WEBHOOK_SECRET`, then restart
+`mise exec -- bun run dev`. Open `/en/commitment` (or `/de/commitment`), find
+**Test payment**, choose a sample reflection, and click **Open Stripe Checkout**.
+This creates a completed sample using the local analysis provider and immediately
+opens the existing Checkout flow. It still requires confirmed payment to unlock
+the Full Compass; returning from Checkout exercises the normal result page and
+fulfillment logic. Failed Checkout requests reuse the sample session on retry.
+
+For a successful test payment, use `4242 4242 4242 4242`, a future expiry, and any
+three-digit CVC. See [Stripe testing](https://docs.stripe.com/testing) and the
+[Stripe CLI listener](https://docs.stripe.com/cli/listen).
+
+`EMAIL_PROVIDER=local` captures delivery in server memory without sending mail.
+To test actual email delivery, use `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, and
+a verified `REPORT_EMAIL_FROM`. The test form uses the configured Stripe Price;
+the boolean does **not** switch Stripe into test mode. Both the form and its seed
+endpoint remain unavailable in production.
+
 ## Verification
 
 ```bash
@@ -158,6 +202,55 @@ mise exec -- bun run build
 The backend tests exercise session creation, answer validation and restoration, structured-analysis repair, the safety state, invalid sessions, and deletion through the Hono app's public interface, mounted directly with an in-memory repository. The frontend tests exercise restoration, required answers, save-before-navigation, analysis rendering, evidence disclosure, and action-plan persistence.
 
 ## Production deployment
+
+### Terms and refund policy
+
+The app serves `/en/terms`, `/en/refunds`, `/de/terms`, and `/de/refunds`.
+The `/terms` and `/refunds` URLs redirect to the visitor's locale. Both pages
+are linked from the site footer and the configured purchase links. The content
+is maintained in `apps/web/src/components/legal/legal-content.ts`.
+
+For the production domain, configure:
+
+```dotenv
+PUBLIC_APP_URL=https://wtfiwant.app
+TERMS_URL=https://wtfiwant.app/terms
+REFUND_POLICY_URL=https://wtfiwant.app/refunds
+```
+
+`PUBLIC_APP_URL` also determines Stripe's return URLs and private report-email
+links. Keep all three URLs on `http://localhost:3000` while testing locally if
+the production domain is not deployed yet.
+
+The Full Compass is a premium digital purchase with **no voluntary refunds**.
+Mandatory consumer rights remain unaffected. Stripe Checkout requires an unchecked
+consent checkbox for early delivery and acknowledgement of the loss of withdrawal
+rights. For digital content, this refers to the **start** of performance. Configure
+`https://wtfiwant.app/terms` as the terms of service URL in Stripe Dashboard →
+Business → Public details, in both sandbox and live environments. Stripe requires
+this dashboard setting independently of the app's `TERMS_URL` variable.
+
+Migration `0006_purchase_consent_and_withdrawals.sql` stores the exact localized
+consent and policy text with each new Checkout and the time accepted consent is
+retrieved from Stripe. Fulfillment checks Stripe consent before unlocking new
+purchases. Initial and resent report emails include the purchase details, consent,
+and complete saved terms/refund text. Existing purchases have no retroactive consent.
+Do not treat an email API accepting a message as proof it reached the customer's inbox.
+
+The `/en/withdraw` and `/de/withdraw` pages provide a two-step statutory withdrawal
+form, linked prominently in the footer. Declarations are stored before email is
+attempted, with their original receipt time preserved on retries. The customer gets
+an email receipt, with a copy to support at `contact@awinter.dev`. Requests are
+reviewed manually; this does not issue automatic Stripe refunds. Receipt records
+contain the submitted contact/contract details, no reflection answers, and remain
+available after a reflection is deleted so the declaration can still be processed.
+Apply your retention policy to these records after processing.
+
+`commerce:reconcile` reports pending withdrawal confirmations. Use
+`mise exec -- bun run --env-file=.env packages/api/src/commerce/reconcile.ts --retry-withdrawals`
+to retry failed confirmation emails; monitor and run promptly after delivery errors.
+The form also permits retrying the confirmation without changing receipt time.
+Review the seller/contact details and legal wording before accepting live payments.
 
 The application deploys as a single unit. On Vercel, the API routes become functions alongside the pages; set `DATABASE_URL` and the `AI_*` variables as server-side environment variables and run `bun run db:migrate` before rolling out a release that expects a new column.
 

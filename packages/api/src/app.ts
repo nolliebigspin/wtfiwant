@@ -8,6 +8,7 @@ import {
   coachPromptInputSchema,
   coachPromptResponseInputSchema,
   coachPromptResponseSchema,
+  createDigitalPurchaseAgreement,
   followUpIdSchema,
   fulfillmentResponseSchema,
   generatedCoachPromptSchema,
@@ -25,6 +26,7 @@ import { LocalAIProvider } from "./ai/local";
 import { type AIProvider, analyzeAnswers } from "./ai/provider";
 import { buildReportEvidence, fulfillCheckout } from "./commerce/fulfillment";
 import type { PaymentEvent, PaymentProvider } from "./commerce/payment";
+import { withdrawalRoutes } from "./commerce/withdrawal";
 import { createSeedSession } from "./dev/personas";
 import type { EmailDeliveryProvider } from "./email/provider";
 import { ANALYSIS_PROMPT_VERSION } from "./prompts/analysis";
@@ -97,6 +99,7 @@ export function createApp({
   basePath = "/",
 }: AppDependencies) {
   const app = new Hono().basePath(basePath);
+  app.route("/withdrawals", withdrawalRoutes(repository, emailProvider));
   const checkoutAvailable = Boolean(
     paymentProvider && emailProvider && legalLinks,
   );
@@ -445,14 +448,18 @@ export function createApp({
         url: existing.checkoutUrl,
       });
     const origin = publicAppUrl.replace(/\/$/, "");
+    const agreement = createDigitalPurchaseAgreement(input.data.locale);
     const checkout = await paymentProvider.createCheckout({
       sessionId: id,
       locale: input.data.locale,
       successUrl: `${origin}/${input.data.locale}/result/${id}?checkout_session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}/${input.data.locale}/result/${id}?checkout=cancelled`,
       idempotencyKey: `checkout/${id}/${existing?.checkoutSessionId ?? "initial"}`,
+      agreement,
+      termsUrl: legalLinks.termsUrl,
+      refundPolicyUrl: legalLinks.refundPolicyUrl,
     });
-    await repository.saveCheckout(id, checkout);
+    await repository.saveCheckout(id, checkout, agreement);
     return context.json(
       {
         status: "checkout_open",
@@ -550,6 +557,7 @@ export function createApp({
         evidence: buildReportEvidence(record),
         resultUrl: `${publicAppUrl.replace(/\/$/, "")}/${record.analysis.locale}/result/${record.session.id}`,
         idempotencyKey: `full-compass/${purchase.id}/resend/${retry.attemptCount}`,
+        purchase,
       });
       await repository.markDeliverySent(retry.deliveryId, sent.messageId);
       return context.json({ sent: true });

@@ -1,6 +1,8 @@
+import { merchant, type WithdrawalReceipt } from "@wtfiwant/shared";
 import { Resend } from "resend";
 import type { EmailDeliveryProvider, FullCompassEmail } from "./provider";
 import { renderFullCompassEmail } from "./report";
+import { withdrawalConfirmation } from "./withdrawal";
 
 export class ResendEmailDeliveryProvider implements EmailDeliveryProvider {
   private readonly resend: Resend;
@@ -18,6 +20,7 @@ export class ResendEmailDeliveryProvider implements EmailDeliveryProvider {
       input.locale,
       input.resultUrl,
       input.evidence,
+      input.purchase,
     );
     const { data, error } = await this.resend.emails.send(
       {
@@ -28,6 +31,20 @@ export class ResendEmailDeliveryProvider implements EmailDeliveryProvider {
         text: report.text,
       },
       { idempotencyKey: input.idempotencyKey },
+    );
+    if (error || !data) throw new Error("Email provider rejected delivery");
+    return { messageId: data.id };
+  }
+
+  async sendWithdrawalConfirmation(input: WithdrawalReceipt) {
+    const { data, error } = await this.resend.emails.send(
+      {
+        from: this.from,
+        to: input.email,
+        bcc: merchant.email,
+        ...withdrawalConfirmation(input),
+      },
+      { idempotencyKey: `withdrawal/${input.requestId}` },
     );
     if (error || !data) throw new Error("Email provider rejected delivery");
     return { messageId: data.id };

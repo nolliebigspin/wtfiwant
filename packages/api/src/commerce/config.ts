@@ -4,7 +4,20 @@ import { StripePaymentProvider } from "./stripe";
 
 export function createCommerceProviders(env = process.env) {
   if (env.PAYMENTS_ENABLED !== "true")
-    return { publicAppUrl: env.PUBLIC_APP_URL ?? "http://localhost:3000" };
+    return {
+      publicAppUrl: env.PUBLIC_APP_URL ?? "http://localhost:3000",
+      // Existing customers still need withdrawal receipts when new purchases
+      // have been disabled. Reuse configured email delivery independently.
+      emailProvider:
+        env.EMAIL_PROVIDER === "local" && env.NODE_ENV !== "production"
+          ? new LocalEmailDeliveryProvider()
+          : env.RESEND_API_KEY && env.REPORT_EMAIL_FROM
+            ? new ResendEmailDeliveryProvider(
+                env.RESEND_API_KEY,
+                env.REPORT_EMAIL_FROM,
+              )
+            : undefined,
+    };
   const required = (name: string) => {
     const value = env[name];
     if (!value)

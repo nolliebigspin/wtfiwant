@@ -28,6 +28,10 @@ export function CommitmentCard() {
         <p className="m-0 text-[0.8rem] text-muted">{t("privateCopy")}</p>
       </aside>
       {process.env.NODE_ENV !== "production" ? <SeedButtons /> : null}
+      {process.env.NODE_ENV !== "production" &&
+      process.env.PAYMENT_TEST_ENABLED === "true" ? (
+        <PaymentTestForm />
+      ) : null}
     </section>
   );
 }
@@ -59,4 +63,5 @@ function CommitmentChecklist() {
 }
 
 import { useTranslations } from "next-intl";
+import { PaymentTestForm } from "@/components/payment-test-form";
 import { Link } from "@/i18n/navigation";

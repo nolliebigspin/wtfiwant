@@ -2,8 +2,11 @@ import {
   type ActionPlanInput,
   assessmentQuestions,
   type ChapterId,
+  type DigitalPurchaseAgreement,
   type Session,
   type StoredAnalysis,
+  type WithdrawalInput,
+  type WithdrawalReceipt,
 } from "@wtfiwant/shared";
 import type {
   AssessmentRecord,
@@ -20,6 +23,7 @@ function copy<T>(value: T): T {
 export class InMemoryAssessmentRepository implements AssessmentRepository {
   private readonly sessions = new Map<string, AssessmentRecord>();
   private readonly purchases = new Map<string, ReportPurchase>();
+  private readonly withdrawals = new Map<string, WithdrawalReceipt>();
   private readonly webhookEvents = new Map<
     string,
     { status: "processing" | "processed"; updatedAt: number }
@@ -165,6 +169,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
   async saveCheckout(
     sessionId: string,
     checkout: { id: string; url: string },
+    agreement?: DigitalPurchaseAgreement,
   ): Promise<ReportPurchase> {
     const existing = this.purchases.get(sessionId);
     const purchase: ReportPurchase = {
@@ -178,6 +183,8 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
       currency: null,
       amountTotal: null,
       paidAt: null,
+      agreement: agreement ? copy(agreement) : null,
+      consentRecordedAt: null,
     };
     this.purchases.set(sessionId, purchase);
     return copy(purchase);
@@ -189,6 +196,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     recipientEmail: string;
     currency: string | null;
     amountTotal: number | null;
+    consentRecordedAt: string | null;
   }): Promise<ReportPurchase | null> {
     const purchase = [...this.purchases.values()].find(
       (candidate) => candidate.checkoutSessionId === input.checkoutSessionId,
@@ -200,8 +208,31 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     purchase.currency = input.currency;
     purchase.amountTotal = input.amountTotal;
     purchase.paidAt ??= new Date().toISOString();
+    purchase.consentRecordedAt ??= input.consentRecordedAt;
     return copy(purchase);
   }
+
+  async saveWithdrawal(input: WithdrawalInput): Promise<WithdrawalReceipt> {
+    const existing = this.withdrawals.get(input.requestId);
+    if (existing) {
+      if (
+        existing.name !== input.name ||
+        existing.email !== input.email ||
+        existing.contractReference !== input.contractReference ||
+        existing.locale !== input.locale
+      )
+        throw new Error("Withdrawal request ID already used");
+      return copy(existing);
+    }
+    const receipt = {
+      ...input,
+      receivedAt: new Date(this.now()).toISOString(),
+    };
+    this.withdrawals.set(input.requestId, receipt);
+    return copy(receipt);
+  }
+
+  async markWithdrawalConfirmationSent(_requestId: string): Promise<void> {}
 
   async setPurchaseStatusByCheckout(
     checkoutSessionId: string,

@@ -3,8 +3,13 @@ import {
   assessmentQuestions,
   type ChapterId,
   coachPromptSchema,
+  type DigitalPurchaseAgreement,
+  digitalPurchaseAgreementSchema,
   type Session,
   type StoredAnalysis,
+  type WithdrawalInput,
+  type WithdrawalReceipt,
+  withdrawalReceiptSchema,
 } from "@wtfiwant/shared";
 import postgres, { type Sql } from "postgres";
 import type {
@@ -26,6 +31,8 @@ type PurchaseRow = {
   currency: string | null;
   amount_total: number | null;
   paid_at: Date | null;
+  agreement: unknown;
+  consent_recorded_at: Date | null;
 };
 
 function mapPurchase(row: PurchaseRow): ReportPurchase {
@@ -40,6 +47,11 @@ function mapPurchase(row: PurchaseRow): ReportPurchase {
     currency: row.currency,
     amountTotal: row.amount_total,
     paidAt: row.paid_at?.toISOString() ?? null,
+    agreement:
+      row.agreement == null
+        ? null
+        : digitalPurchaseAgreementSchema.parse(row.agreement),
+    consentRecordedAt: row.consent_recorded_at?.toISOString() ?? null,
   };
 }
 
@@ -330,11 +342,12 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
   async saveCheckout(
     sessionId: string,
     checkout: { id: string; url: string },
+    agreement?: DigitalPurchaseAgreement,
   ): Promise<ReportPurchase> {
     const rows = await this.sql<PurchaseRow[]>`
       INSERT INTO report_purchases (
-        session_id, status, stripe_checkout_session_id, checkout_url
-      ) VALUES (${sessionId}, 'checkout_open', ${checkout.id}, ${checkout.url})
+        session_id, status, stripe_checkout_session_id, checkout_url, agreement
+      ) VALUES (${sessionId}, 'checkout_open', ${checkout.id}, ${checkout.url}, ${agreement ? this.sql.json(agreement) : null})
       ON CONFLICT (session_id) DO UPDATE SET
         status = 'checkout_open',
         stripe_checkout_session_id = EXCLUDED.stripe_checkout_session_id,
@@ -344,6 +357,8 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         currency = NULL,
         amount_total = NULL,
         paid_at = NULL,
+        agreement = EXCLUDED.agreement,
+        consent_recorded_at = NULL,
         updated_at = now()
       WHERE report_purchases.status <> 'paid'
       RETURNING *
@@ -363,6 +378,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     recipientEmail: string;
     currency: string | null;
     amountTotal: number | null;
+    consentRecordedAt: string | null;
   }): Promise<ReportPurchase | null> {
     return this.sql.begin(async (transaction) => {
       const locked = await transaction<PurchaseRow[]>`
@@ -379,6 +395,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
           currency = ${input.currency},
           amount_total = ${input.amountTotal},
           paid_at = COALESCE(paid_at, now()),
+          consent_recorded_at = COALESCE(consent_recorded_at, ${input.consentRecordedAt}),
           updated_at = now()
         WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
         RETURNING *
@@ -529,5 +546,30 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
       DELETE FROM assessment_sessions WHERE id = ${id} RETURNING id
     `;
     return rows.length > 0;
+  }
+
+  async saveWithdrawal(input: WithdrawalInput): Promise<WithdrawalReceipt> {
+    const [row] = await this.sql<Array<{ received_at: Date }>>`
+      INSERT INTO withdrawal_requests (request_id, name, email, contract_reference, locale)
+      VALUES (${input.requestId}, ${input.name}, ${input.email}, ${input.contractReference}, ${input.locale})
+      ON CONFLICT (request_id) DO UPDATE SET request_id = EXCLUDED.request_id
+      WHERE withdrawal_requests.name = EXCLUDED.name
+        AND withdrawal_requests.email = EXCLUDED.email
+        AND withdrawal_requests.contract_reference = EXCLUDED.contract_reference
+        AND withdrawal_requests.locale = EXCLUDED.locale
+      RETURNING received_at
+    `;
+    if (!row) throw new Error("Withdrawal request ID already used");
+    return withdrawalReceiptSchema.parse({
+      ...input,
+      receivedAt: row.received_at.toISOString(),
+    });
+  }
+
+  async markWithdrawalConfirmationSent(requestId: string): Promise<void> {
+    await this.sql`
+      UPDATE withdrawal_requests SET confirmation_sent_at = COALESCE(confirmation_sent_at, now())
+      WHERE request_id = ${requestId}
+    `;
   }
 }

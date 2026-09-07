@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { COACH_PROMPT_VERSION, sessionViewSchema } from "@wtfiwant/shared";
+import {
+  COACH_PROMPT_VERSION,
+  createDigitalPurchaseAgreement,
+  sessionViewSchema,
+} from "@wtfiwant/shared";
 import { createApp } from "../src/app";
 import type {
   CheckoutDetails,
@@ -7,10 +11,12 @@ import type {
   PaymentEvent,
   PaymentProvider,
 } from "../src/commerce/payment";
+import { LocalEmailDeliveryProvider } from "../src/email/local";
 import type {
   EmailDeliveryProvider,
   FullCompassEmail,
 } from "../src/email/provider";
+import { renderFullCompassEmail } from "../src/email/report";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
 
 const legalLinks = {
@@ -37,6 +43,7 @@ class FakePayments implements PaymentProvider {
       paymentIntentId: "pi_test_paid",
       currency: "eur",
       amountTotal: 1900,
+      consentAccepted: true,
     });
     return { id, url: `https://checkout.stripe.test/${id}` };
   }
@@ -64,7 +71,10 @@ class FakePayments implements PaymentProvider {
   }
 }
 
-class FakeEmail implements EmailDeliveryProvider {
+class FakeEmail
+  extends LocalEmailDeliveryProvider
+  implements EmailDeliveryProvider
+{
   readonly sent: FullCompassEmail[] = [];
 
   async sendFullCompass(input: FullCompassEmail) {
@@ -191,6 +201,128 @@ describe("paid Full Compass", () => {
     expect(resend.status).toBe(200);
     expect(email.sent).toHaveLength(2);
     expect(email.sent[1].idempotencyKey).toContain("/resend/2");
+    expect(email.sent[0].purchase?.agreement).toEqual(
+      createDigitalPurchaseAgreement("en"),
+    );
+    expect(email.sent[1].purchase?.agreement).toEqual(
+      email.sent[0].purchase?.agreement,
+    );
+    expect(email.sent[1].purchase?.consentRecordedAt).toBe(
+      email.sent[0].purchase?.consentRecordedAt,
+    );
+    const message = email.sent[1];
+    const rendered = renderFullCompassEmail(
+      message.analysis.result,
+      message.locale,
+      message.resultUrl,
+      message.evidence,
+      message.purchase,
+    );
+    expect(rendered.text).toContain(
+      createDigitalPurchaseAgreement("en").statement,
+    );
+    expect(rendered.html).toContain(
+      "Purchase confirmation and digital delivery",
+    );
+    expect(rendered.text).toContain(createDigitalPurchaseAgreement("en").terms);
+    expect(rendered.text).toContain(
+      createDigitalPurchaseAgreement("en").refundPolicy,
+    );
+  });
+
+  test("requires Stripe consent for new purchases and preserves the original receipt on retry", async () => {
+    const repository = new InMemoryAssessmentRepository();
+    const payments = new FakePayments();
+    const email = new FakeEmail();
+    const app = createApp({
+      repository,
+      paymentProvider: payments,
+      emailProvider: email,
+      legalLinks,
+    });
+    const seeded = sessionViewSchema.parse(
+      await (
+        await app.request("/dev/seed/burned_out", { method: "POST" })
+      ).json(),
+    );
+    await app.request(`/sessions/${seeded.session.id}/checkout`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale: "de" }),
+    });
+    const checkout = [...payments.checkouts.values()][0];
+    checkout.consentAccepted = false;
+    const rejected = await app.request(`/checkout/${checkout.id}/fulfill`, {
+      method: "POST",
+    });
+    expect(rejected.status).toBe(500);
+    expect(
+      (await app.request(`/sessions/${seeded.session.id}/compass`)).status,
+    ).toBe(402);
+    expect(email.sent).toHaveLength(0);
+    expect(
+      (await repository.getPurchaseByCheckout(checkout.id))?.consentRecordedAt,
+    ).toBeNull();
+    checkout.consentAccepted = true;
+    expect(
+      (
+        await app.request(`/checkout/${checkout.id}/fulfill`, {
+          method: "POST",
+        })
+      ).status,
+    ).toBe(200);
+    const purchase = await repository.getPurchaseByCheckout(checkout.id);
+    expect(purchase?.agreement).toEqual(createDigitalPurchaseAgreement("de"));
+    expect(purchase?.consentRecordedAt).toBeTruthy();
+    const message = email.sent[0];
+    const rendered = renderFullCompassEmail(
+      message.analysis.result,
+      message.locale,
+      message.resultUrl,
+      message.evidence,
+      message.purchase,
+    );
+    expect(rendered.text).toContain(
+      createDigitalPurchaseAgreement("de").statement,
+    );
+    expect(rendered.html).toContain(
+      "Kaufbestätigung und digitale Bereitstellung",
+    );
+  });
+
+  test("fulfills legacy purchases without inventing withdrawal consent", async () => {
+    const repository = new InMemoryAssessmentRepository();
+    const payments = new FakePayments();
+    const email = new FakeEmail();
+    const app = createApp({
+      repository,
+      paymentProvider: payments,
+      emailProvider: email,
+      legalLinks,
+    });
+    const seeded = sessionViewSchema.parse(
+      await (
+        await app.request("/dev/seed/burned_out", { method: "POST" })
+      ).json(),
+    );
+    await app.request(`/sessions/${seeded.session.id}/checkout`, {
+      method: "POST",
+    });
+    const checkout = [...payments.checkouts.values()][0];
+    await repository.saveCheckout(seeded.session.id, {
+      id: checkout.id,
+      url: "https://checkout.stripe.test/legacy",
+    });
+    checkout.consentAccepted = false;
+    expect(
+      (
+        await app.request(`/checkout/${checkout.id}/fulfill`, {
+          method: "POST",
+        })
+      ).status,
+    ).toBe(200);
+    expect(email.sent[0].purchase?.agreement).toBeNull();
+    expect(email.sent[0].purchase?.consentRecordedAt).toBeNull();
   });
 
   test("keeps delayed payments locked and reports expired Checkouts as failed", async () => {

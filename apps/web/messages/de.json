@@ -142,7 +142,7 @@
     "purchase": "Meinen vollständigen Kompass erhalten",
     "openingCheckout": "Sicherer Checkout wird geöffnet …",
     "emailWarning": "Stripe erfasst deine E-Mail- und Zahlungsdaten. Die E-Mail enthält persönliche Reflexionsinhalte und einen privaten Ergebnislink.",
-    "purchaseTerms": "Dies ist ein einmaliger digitaler Kauf, der direkt nach bestätigter Zahlung geliefert wird. Für Erstattungen gilt die veröffentlichte Erstattungsrichtlinie des Anbieters.",
+    "purchaseTerms": "Einmaliger digitaler Premium-Kauf mit Bereitstellung nach bestätigter Zahlung. Keine freiwilligen Erstattungen. Gesetzliche Rechte bleiben unberührt. Checkout verlangt deine ausdrückliche Zustimmung zur vorzeitigen Bereitstellung und deine Kenntnisnahme vom Verlust des Widerrufsrechts.",
     "termsLink": "Bedingungen",
     "refundLink": "Erstattungsrichtlinie",
     "checkoutError": "Der sichere Checkout konnte nicht geöffnet werden. Versuche es gleich noch einmal.",
@@ -249,5 +249,20 @@
   "NotFound": {
     "title": "Hier gibt es nichts zu reflektieren.",
     "home": "Zur Startseite"
+  },
+  "PaymentTest": {
+    "title": "Zahlung testen",
+    "description": "Überspringe die Reflexion und öffne Stripe Checkout mit einem fertigen Beispiel-Kompass. Verwendet werden das konfigurierte Stripe-Konto und dessen Preis. Nutze Test-Zugangsdaten, um eine echte Zahlung zu vermeiden.",
+    "persona": "Beispiel-Reflexion",
+    "submit": "Stripe Checkout öffnen",
+    "loading": "Checkout wird geöffnet…",
+    "unavailable": "Zahlungen sind nicht verfügbar. Aktiviere PAYMENTS_ENABLED und konfiguriere Stripe, E-Mail-Versand und Richtlinien-URLs. Starte die App anschließend neu.",
+    "error": "Checkout konnte nicht geöffnet werden. Prüfe die Zahlungskonfiguration und versuche es erneut."
+  },
+  "LegalNavigation": {
+    "label": "Rechtliche Informationen",
+    "terms": "Nutzungsbedingungen",
+    "refunds": "Erstattungsrichtlinie",
+    "withdraw": "Vertrag widerrufen"
   }
 }

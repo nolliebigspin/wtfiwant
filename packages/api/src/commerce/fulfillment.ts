@@ -37,6 +37,10 @@ export async function fulfillCheckout({
   if (checkout.paymentStatus !== "paid") return "processing";
   if (!checkout.recipientEmail)
     throw new Error("Paid Checkout is missing its recipient email");
+  if (!storedPurchase || checkout.sessionId !== storedPurchase.sessionId)
+    throw new Error("Checkout is not linked to this Reflection");
+  if (storedPurchase.agreement && !checkout.consentAccepted)
+    throw new Error("Paid Checkout is missing digital delivery consent");
 
   const purchase = await repository.markPurchasePaid({
     checkoutSessionId: checkout.id,
@@ -44,6 +48,9 @@ export async function fulfillCheckout({
     recipientEmail: checkout.recipientEmail,
     currency: checkout.currency,
     amountTotal: checkout.amountTotal,
+    consentRecordedAt: storedPurchase.agreement
+      ? (storedPurchase.consentRecordedAt ?? new Date().toISOString())
+      : null,
   });
   if (!purchase) throw new Error("Checkout is not linked to a Reflection");
 
@@ -69,6 +76,7 @@ export async function fulfillCheckout({
       evidence,
       resultUrl: `${publicAppUrl}/${record.analysis.locale}/result/${record.session.id}`,
       idempotencyKey: `full-compass/${purchase.id}`,
+      purchase,
     });
     await repository.markDeliverySent(deliveryId, sent.messageId);
   } catch (error) {
