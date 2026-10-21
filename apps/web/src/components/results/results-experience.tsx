@@ -8,6 +8,8 @@ import type {
 } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useAnalyticsEvent } from "@/components/analytics/use-analytics-event";
+import { trackAnalytics } from "@/lib/analytics";
 import { api } from "@/lib/api";
 import { ActionPlanBuilder } from "./action-plan-builder";
 import { AntiLifeSection } from "./anti-life-section";
@@ -121,6 +123,37 @@ export function ResultsExperience({
     };
   }, [client, locale, sessionId, t]);
 
+  useAnalyticsEvent(
+    "preview_viewed",
+    "result",
+    locale,
+    undefined,
+    Boolean(preview && !analysis),
+  );
+  useAnalyticsEvent(
+    "report_viewed",
+    "result",
+    locale,
+    undefined,
+    Boolean(analysis),
+  );
+  useAnalyticsEvent(
+    "report_error",
+    "result",
+    locale,
+    undefined,
+    Boolean(error),
+  );
+  useAnalyticsEvent(
+    "checkout_cancelled",
+    "result",
+    locale,
+    undefined,
+    typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("checkout") ===
+        "cancelled",
+  );
+
   if (error) return <ResultError message={error} />;
   if (safetyMessage) return <SafetyResult message={safetyMessage} />;
   if (paymentProcessing)
@@ -142,6 +175,7 @@ export function ResultsExperience({
         purchasing={purchasing}
         error={purchaseError}
         onPurchase={() => {
+          trackAnalytics("checkout_clicked", "result", locale);
           setPurchasing(true);
           setPurchaseError(null);
           void client
@@ -152,6 +186,7 @@ export function ResultsExperience({
             })
             .catch(() => {
               setPurchaseError(t("checkoutError"));
+              trackAnalytics("checkout_error", "result", locale);
               setPurchasing(false);
             });
         }}
@@ -170,6 +205,22 @@ export function ResultsExperience({
     <ResultShell>
       <main>
         <ResultHero summary={analysis.summary} />
+        <div className="mx-auto max-w-5xl px-6 py-6 sm:px-10">
+          <a
+            className="inline-flex rounded border border-ink/20 bg-ink px-5 py-3 text-sm font-bold text-paper"
+            href={`/api/sessions/${sessionId}/report.pdf?locale=${locale}`}
+            onClick={() => trackAnalytics("pdf_download", "result", locale)}
+          >
+            {locale === "de"
+              ? "Kompass als PDF speichern"
+              : "Save your Compass as PDF"}
+          </a>
+          <p className="mt-2 text-xs text-muted">
+            {locale === "de"
+              ? "Mit deinen Belegen und deinem zuletzt gespeicherten Aktionsplan."
+              : "Includes your evidence and latest saved action plan."}
+          </p>
+        </div>
         <DriversSection
           drivers={analysis.coreDrivers}
           answers={evidenceAnswers}

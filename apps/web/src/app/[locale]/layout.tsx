@@ -1,8 +1,11 @@
+import type { Locale } from "@wtfiwant/shared";
 import type { Metadata } from "next";
 import { DM_Sans, Newsreader } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
+import { Suspense } from "react";
+import { AnalyticsControls } from "@/components/analytics/analytics-controls";
 import { LegalFooter } from "@/components/legal/legal-footer";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
@@ -51,6 +54,9 @@ export default async function LocaleLayout({
     <html className={cn(dmSans.variable, newsreader.variable)} lang={locale}>
       <body className="bg-paper font-sans text-ink antialiased">
         <NextIntlClientProvider messages={await getMessages()}>
+          <Suspense fallback={null}>
+            <AnalyticsControls locale={locale as Locale} />
+          </Suspense>
           {children}
           <LegalFooter />
         </NextIntlClientProvider>

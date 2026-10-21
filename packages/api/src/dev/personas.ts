@@ -1,4 +1,4 @@
-import type { SeedPersona } from "@wtfiwant/shared";
+import type { Locale, SeedPersona } from "@wtfiwant/shared";
 import { LocalAIProvider } from "../ai/local";
 import { analyzeAnswers } from "../ai/provider";
 import { ANALYSIS_PROMPT_VERSION } from "../prompts/analysis";
@@ -104,6 +104,7 @@ const variations: Record<SeedPersona, Record<string, unknown>> = {
 export async function createSeedSession(
   repository: AssessmentRepository,
   persona: SeedPersona,
+  locale: Locale = "en",
 ) {
   const view = await repository.createSession();
   const answers = { ...common, ...variations[persona] };
@@ -111,11 +112,16 @@ export async function createSeedSession(
     await repository.saveAnswer(view.session.id, questionId, value);
   }
   const provider = new LocalAIProvider();
-  const result = await analyzeAnswers(provider, answers, view.session.id);
+  const result = await analyzeAnswers(
+    provider,
+    answers,
+    view.session.id,
+    locale,
+  );
   await repository.saveAnalysis(view.session.id, {
     version: ANALYSIS_PROMPT_VERSION,
     model: provider.name,
-    locale: "en",
+    locale,
     result,
     createdAt: new Date().toISOString(),
   });

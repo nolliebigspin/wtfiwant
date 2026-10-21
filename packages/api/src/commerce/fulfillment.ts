@@ -1,4 +1,7 @@
 import type { FulfillmentStatus } from "@wtfiwant/shared";
+import { analysisInLocale, buildAnalysisAnswers } from "../ai/analysis";
+import type { AIProvider } from "../ai/provider";
+import { type AnalyticsStore, analyticsBestEffort } from "../analytics/store";
 import type { EmailDeliveryProvider } from "../email/provider";
 import { buildEmailEvidence } from "../email/report";
 import type {
@@ -15,12 +18,16 @@ export async function fulfillCheckout({
   paymentProvider,
   emailProvider,
   publicAppUrl,
+  aiProvider,
+  analytics,
 }: {
   checkoutSessionId: string;
   repository: AssessmentRepository;
   paymentProvider: PaymentProvider;
   emailProvider?: EmailDeliveryProvider;
   publicAppUrl: string;
+  aiProvider: AIProvider;
+  analytics?: AnalyticsStore;
 }): Promise<FulfillmentStatus> {
   const storedPurchase =
     await repository.getPurchaseByCheckout(checkoutSessionId);
@@ -53,10 +60,17 @@ export async function fulfillCheckout({
       : null,
   });
   if (!purchase) throw new Error("Checkout is not linked to a Reflection");
+  await analyticsBestEffort(
+    () =>
+      analytics?.purchase(
+        checkout.id,
+        checkout.amountTotal,
+        checkout.currency,
+      ) ?? Promise.resolve(),
+  );
 
   const record = await repository.getSession(purchase.sessionId);
   if (!record?.analysis) throw new Error("Paid Reflection has no Compass");
-  const evidence = buildReportEvidence(record);
   if (
     record.session.status === "safety_paused" ||
     classifySafety(buildSafetyAnswers(record)) === "immediate_self_harm_risk"
@@ -69,12 +83,18 @@ export async function fulfillCheckout({
   const deliveryId = await repository.claimInitialDelivery(purchase.id);
   if (!deliveryId) return "paid";
   try {
+    const analysis = await analysisInLocale(
+      aiProvider,
+      record,
+      purchase.agreement?.locale ?? record.analysis.locale,
+    );
     const sent = await emailProvider.sendFullCompass({
       to: checkout.recipientEmail,
-      locale: record.analysis.locale,
-      analysis: record.analysis,
-      evidence,
-      resultUrl: `${publicAppUrl}/${record.analysis.locale}/result/${record.session.id}`,
+      locale: analysis.locale,
+      analysis,
+      evidence: buildReportEvidence({ ...record, analysis }),
+      actionPlan: record.actionPlan,
+      resultUrl: `${publicAppUrl}/${analysis.locale}/result/${record.session.id}`,
       idempotencyKey: `full-compass/${purchase.id}`,
       purchase,
     });
@@ -92,35 +112,8 @@ export function buildReportEvidence(
   record: AssessmentRecord,
 ): Record<string, unknown> {
   if (!record.analysis) return {};
-  const source = {
-    ...record.answers,
-    ...Object.fromEntries(
-      record.followUps.flatMap((prompt) =>
-        prompt.userResponse
-          ? [
-              [
-                `followup:${prompt.questionId}:${prompt.id}`,
-                {
-                  question: prompt.generatedQuestion,
-                  answer: prompt.userResponse,
-                },
-              ],
-            ]
-          : [],
-      ),
-    ),
-    ...Object.fromEntries(
-      record.coachPrompts.flatMap((prompt) =>
-        prompt.userResponse
-          ? [
-              [
-                `coach:${prompt.chapter}:${prompt.id}`,
-                { question: prompt.question, answer: prompt.userResponse },
-              ],
-            ]
-          : [],
-      ),
-    ),
-  };
-  return buildEmailEvidence(record.analysis.result, source);
+  return buildEmailEvidence(
+    record.analysis.result,
+    buildAnalysisAnswers(record, record.analysis.locale),
+  );
 }

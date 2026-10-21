@@ -4,6 +4,10 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["pdfkit"],
+  outputFileTracingIncludes: {
+    "/api/[[...route]]": ["../../packages/api/src/report/fonts/*"],
+  },
   reactCompiler: true,
   transpilePackages: ["@wtfiwant/api", "@wtfiwant/shared"],
   // Tracing defaults to the app directory, which would omit the workspace

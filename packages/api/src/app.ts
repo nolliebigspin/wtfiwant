@@ -12,6 +12,7 @@ import {
   followUpIdSchema,
   fulfillmentResponseSchema,
   generatedCoachPromptSchema,
+  localeSchema,
   paymentEventSchema,
   saveAnswerInputSchema,
   seedPersonaSchema,
@@ -22,14 +23,17 @@ import {
   webhookResponseSchema,
 } from "@wtfiwant/shared";
 import { type Context, Hono, type Next } from "hono";
+import { analysisInLocale, buildAnalysisAnswers } from "./ai/analysis";
 import { LocalAIProvider } from "./ai/local";
-import { type AIProvider, analyzeAnswers } from "./ai/provider";
+import type { AIProvider } from "./ai/provider";
+import { analyticsRoutes } from "./analytics/routes";
+import { type AnalyticsStore, analyticsBestEffort } from "./analytics/store";
 import { buildReportEvidence, fulfillCheckout } from "./commerce/fulfillment";
 import type { PaymentEvent, PaymentProvider } from "./commerce/payment";
 import { withdrawalRoutes } from "./commerce/withdrawal";
 import { createSeedSession } from "./dev/personas";
 import type { EmailDeliveryProvider } from "./email/provider";
-import { ANALYSIS_PROMPT_VERSION } from "./prompts/analysis";
+import { renderCompassPdf } from "./report/pdf";
 import type {
   AssessmentRecord,
   AssessmentRepository,
@@ -39,6 +43,7 @@ import { classifySafety, SAFETY_MESSAGE } from "./safety/classifier";
 
 type AppDependencies = {
   repository: AssessmentRepository;
+  analytics?: AnalyticsStore;
   aiProvider?: AIProvider;
   paymentProvider?: PaymentProvider;
   emailProvider?: EmailDeliveryProvider;
@@ -91,6 +96,7 @@ function toSessionView(
 
 export function createApp({
   repository,
+  analytics,
   aiProvider = new LocalAIProvider(),
   paymentProvider,
   emailProvider,
@@ -99,6 +105,12 @@ export function createApp({
   basePath = "/",
 }: AppDependencies) {
   const app = new Hono().basePath(basePath);
+  app.get("/analytics/config", (context) => {
+    context.header("Cache-Control", "no-store");
+    return context.json({ enabled: Boolean(analytics) });
+  });
+  if (analytics)
+    app.route("/analytics", analyticsRoutes(analytics, publicAppUrl));
   app.route("/withdrawals", withdrawalRoutes(repository, emailProvider));
   const checkoutAvailable = Boolean(
     paymentProvider && emailProvider && legalLinks,
@@ -197,49 +209,7 @@ export function createApp({
     const id = context.req.param("id");
     const view = await repository.getSession(id);
     if (!view) return context.json({ error: "Reflection not found" }, 404);
-    const analysisAnswers = {
-      ...view.answers,
-      ...Object.fromEntries(
-        view.followUps.flatMap((followUp) =>
-          followUp.userResponse
-            ? [
-                [
-                  `followup:${followUp.questionId}:${followUp.id}`,
-                  {
-                    question:
-                      followUp.locale === input.data.locale
-                        ? followUp.generatedQuestion
-                        : input.data.locale === "de"
-                          ? "Zusätzliche Antwort aus der Reflexion"
-                          : "Additional answer from the reflection",
-                    answer: followUp.userResponse,
-                  },
-                ],
-              ]
-            : [],
-        ),
-      ),
-      ...Object.fromEntries(
-        view.coachPrompts.flatMap((prompt) =>
-          prompt.userResponse
-            ? [
-                [
-                  `coach:${prompt.chapter}:${prompt.id}`,
-                  {
-                    question:
-                      prompt.locale === input.data.locale
-                        ? prompt.question
-                        : input.data.locale === "de"
-                          ? "Zusätzliche Antwort aus der Reflexion"
-                          : "Additional answer from the reflection",
-                    answer: prompt.userResponse,
-                  },
-                ],
-              ]
-            : [],
-        ),
-      ),
-    };
+    const analysisAnswers = buildAnalysisAnswers(view, input.data.locale);
 
     if (
       view.session.status === "safety_paused" ||
@@ -270,19 +240,11 @@ export function createApp({
       );
     }
 
-    const result = await analyzeAnswers(
+    const analysis = await analysisInLocale(
       aiProvider,
-      analysisAnswers,
-      id,
+      view,
       input.data.locale,
     );
-    const analysis = {
-      version: ANALYSIS_PROMPT_VERSION,
-      model: aiProvider.name,
-      locale: input.data.locale,
-      result,
-      createdAt: new Date().toISOString(),
-    };
     await repository.saveAnalysis(id, analysis);
     return view.entitlements.includes("full_analysis")
       ? context.json({ status: "complete", analysis })
@@ -441,12 +403,23 @@ export function createApp({
       return context.json({ error: "Compass is not ready" }, 409);
     const existing = await repository.getPurchaseForSession(id);
     if (existing?.status === "paid") return context.json({ status: "paid" });
-    if (existing?.status === "checkout_open")
+    const attribution = input.data.analytics;
+    if (existing?.status === "checkout_open") {
+      if (attribution)
+        await analyticsBestEffort(
+          () =>
+            analytics?.checkout(
+              existing.checkoutSessionId,
+              attribution,
+              input.data.locale,
+            ) ?? Promise.resolve(),
+        );
       return context.json({
         status: "checkout_open",
         checkoutSessionId: existing.checkoutSessionId,
         url: existing.checkoutUrl,
       });
+    }
     const origin = publicAppUrl.replace(/\/$/, "");
     const agreement = createDigitalPurchaseAgreement(input.data.locale);
     const checkout = await paymentProvider.createCheckout({
@@ -460,6 +433,12 @@ export function createApp({
       refundPolicyUrl: legalLinks.refundPolicyUrl,
     });
     await repository.saveCheckout(id, checkout, agreement);
+    if (attribution)
+      await analyticsBestEffort(
+        () =>
+          analytics?.checkout(checkout.id, attribution, input.data.locale) ??
+          Promise.resolve(),
+      );
     return context.json(
       {
         status: "checkout_open",
@@ -480,9 +459,11 @@ export function createApp({
       return context.json({ error: "Invalid Checkout Session ID" }, 400);
     const status = await fulfillCheckout({
       checkoutSessionId: checkoutSessionId.data,
+      aiProvider,
       repository,
       paymentProvider,
       emailProvider,
+      analytics,
       publicAppUrl: publicAppUrl.replace(/\/$/, ""),
     });
     return context.json(fulfillmentResponseSchema.parse({ status }));
@@ -512,9 +493,11 @@ export function createApp({
       ) {
         await fulfillCheckout({
           checkoutSessionId: event.checkoutSessionId,
+          aiProvider,
           repository,
           paymentProvider,
           emailProvider,
+          analytics,
           publicAppUrl: publicAppUrl.replace(/\/$/, ""),
         });
       } else {
@@ -529,6 +512,37 @@ export function createApp({
       throw error;
     }
     return context.json(webhookResponseSchema.parse({ received: true }));
+  });
+
+  app.get("/sessions/:id/report.pdf", async (context) => {
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    if (!record.entitlements.includes("full_analysis") || !record.analysis)
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    const locale = localeSchema.safeParse(
+      context.req.query("locale") ?? record.analysis.locale,
+    );
+    if (!locale.success)
+      return context.json({ error: "Invalid report language" }, 400);
+    const analysis = await analysisInLocale(aiProvider, record, locale.data);
+    const pdf = await renderCompassPdf(
+      analysis.result,
+      analysis.locale,
+      buildReportEvidence({ ...record, analysis }),
+      record.actionPlan,
+    );
+    return new Response(new Uint8Array(pdf), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="wtfiwant-compass-${analysis.locale}.pdf"`,
+        "Cache-Control": "private, no-store",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": "noindex, nofollow",
+      },
+    });
   });
 
   app.post("/sessions/:id/report-email", async (context) => {
@@ -550,12 +564,18 @@ export function createApp({
         409,
       );
     try {
+      const analysis = await analysisInLocale(
+        aiProvider,
+        record,
+        purchase.agreement?.locale ?? record.analysis.locale,
+      );
       const sent = await emailProvider.sendFullCompass({
         to: purchase.recipientEmail,
-        locale: record.analysis.locale,
-        analysis: record.analysis,
-        evidence: buildReportEvidence(record),
-        resultUrl: `${publicAppUrl.replace(/\/$/, "")}/${record.analysis.locale}/result/${record.session.id}`,
+        locale: analysis.locale,
+        analysis,
+        evidence: buildReportEvidence({ ...record, analysis }),
+        actionPlan: record.actionPlan,
+        resultUrl: `${publicAppUrl.replace(/\/$/, "")}/${analysis.locale}/result/${record.session.id}`,
         idempotencyKey: `full-compass/${purchase.id}/resend/${retry.attemptCount}`,
         purchase,
       });
@@ -596,7 +616,16 @@ export function createApp({
       const persona = seedPersonaSchema.safeParse(context.req.param("persona"));
       if (!persona.success)
         return context.json({ error: "Unknown seed persona" }, 400);
-      const view = await createSeedSession(repository, persona.data);
+      const input = analysisInputSchema.safeParse(
+        await context.req.json().catch(() => ({})),
+      );
+      if (!input.success)
+        return context.json({ error: "Invalid seed request" }, 400);
+      const view = await createSeedSession(
+        repository,
+        persona.data,
+        input.data.locale,
+      );
       return context.json(
         toSessionView(view, checkoutAvailable, legalLinks),
         201,

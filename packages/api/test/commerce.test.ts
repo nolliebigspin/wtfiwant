@@ -4,6 +4,7 @@ import {
   createDigitalPurchaseAgreement,
   sessionViewSchema,
 } from "@wtfiwant/shared";
+import { InMemoryAnalyticsStore } from "../src/analytics/in-memory";
 import { createApp } from "../src/app";
 import type {
   CheckoutDetails,
@@ -84,6 +85,64 @@ class FakeEmail
 }
 
 describe("paid Full Compass", () => {
+  test("uses the selected locale for initial and resent report emails", async () => {
+    let now = Date.now();
+    const payments = new FakePayments();
+    const email = new FakeEmail();
+    const app = createApp({
+      legalLinks,
+      repository: new InMemoryAssessmentRepository(() => now),
+      paymentProvider: payments,
+      emailProvider: email,
+      publicAppUrl: "https://wtfiwant.test",
+    });
+    const seeded = sessionViewSchema.parse(
+      await (
+        await app.request("/dev/seed/burned_out", { method: "POST" })
+      ).json(),
+    );
+    const id = seeded.session.id;
+    await app.request(`/sessions/${id}/checkout`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale: "de" }),
+    });
+    const checkoutId = [...payments.checkouts.keys()][0];
+    const fulfilled = await app.request(`/checkout/${checkoutId}/fulfill`, {
+      method: "POST",
+    });
+    expect(fulfilled.status).toBe(200);
+    expect(email.sent[0].locale).toBe("de");
+    expect(email.sent[0].analysis.locale).toBe("de");
+    expect(email.sent[0].resultUrl).toBe(
+      `https://wtfiwant.test/de/result/${id}`,
+    );
+    expect(email.sent[0].analysis.result.summary).toContain("Deine Antworten");
+
+    // Viewing a different UI language must not change the purchased report's language.
+    await app.request(`/sessions/${id}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale: "en" }),
+    });
+    now += 60_000;
+    const resent = await app.request(`/sessions/${id}/report-email`, {
+      method: "POST",
+    });
+    expect(resent.status).toBe(200);
+    expect(email.sent[1].locale).toBe("de");
+    expect(email.sent[1].analysis.result.summary).toContain("Deine Antworten");
+    const rendered = renderFullCompassEmail(
+      email.sent[1].analysis.result,
+      email.sent[1].locale,
+      email.sent[1].resultUrl,
+      email.sent[1].evidence,
+      email.sent[1].purchase,
+    );
+    expect(rendered.subject).toBe("Dein vollständiger Kompass");
+    expect(rendered.html).toContain("Was wichtig zu sein scheint");
+  });
+
   test("validates Checkout IDs and normalized webhook events before fulfillment", async () => {
     const payments = new FakePayments();
     const app = createApp({
@@ -146,7 +205,9 @@ describe("paid Full Compass", () => {
     let now = Date.now();
     const payments = new FakePayments();
     const email = new FakeEmail();
+    const analytics = new InMemoryAnalyticsStore();
     const app = createApp({
+      analytics,
       legalLinks,
       repository: new InMemoryAssessmentRepository(() => now),
       paymentProvider: payments,
@@ -164,7 +225,13 @@ describe("paid Full Compass", () => {
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ locale: "en" }),
+        body: JSON.stringify({
+          locale: "en",
+          analytics: {
+            visitId: crypto.randomUUID(),
+            attribution: { source: "meta", campaign: "launch_de" },
+          },
+        }),
       },
     );
     expect(checkoutResponse.status).toBe(201);
@@ -184,6 +251,16 @@ describe("paid Full Compass", () => {
 
     const full = await app.request(`/sessions/${seeded.session.id}/compass`);
     expect(full.status).toBe(200);
+    expect(
+      analytics.rows.filter((row) => row.name === "purchase"),
+    ).toHaveLength(1);
+    expect(
+      analytics.rows.find((row) => row.name === "purchase")?.attribution
+        .campaign,
+    ).toBe("launch_de");
+    expect(
+      analytics.rows.find((row) => row.name === "purchase")?.amountCents,
+    ).toBe(1900);
     expect(email.sent).toHaveLength(1);
     expect(email.sent[0].to).toBe("person@example.com");
     expect(email.sent[0].analysis.result.summary).toBeTruthy();

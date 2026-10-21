@@ -1,7 +1,7 @@
 import {
-  assessmentQuestions,
-  getGermanAssessmentTranslation,
+  formatReportAnswer,
   type Locale,
+  reflectionQuestionLabel,
   type SessionView,
 } from "@wtfiwant/shared";
 import { useLocale, useTranslations } from "next-intl";
@@ -87,12 +87,7 @@ export function EvidenceDrawer({
         {ids.map((id) => (
           <figure className="motion-feedback my-4" key={id}>
             <blockquote className="m-0 whitespace-pre-wrap font-serif text-base">
-              {formatAnswer(
-                answers[id],
-                t("noAnswer"),
-                locale,
-                t.raw("answerKeys") as Record<string, string>,
-              )}
+              {formatReportAnswer(id, answers[id], locale)}
             </blockquote>
             <figcaption
               className={cn(
@@ -100,47 +95,11 @@ export function EvidenceDrawer({
                 dark ? "text-white/55" : "text-muted",
               )}
             >
-              {id}
+              {reflectionQuestionLabel(id, locale)}
             </figcaption>
           </figure>
         ))}
       </div>
     </details>
   );
-}
-
-function formatAnswer(
-  answer: unknown,
-  noAnswer: string,
-  locale: Locale,
-  keys: Record<string, string>,
-): string {
-  const optionLabels = new Map<string, string>();
-  if (locale === "de") {
-    const translated = getGermanAssessmentTranslation();
-    for (const question of assessmentQuestions) {
-      if (!("options" in question)) continue;
-      question.options.forEach((option, index) => {
-        optionLabels.set(
-          option,
-          translated.questions[question.id]?.options?.[index] ?? option,
-        );
-      });
-    }
-  }
-  if (typeof answer === "string") return optionLabels.get(answer) ?? answer;
-  if (Array.isArray(answer))
-    return answer
-      .map((item) => formatAnswer(item, noAnswer, locale, keys))
-      .join(", ");
-  if (answer === undefined) return noAnswer;
-  if (answer && typeof answer === "object")
-    return Object.entries(answer)
-      .map(
-        ([key, value]) =>
-          `${keys[key] ?? key}: ${formatAnswer(value, noAnswer, locale, keys)}`,
-      )
-      .join(" · ");
-  if (typeof answer === "boolean") return answer ? keys.true : keys.false;
-  return String(answer);
 }

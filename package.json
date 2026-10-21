@@ -14,7 +14,9 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "db:migrate": "bun run --cwd packages/api db:migrate",
-    "commerce:reconcile": "bun run --cwd packages/api commerce:reconcile"
+    "commerce:reconcile": "bun run --cwd packages/api commerce:reconcile",
+    "analytics:prune": "bun run --cwd packages/api analytics:prune",
+    "analytics:flush": "bun run --cwd packages/api analytics:flush"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",

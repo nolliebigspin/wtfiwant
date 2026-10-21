@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { analyticsContextSchema } from "./analytics";
 import { localeSchema } from "./localization";
 
 export const sessionIdSchema = z.uuid();
@@ -269,7 +270,10 @@ export const analysisInputSchema = z
   .strict();
 
 export const checkoutInputSchema = z
-  .object({ locale: localeSchema.default("en") })
+  .object({
+    locale: localeSchema.default("en"),
+    analytics: analyticsContextSchema.optional(),
+  })
   .strict();
 
 export const checkoutSessionIdSchema = z

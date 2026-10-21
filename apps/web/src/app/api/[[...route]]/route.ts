@@ -1,7 +1,9 @@
 import { createApp } from "@wtfiwant/api";
 import { createAIProvider } from "@wtfiwant/api/ai";
+import { createAnalytics } from "@wtfiwant/api/analytics";
 import { createCommerceProviders } from "@wtfiwant/api/commerce";
 import { PostgresAssessmentRepository } from "@wtfiwant/api/repositories";
+import { after } from "next/server";
 
 /**
  * The reflection API runs in-process with the web app. Analysis and follow-up
@@ -14,6 +16,7 @@ export const dynamic = "force-dynamic";
 type App = ReturnType<typeof createApp>;
 
 let app: App | undefined;
+let flushAnalytics: (() => Promise<void>) | undefined;
 
 /**
  * Built lazily, then reused for the lifetime of the instance: the connection
@@ -27,16 +30,33 @@ function getApp(): App {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
 
+  const analyticsDependencies = createAnalytics(databaseUrl);
+  flushAnalytics = analyticsDependencies.analytics
+    ? () => analyticsDependencies.analytics.flush()
+    : undefined;
   app = createApp({
     repository: PostgresAssessmentRepository.connect(databaseUrl),
     aiProvider: createAIProvider(),
     ...createCommerceProviders(),
+    ...analyticsDependencies,
     basePath: "/api",
   });
   return app;
 }
 
-const handler = (request: Request) => getApp().fetch(request);
+const handler = (request: Request) => {
+  const api = getApp();
+  if (flushAnalytics) {
+    after(async () => {
+      try {
+        await flushAnalytics?.();
+      } catch {
+        console.error("Optional analytics delivery delayed");
+      }
+    });
+  }
+  return api.fetch(request);
+};
 
 export {
   handler as GET,

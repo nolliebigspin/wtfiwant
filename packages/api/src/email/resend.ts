@@ -1,5 +1,6 @@
 import { merchant, type WithdrawalReceipt } from "@wtfiwant/shared";
 import { Resend } from "resend";
+import { renderCompassPdf } from "../report/pdf";
 import type { EmailDeliveryProvider, FullCompassEmail } from "./provider";
 import { renderFullCompassEmail } from "./report";
 import { withdrawalConfirmation } from "./withdrawal";
@@ -22,6 +23,12 @@ export class ResendEmailDeliveryProvider implements EmailDeliveryProvider {
       input.evidence,
       input.purchase,
     );
+    const pdf = await renderCompassPdf(
+      input.analysis.result,
+      input.locale,
+      input.evidence,
+      input.actionPlan,
+    );
     const { data, error } = await this.resend.emails.send(
       {
         from: this.from,
@@ -29,6 +36,13 @@ export class ResendEmailDeliveryProvider implements EmailDeliveryProvider {
         subject: report.subject,
         html: report.html,
         text: report.text,
+        attachments: [
+          {
+            filename: `wtfiwant-compass-${input.locale}.pdf`,
+            content: pdf,
+            contentType: "application/pdf",
+          },
+        ],
       },
       { idempotencyKey: input.idempotencyKey },
     );

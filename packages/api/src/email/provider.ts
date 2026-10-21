@@ -1,4 +1,5 @@
 import type {
+  ActionPlanInput,
   Locale,
   StoredAnalysis,
   WithdrawalReceipt,
@@ -13,6 +14,7 @@ export type FullCompassEmail = {
   resultUrl: string;
   idempotencyKey: string;
   purchase?: ReportPurchase;
+  actionPlan?: ActionPlanInput | null;
 };
 
 export interface EmailDeliveryProvider {

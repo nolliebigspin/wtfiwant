@@ -1,13 +1,16 @@
 "use client";
 
-import { type SeedPersona, seedPersonas } from "@wtfiwant/shared";
+import { type Locale, type SeedPersona, seedPersonas } from "@wtfiwant/shared";
 import { useLocale, useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { fieldControlClassName, primaryButtonClassName } from "@/lib/styles";
 
 type PaymentTestClient = {
-  seed(persona: string): Promise<{
+  seed(
+    persona: string,
+    locale: Locale,
+  ): Promise<{
     session: { id: string };
     checkoutAvailable: boolean;
   }>;
@@ -43,7 +46,7 @@ export function PaymentTestForm({
         setError(null);
         try {
           if (session.current?.persona !== persona) {
-            const view = await client.seed(persona);
+            const view = await client.seed(persona, locale);
             if (!view.checkoutAvailable) {
               setError(t("unavailable"));
               return;

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Locale } from "@wtfiwant/shared";
 import {
   assessmentQuestions,
   chapters,
@@ -7,6 +8,8 @@ import {
 } from "@wtfiwant/shared";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useAnalyticsEvent } from "@/components/analytics/use-analytics-event";
+import { trackAnalytics } from "@/lib/analytics";
 import type { ReflectionClient } from "@/lib/api";
 
 export function useReflectionJourney({
@@ -63,6 +66,14 @@ export function useReflectionJourney({
     };
   }, [client, sessionId, t]);
 
+  useAnalyticsEvent(
+    "step_view",
+    "reflection",
+    locale as Locale,
+    index,
+    !loading && !followUp,
+  );
+
   const question = assessmentQuestions[index];
   const chapterIndex = question
     ? chapters.findIndex((chapter) => chapter.id === question.chapter)
@@ -70,6 +81,7 @@ export function useReflectionJourney({
   const value = question ? answers[question.id] : undefined;
 
   const complete = () => {
+    trackAnalytics("reflection_completed", "reflection", locale as Locale);
     window.location.assign(`/${locale}/result/${sessionId}`);
   };
 
@@ -102,6 +114,7 @@ export function useReflectionJourney({
     try {
       await client.saveAnswer(sessionId, question.id, value);
       setSaved(true);
+      trackAnalytics("answer_saved", "reflection", locale as Locale, index);
       const next = assessmentQuestions[index + 1];
       const chapterComplete = !next || next.chapter !== question.chapter;
       if (chapterComplete) {
@@ -119,6 +132,7 @@ export function useReflectionJourney({
       } else await advance();
     } catch {
       setError(t("saveError"));
+      trackAnalytics("journey_error", "reflection", locale as Locale, index);
     } finally {
       setSaving(false);
     }
@@ -135,6 +149,7 @@ export function useReflectionJourney({
       await advance();
     } catch {
       setError(t("followUpSaveError"));
+    } finally {
       setSaving(false);
     }
   };

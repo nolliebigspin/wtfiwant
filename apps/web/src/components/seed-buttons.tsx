@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 
 export function SeedButtons() {
-  const locale = useLocale();
+  const locale = useLocale() === "de" ? "de" : "en";
   const t = useTranslations("Commitment");
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -22,7 +22,7 @@ export function SeedButtons() {
             disabled={Boolean(loading)}
             onClick={async () => {
               setLoading(id);
-              const view = await api.seed(id);
+              const view = await api.seed(id, locale);
               window.location.assign(`/${locale}/result/${view?.session.id}`);
             }}
           >

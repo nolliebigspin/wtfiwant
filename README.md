@@ -85,9 +85,14 @@ Open [http://localhost:3000](http://localhost:3000). The API health endpoint is 
 
 All of these are server-only and read inside route handlers. None is exposed as `NEXT_PUBLIC_*`.
 
+For local Resend operations, prefer the installed `resend` CLI. Authenticate with
+`resend login` and check the active profile with `resend whoami`. Sending-only
+credentials permit sending mail; inspecting deliveries and managing domains require
+full access. Keep credentials in the CLI's secure storage, never in tracked files.
+
 `AI_PROVIDER=local` is the default. It sends no reflections to an external AI service and produces cautious deterministic hypotheses for development. To use OpenAI, set `AI_PROVIDER=openai` and provide a key plus models. The adapter uses the Responses API with Zod-backed structured output; all returned data is still validated locally before it can be stored or shown.
 
-No reflection answer or assembled prompt is intentionally written to application logs. There are no tracking scripts or reflection analytics.
+No reflection answer or assembled prompt is intentionally written to application logs. Optional Umami analytics measures the product funnel without sending reflection content.
 
 ## Database and migrations
 
@@ -112,6 +117,12 @@ mise exec -- bun run db:migrate
 Chapters, question IDs, prompts, interaction types, options, and required flags live in `packages/shared/src/assessment.ts`. The web app renders the discriminated question type; the API validates values against the same configuration.
 
 Question IDs are durable evidence references stored in analyses. Treat a released ID like database schema: add new questions freely, but do not rename IDs without a migration plan.
+
+The selected locale controls generated report content, including development
+shortcuts. Checkout records the purchase language, which is used for the initial
+report email and resends even if the result page is later viewed in another
+language. Evidence labels and saved choice values are localized; written answers
+are quoted as entered.
 
 ## AI prompts and output
 
@@ -294,4 +305,128 @@ Migrations run as their own service rather than from the web container's entrypo
 - The local provider is intentionally heuristic. It proves the private end-to-end flow but is not a substitute for evaluating production prompt quality.
 - The safety classifier is deliberately conservative and minimal; it is a clear architecture seam, not a clinical moderation system.
 - A Full Compass email cannot be recalled after delivery. Refund state is recorded for future policy automation, but refunds do not automatically revoke an already-delivered report.
-- There are no recurring notifications, streaks, analytics, social features, subscriptions, public profiles, or generic chat.
+- There are no recurring notifications, streaks, social features, subscriptions, public profiles, or generic chat.
+
+### Report presentation and PDF
+
+Emails and PDFs share one report content model. Evidence uses localized question wording, readable trade-offs, and a deduplicated numbered appendix; persistent question IDs remain internal. Original free text is quoted without translation. The paid Compass has a **Save as PDF** link, also included in the email. Resend delivery attaches the PDF directly as well. The PDF includes the latest saved action plan when downloaded, uses embedded OFL Noto fonts, and contains no private session URL. Download checks entitlement and safety status, and sends `private, no-store` headers. Downloads stop working after reflection deletion. Already downloaded files and delivered emails cannot be recalled.
+
+### Umami analytics
+
+The dashboard is hosted separately at https://analytics.awinter.dev. There is no
+analytics admin screen or access key inside wtfiwant. Do **not** paste Umami's
+standard script into the app: it would collect private reflection/report paths.
+The browser sends a strict, finite event contract to `/api/analytics/events`;
+the API forwards sanitized events to Umami's public `/api/send` endpoint after
+responding, using Next's `after`. No Umami admin password or API key is needed.
+
+#### Dokploy environment before deployment
+
+Add these to the **wtfiwant service's Environment**, not the Umami service:
+
+```dotenv
+ANALYTICS_ENABLED=true
+UMAMI_URL=https://analytics.awinter.dev
+UMAMI_WEBSITE_ID=2b8b4183-f7a1-4d0d-9955-34c33ef3c196
+ANALYTICS_HASH_SECRET=REPLACE_WITH_A_NEW_RANDOM_SECRET
+PUBLIC_APP_URL=https://wtfiwant.app
+```
+
+Generate the hashing secret once with `openssl rand -hex 32`. Keep it stable on
+redeploys so pending purchases retain attribution; it is separate from Umami's
+APP_SECRET. Remove the former `ANALYTICS_ADMIN_TOKEN` if present. Compose passes
+these variables at runtime; no `NEXT_PUBLIC_` variables or build arguments are
+needed. Apply migrations through `0008_umami_outbox` (the Compose migrate service
+runs automatically), then redeploy. An invalid optional configuration disables
+analytics instead of breaking payments. `/api/analytics/config` should return
+`{"enabled":true}`. Local `.env` is ignored by Git and is **not** uploaded to Dokploy.
+Local `.env` disables analytics and needs no Umami credentials. Analytics also
+requires `NODE_ENV=production`; loopback/localhost app URLs are rejected and the
+browser skips collection on localhost, even if runtime settings enable it.
+
+#### Events and reports
+
+| Event | Meaning |
+| --- | --- |
+| Page view | Native Umami pageview for a finite page, e.g. `/de/result`; no private IDs |
+| `reflection_started` | A new reflection was created |
+| `question_01_viewed` … `question_15_viewed` | Question reached; numbers follow the form order |
+| `question_01_answered` … `question_15_answered` | Answer saved successfully; no answer content |
+| `reflection_completed` | Last question and optional coach step finished |
+| `preview_viewed` | Free Compass Preview shown |
+| `checkout_clicked` | Purchase button clicked |
+| `checkout_started` | Checkout created or first associated with this consenting visit |
+| `checkout_cancelled` | Visitor returned through Stripe's cancellation link |
+| `purchase` | Stripe payment independently verified by the server |
+| `report_viewed` | Paid report shown |
+| `pdf_download` | Website PDF link clicked; not proof of a completed download |
+| `action_plan_saved` | Action plan saved successfully |
+| `journey_error`, `checkout_error`, `report_error` | Technical failure; no error text or content |
+
+In Umami, choose **the menu → Funnels**, then use events:
+`reflection_started → reflection_completed → preview_viewed → checkout_started → purchase → report_viewed`.
+Create a second funnel using the question-view events to see where people stop.
+Umami lists event names after it has received them; configure the production
+funnel once the first production reflection has run after deployment.
+Leaving a page is inferred from missing later milestones; closing a tab is not a
+reliable event. A person can resume later. Use the UTM and Revenue insights for
+campaigns and gross purchase amounts. Revenue is before fees/refunds, not a ledger.
+
+Use stable, non-personal ad codes, for example:
+`https://wtfiwant.app/de?utm_source=meta&utm_medium=paid_social&utm_campaign=launch_de&utm_content=video_a`.
+Only these four UTM dimensions are accepted (letters, digits, `_` and `-`, max 64
+characters). First-touch codes persist for the current analytics visit and are
+included in native Umami UTM fields and conversion event data. Never put names,
+emails or sensitive content in campaign codes. `fbclid`, other click IDs, search
+terms, hashes, private session IDs and arbitrary URL parameters are discarded.
+No Meta Pixel, Conversions API, session replay or answer recording is enabled.
+
+Measurement starts only after consent and honours DNT/GPC. A random tab identifier
+expires after 30 minutes of inactivity. Milestones deduplicate across reloads in
+that visit; page views count navigation/reload. Counts describe consenting visits,
+not unique people. To join browser milestones to server purchases without storing
+IP addresses or browser fingerprints, the adapter uses a fixed local IP/transport
+agent and passes the random visit ID. Therefore geography, browser and device
+reports are intentionally unavailable; they must not be interpreted as visitor
+measurements. Locale is measured. Infrastructure access logs are separate.
+
+#### Delivery, withdrawal and operations
+
+The app retains a small durable delivery outbox, not a second analytics dashboard.
+Events/acknowledgement receipts expire after 7 days; hashed checkout attribution and
+revocation markers after 30 days. New ingestion prunes at most hourly. Umami owns
+longer-term history; configure its retention separately. Previous dashboard events
+are not backfilled. A browser withdrawal removes queued events/checkout attribution,
+blocks late writes and stops further measurement. It cannot recall an in-flight
+request or erase already delivered Umami history. The notice states this explicitly.
+
+Checkout/purchase writes are atomic and deduplicate verified conversion enqueueing
+across Stripe webhooks and return-page polling. Network delivery runs separately
+with a 1.5-second timeout and exponential backoff, up to 60 minutes. Row locks
+prevent concurrent workers from delivering the same queued row. Like most HTTP
+analytics delivery, a lost acknowledgement after Umami saves an event can produce
+a duplicate on retry: Umami's ingestion API has no event-id idempotency guarantee.
+Use the Stripe ledger as payment truth.
+
+For recovery even when there is no subsequent traffic, schedule this command every
+minute in the deployed environment with the same runtime variables and database
+access (for a full repository/Bun checkout):
+
+```bash
+mise exec -- bun run --env-file=.env analytics:flush
+```
+
+It drains up to 100 due events and prunes expired local data. The production web
+image includes the bundled maintenance command `bun /app/analytics-flush.js`.
+Schedule that command every minute **inside the deployed web container**, with its
+normal environment (e.g. your Dokploy task runner or host scheduler using Docker
+exec). It requires no public maintenance endpoint or extra web credentials.
+Monitor logs for `Umami event delivery delayed; retry queued`. Payment/report
+delivery never waits for Umami's network.
+
+Before activating paid campaigns, visit the production site with test UTM codes,
+allow analytics and verify page views and question events in Umami Realtime. Run a
+Stripe test-mode purchase against a separate test website, check one purchase and
+its revenue, then switch back to production settings. Do not use a production card
+charge merely to test analytics. Update the privacy notice for the actual operator
+and any hosting changes before launch.

@@ -1,8 +1,10 @@
 "use client";
 
+import type { Locale } from "@wtfiwant/shared";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { FormError } from "@/components/ui/form-error";
+import { trackAnalytics } from "@/lib/analytics";
 import { api } from "@/lib/api";
 import { largePrimaryButtonClassName } from "@/lib/styles";
 
@@ -22,6 +24,11 @@ export function StartReflectionButton({ label }: { label?: string }) {
           setError(false);
           try {
             const view = await api.createSession();
+            trackAnalytics(
+              "reflection_started",
+              "commitment",
+              locale as Locale,
+            );
             localStorage.setItem("wtfiwant.sessionId", view.session.id);
             window.location.assign(`/${locale}/reflection/${view.session.id}`);
           } catch {

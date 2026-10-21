@@ -6,14 +6,25 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { CheckoutResponse } from "@wtfiwant/shared";
+import type { CheckoutResponse, Locale } from "@wtfiwant/shared";
 import { NextIntlClientProvider } from "next-intl";
+import deMessages from "../messages/de.json";
 import enMessages from "../messages/en.json";
 import { PaymentTestForm } from "../src/components/payment-test-form";
 
 afterEach(cleanup);
 
-function setup({ available = true, failOnce = false, paid = false } = {}) {
+function setup({
+  available = true,
+  failOnce = false,
+  paid = false,
+  locale = "en",
+}: {
+  available?: boolean;
+  failOnce?: boolean;
+  paid?: boolean;
+  locale?: Locale;
+} = {}) {
   const seed = mock(async (_persona: string) => ({
     session: { id: "sample-session" },
     checkoutAvailable: available,
@@ -33,7 +44,10 @@ function setup({ available = true, failOnce = false, paid = false } = {}) {
   });
   const navigate = mock((_url: string) => {});
   render(
-    <NextIntlClientProvider locale="en" messages={enMessages}>
+    <NextIntlClientProvider
+      locale={locale}
+      messages={locale === "de" ? deMessages : enMessages}
+    >
       <PaymentTestForm client={{ seed, createCheckout }} navigate={navigate} />
     </NextIntlClientProvider>,
   );
@@ -56,9 +70,17 @@ describe("instant payment test form", () => {
       ),
     );
     expect(seed).toHaveBeenCalledTimes(1);
-    expect(seed).toHaveBeenCalledWith("stable_adventure");
+    expect(seed).toHaveBeenCalledWith("stable_adventure", "en");
     expect(createCheckout).toHaveBeenCalledTimes(1);
     expect(createCheckout).toHaveBeenCalledWith("sample-session", "en");
+  });
+
+  test("passes the German form locale to report generation and Checkout", async () => {
+    const { seed, createCheckout, navigate } = setup({ locale: "de" });
+    fireEvent.submit(screen.getByRole("form"));
+    await waitFor(() => expect(navigate).toHaveBeenCalled());
+    expect(seed).toHaveBeenCalledWith("burned_out", "de");
+    expect(createCheckout).toHaveBeenCalledWith("sample-session", "de");
   });
 
   test("shows configuration guidance when purchases are disabled", async () => {

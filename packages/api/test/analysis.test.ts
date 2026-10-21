@@ -73,6 +73,22 @@ const validAnalysis: Analysis = {
 };
 
 describe("analysis validation", () => {
+  test("generates development reports in the requested locale and rejects unsupported locales", async () => {
+    const app = createApp({ repository: new InMemoryAssessmentRepository() });
+    const seed = (locale: string) =>
+      app.request("/dev/seed/burned_out", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
+    const response = await seed("de");
+    expect(response.status).toBe(201);
+    const view = sessionViewSchema.parse(await response.json());
+    expect(view.preview?.locale).toBe("de");
+    expect(view.preview?.summary).toContain("Deine Antworten");
+    expect((await seed("fr")).status).toBe(400);
+  });
+
   test("local fallback keeps the same analysis behavior when translating to German", async () => {
     const provider = new LocalAIProvider();
     const answers = {

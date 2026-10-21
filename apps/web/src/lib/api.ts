@@ -16,6 +16,8 @@ import {
   sessionViewSchema,
 } from "@wtfiwant/shared";
 
+import { analyticsContext } from "./analytics";
+
 // The API runs in-process as Next route handlers, so requests stay same-origin.
 const API_BASE = "/api";
 
@@ -68,7 +70,7 @@ export const api: ReflectionClient & {
   resendFullCompass(id: string): Promise<void>;
   saveActionPlan(id: string, input: ActionPlanInput): Promise<void>;
   deleteSession(id: string): Promise<void>;
-  seed(persona: string): Promise<SessionView>;
+  seed(persona: string, locale?: Locale): Promise<SessionView>;
 } = {
   async createSession() {
     return sessionViewSchema.parse(
@@ -128,7 +130,7 @@ export const api: ReflectionClient & {
     return checkoutResponseSchema.parse(
       await request(`/sessions/${id}/checkout`, {
         method: "POST",
-        body: JSON.stringify({ locale }),
+        body: JSON.stringify({ locale, analytics: analyticsContext() }),
       }),
     );
   },
@@ -153,9 +155,12 @@ export const api: ReflectionClient & {
   async deleteSession(id) {
     await request(`/sessions/${id}`, { method: "DELETE" });
   },
-  async seed(persona) {
+  async seed(persona, locale = "en") {
     return sessionViewSchema.parse(
-      await request(`/dev/seed/${persona}`, { method: "POST" }),
+      await request(`/dev/seed/${persona}`, {
+        method: "POST",
+        body: JSON.stringify({ locale }),
+      }),
     );
   },
 };

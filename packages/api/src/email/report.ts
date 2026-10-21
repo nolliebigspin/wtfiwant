@@ -1,5 +1,8 @@
 import type { Analysis, Locale } from "@wtfiwant/shared";
+import { buildReportDocument } from "../report/document";
 import type { ReportPurchase } from "../repositories/types";
+
+export { buildEmailEvidence } from "./evidence";
 
 function escapeHtml(value: string): string {
   return value
@@ -10,65 +13,6 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
-function items(values: string[]): string {
-  return `<ul>${values.map((value) => `<li>${escapeHtml(value)}</li>`).join("")}</ul>`;
-}
-
-function evidence(
-  ids: string[],
-  de: boolean,
-  answers: Record<string, unknown>,
-): string {
-  const values = ids
-    .filter((id) => id in answers)
-    .map(
-      (id) =>
-        `<li><strong>${escapeHtml(id)}</strong><br>${escapeHtml(formatEvidenceValue(answers[id]))}</li>`,
-    )
-    .join("");
-  return `<div style="font-size:12px;color:#68635b"><strong>${de ? "Belege" : "Evidence"}:</strong><ul>${values}</ul></div>`;
-}
-
-function formatEvidenceValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(formatEvidenceValue).join(", ");
-  if (value && typeof value === "object")
-    return Object.entries(value)
-      .map(([key, item]) => `${key}: ${formatEvidenceValue(item)}`)
-      .join(" · ");
-  return String(value ?? "");
-}
-
-function textEvidence(
-  ids: string[],
-  de: boolean,
-  answers: Record<string, unknown>,
-): string {
-  const values = ids
-    .filter((id) => id in answers)
-    .map((id) => `${id}: ${formatEvidenceValue(answers[id])}`)
-    .join(" | ");
-  return `${de ? "Belege" : "Evidence"}: ${values}`;
-}
-
-export function buildEmailEvidence(
-  analysis: Analysis,
-  source: Record<string, unknown>,
-): Record<string, unknown> {
-  const ids = new Set([
-    ...analysis.coreDrivers.flatMap((item) => item.evidenceQuestionIds),
-    ...analysis.tensions.flatMap((item) => item.evidenceQuestionIds),
-    ...analysis.antiLife.evidenceQuestionIds,
-    ...analysis.externalInfluences.flatMap((item) => item.evidenceQuestionIds),
-    ...analysis.possibleDirections.flatMap((item) => item.evidenceQuestionIds),
-    ...analysis.goals.flatMap((item) => item.evidenceQuestionIds),
-    ...analysis.firstSteps.flatMap((item) => item.evidenceQuestionIds),
-  ]);
-  return Object.fromEntries(
-    [...ids].flatMap((id) => (id in source ? [[id, source[id]]] : [])),
-  );
-}
-
 export function renderFullCompassEmail(
   analysis: Analysis,
   locale: Locale,
@@ -77,81 +21,66 @@ export function renderFullCompassEmail(
   purchase?: ReportPurchase,
 ): { subject: string; html: string; text: string } {
   const de = locale === "de";
-  const section = (title: string, body: string) =>
-    `<section><h2>${escapeHtml(title)}</h2>${body}</section>`;
+  const doc = buildReportDocument(analysis, locale, evidenceAnswers);
   const confirmation = purchaseConfirmation(purchase);
-  const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.55;color:#201d18;max-width:720px;margin:auto;padding:32px">
-    <p style="font-size:12px;letter-spacing:.12em">${de ? "DEIN VOLLSTÄNDIGER KOMPASS" : "YOUR FULL COMPASS"}</p>
-    <h1>${escapeHtml(analysis.summary)}</h1>
-    ${section(de ? "Was wichtig zu sein scheint" : "What seems to matter", analysis.coreDrivers.map((driver) => `<h3>${escapeHtml(driver.name)}</h3><p>${escapeHtml(driver.explanation)}</p>${evidence(driver.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
-    ${section(de ? "Spannungen" : "Tensions", analysis.tensions.map((tension) => `<h3>${escapeHtml(tension.sideA)} ↔ ${escapeHtml(tension.sideB)}</h3><p>${escapeHtml(tension.explanation)}</p>${evidence(tension.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
-    ${section(de ? "Dein Anti-Leben" : "Your Anti-Life", `<p>${escapeHtml(analysis.antiLife.summary)}</p>${items(analysis.antiLife.themes)}${evidence(analysis.antiLife.evidenceQuestionIds, de, evidenceAnswers)}`)}
-    ${section(de ? "Äußere Einflüsse" : "Outside influences", analysis.externalInfluences.map((item) => `<p>${escapeHtml(item.observation)}</p>${evidence(item.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
-    ${section(de ? "Richtungen zum Erkunden" : "Directions worth exploring", analysis.possibleDirections.map((direction) => `<h3>${escapeHtml(direction.title)}</h3><p>${escapeHtml(direction.explanation)}</p><p><strong>${de ? "Warum es passen könnte" : "Why it may fit"}:</strong> ${escapeHtml(direction.whyItFits)}</p>${evidence(direction.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
-    ${section(de ? "Unter deinen Zielen" : "Beneath your goals", analysis.goals.map((goal) => `<h3>${escapeHtml(goal.originalGoal)}</h3><p>${escapeHtml(goal.possibleUnderlyingNeed)}</p><p>${escapeHtml(goal.interpretation)}</p>${evidence(goal.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
-    ${section(de ? "Erste Schritte" : "First steps", analysis.firstSteps.map((step) => `<h3>${escapeHtml(step.direction)}</h3><p><strong>${de ? "Experiment" : "Experiment"}:</strong> ${escapeHtml(step.experiment)}</p><p><strong>${de ? "Jetzt" : "Now"}:</strong> ${escapeHtml(step.immediateAction)}</p>${evidence(step.evidenceQuestionIds, de, evidenceAnswers)}`).join(""))}
-    <p><a href="${escapeHtml(resultUrl)}">${de ? "Privaten Kompass öffnen, Belege prüfen oder Reflexion löschen" : "Open your private Compass, inspect evidence, or delete this reflection"}</a></p>
-    ${
-      confirmation
-        ? section(
-            purchase?.agreement?.locale === "de"
-              ? "Kaufbestätigung und digitale Bereitstellung"
-              : "Purchase confirmation and digital delivery",
-            confirmation
-              .split("\n\n")
-              .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-              .join(""),
-          )
-        : ""
-    }
-    <hr><p style="font-size:12px;color:#68635b">${de ? "Dies ist eine geführte Reflexion, keine Diagnose, Therapie oder Krisenhilfe." : "This is guided reflection, not diagnosis, therapy, or crisis support."}</p>
-  </body></html>`;
+  const escaped = escapeHtml;
+  const paragraph = (value: string) =>
+    `<p style="margin:12px 0;white-space:pre-wrap">${escaped(value)}</p>`;
+  const references = (values: number[]) =>
+    values.length
+      ? `${de ? "Grundlage" : "Evidence"}: ${values.map((value) => `[${value}]`).join(", ")}`
+      : "";
+  const pdfUrl = `${resultUrl.replace(
+    /\/(en|de)\/result\/([^/?#]+).*$/,
+    "/api/sessions/$2/report.pdf",
+  )}?locale=${locale}`;
+  const html = `<!doctype html><html lang="${locale}"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#f4f1e9;font-family:Arial,sans-serif;color:#24271f;line-height:1.65">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;margin:auto;background:#fffdf8"><tr><td style="padding:36px 28px">
+<p style="font-size:12px;font-weight:bold;letter-spacing:2px;margin:0 0 32px">WTFIWANT / COMPASS</p>
+<p style="font-size:12px;text-transform:uppercase;color:#667056">${de ? "Eine Richtung, die zu dir passt" : "A direction that feels like yours"}</p>
+<h1 style="font-family:Georgia,serif;font-size:36px;line-height:1.15;font-weight:normal">${escaped(doc.title)}</h1>
+<p style="font-size:18px;line-height:1.65">${escaped(doc.summary)}</p>
+<p style="margin:28px 0"><a href="${escaped(pdfUrl)}" style="display:inline-block;background:#263626;color:#fff;padding:12px 20px;text-decoration:none;border-radius:4px">${de ? "Kompass als PDF speichern" : "Save your Compass as PDF"}</a></p>
+${doc.sections
+  .filter((section) => section.items.length)
+  .map(
+    (section, index) =>
+      `<section style="margin-top:36px;border-top:1px solid #d8dccd;padding-top:20px"><p style="font-size:11px;color:#667056;letter-spacing:2px">0${index + 1}</p><h2 style="font-family:Georgia,serif;font-size:26px;line-height:1.25;font-weight:normal">${escaped(section.title)}</h2>${section.items.map((item) => `<div style="margin:24px 0">${item.title ? `<h3 style="font-size:17px;line-height:1.4;margin-bottom:8px">${escaped(item.title)}</h3>` : ""}${item.paragraphs.map(paragraph).join("")}<p style="font-size:12px;color:#667056">${escaped(references(item.evidence))}</p></div>`).join("")}</section>`,
+  )
+  .join("")}
+<section style="margin-top:36px;border-top:1px solid #d8dccd;padding-top:20px"><h2 style="font-family:Georgia,serif;font-size:26px;font-weight:normal">${escaped(doc.evidenceTitle)}</h2><p style="font-size:13px;color:#667056">${de ? "Die Nummern im Report verweisen auf deine ursprünglichen Antworten. Deine eigenen Worte bleiben unverändert." : "The numbers in your report refer to your original answers. Your own words remain unchanged."}</p>${doc.evidence.map((item) => `<div style="border-left:3px solid #b9c792;padding-left:16px;margin:24px 0"><h3 style="font-size:14px;line-height:1.5">[${item.number}] ${escaped(item.label)}</h3><p style="font-size:14px;white-space:pre-wrap">${escaped(item.body)}</p></div>`).join("")}</section>
+<p style="margin:32px 0"><a href="${escaped(resultUrl)}" style="color:#263626">${de ? "Privaten Kompass öffnen, Belege prüfen oder Reflexion löschen" : "Open your private Compass, inspect evidence, or delete this reflection"}</a></p>
+<p style="font-size:12px;color:#667056">${escaped(doc.disclaimer)}</p>
+${confirmation ? `<section style="margin-top:32px;border-top:1px solid #d8dccd;font-size:12px;color:#667056"><h2 style="font-size:16px">${purchase?.agreement?.locale === "de" ? "Kaufbestätigung und digitale Bereitstellung" : "Purchase confirmation and digital delivery"}</h2>${confirmation.split("\n\n").map(paragraph).join("")}</section>` : ""}
+</td></tr></table></td></tr></table></body></html>`;
   const text = [
-    analysis.summary,
-    ...(confirmation ? [confirmation] : []),
-    ...analysis.coreDrivers.flatMap((driver) => [
-      driver.name,
-      driver.explanation,
-      textEvidence(driver.evidenceQuestionIds, de, evidenceAnswers),
+    doc.title,
+    doc.summary,
+    ...doc.sections.flatMap((section) => [
+      section.title,
+      ...section.items.flatMap((item) => [
+        item.title ?? "",
+        ...item.paragraphs,
+        references(item.evidence),
+      ]),
     ]),
-    ...analysis.tensions.flatMap((tension) => [
-      `${tension.sideA} / ${tension.sideB}`,
-      tension.explanation,
-      textEvidence(tension.evidenceQuestionIds, de, evidenceAnswers),
-    ]),
-    analysis.antiLife.summary,
-    textEvidence(analysis.antiLife.evidenceQuestionIds, de, evidenceAnswers),
-    ...analysis.externalInfluences.flatMap((influence) => [
-      influence.observation,
-      textEvidence(influence.evidenceQuestionIds, de, evidenceAnswers),
-    ]),
-    ...analysis.possibleDirections.flatMap((direction) => [
-      direction.title,
-      direction.explanation,
-      direction.whyItFits,
-      textEvidence(direction.evidenceQuestionIds, de, evidenceAnswers),
-    ]),
-    ...analysis.goals.flatMap((goal) => [
-      goal.originalGoal,
-      goal.possibleUnderlyingNeed,
-      goal.interpretation,
-      textEvidence(goal.evidenceQuestionIds, de, evidenceAnswers),
-    ]),
-    ...analysis.firstSteps.flatMap((step) => [
-      step.direction,
-      step.experiment,
-      step.immediateAction,
-      textEvidence(step.evidenceQuestionIds, de, evidenceAnswers),
-    ]),
+    doc.evidenceTitle,
+    ...doc.evidence.map(
+      (item) => `[${item.number}] ${item.label}\n${item.body}`,
+    ),
+    de
+      ? `Kompass als PDF speichern: ${pdfUrl}`
+      : `Save your Compass as PDF: ${pdfUrl}`,
     de
       ? `Privaten Kompass öffnen, Belege prüfen oder Reflexion löschen: ${resultUrl}`
       : `Open your private Compass, inspect evidence, or delete this reflection: ${resultUrl}`,
-  ].join("\n\n");
-  return {
-    subject: de ? "Dein vollständiger Kompass" : "Your Full Compass",
-    html,
-    text,
-  };
+    doc.disclaimer,
+    confirmation,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  return { subject: doc.title, html, text };
 }
 
 function purchaseConfirmation(purchase?: ReportPurchase): string {
