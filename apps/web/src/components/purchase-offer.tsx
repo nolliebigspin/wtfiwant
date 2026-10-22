@@ -40,8 +40,8 @@ export function PurchaseOfferNotice() {
   return (
     <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted">
       {locale === "de"
-        ? `Deine Reflexion und dein Zwischenstand sind kostenlos. Ein persönlicher KI-Kompass mit bis zu drei Rückfragen und PDF ist optional${offer ? ` für einmalig ${formatOffer(offer, locale)}` : " kostenpflichtig"}. Kein Abo.${offer && !offer.taxIncluded ? " Der endgültige Gesamtpreis wird vor der Zahlung angezeigt." : ""}`
-        : `Your reflection and checkpoint are free. A personal AI Compass with up to three follow-up questions and a PDF is optional${offer ? ` for ${formatOffer(offer, locale)} once` : " and paid"}. No subscription.${offer && !offer.taxIncluded ? " The final total is shown before payment." : ""}`}
+        ? `Deine Reflexion und dein Zwischenstand sind kostenlos. Ein persönlicher KI-Kompass mit bis zu fünf Rückfragen und PDF ist optional${offer ? ` für einmalig ${formatOffer(offer, locale)}` : " kostenpflichtig"}. Kein Abo.${offer && !offer.taxIncluded ? " Der endgültige Gesamtpreis wird vor der Zahlung angezeigt." : ""}`
+        : `Your reflection and checkpoint are free. A personal AI Compass with up to five follow-up questions and a PDF is optional${offer ? ` for ${formatOffer(offer, locale)} once` : " and paid"}. No subscription.${offer && !offer.taxIncluded ? " The final total is shown before payment." : ""}`}
     </p>
   );
 }
