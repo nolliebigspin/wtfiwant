@@ -1,17 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
   type Analysis,
-  analysisResponseSchema,
-  assessmentQuestions,
-  COACH_PROMPT_VERSION,
-  coachPromptSchema,
+  createDigitalPurchaseAgreement,
   sessionViewSchema,
-  threeLives,
-  tradeoffPairs,
 } from "@wtfiwant/shared";
 import { LocalAIProvider } from "../src/ai/local";
+import { localCompass, localDirection } from "../src/ai/local-compass";
 import type { AIProvider } from "../src/ai/provider";
 import { createApp } from "../src/app";
+import { createSeedSession } from "../src/dev/personas";
+import { processAIJob } from "../src/journey/process";
+import { InMemoryAIJobStore } from "../src/journey/store";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
 
 const validAnalysis: Analysis = {
@@ -84,8 +83,14 @@ describe("analysis validation", () => {
     const response = await seed("de");
     expect(response.status).toBe(201);
     const view = sessionViewSchema.parse(await response.json());
-    expect(view.preview?.locale).toBe("de");
-    expect(view.preview?.summary).toContain("Deine Antworten");
+    expect(view.preview).toBeNull();
+    expect(
+      (
+        await (
+          await app.request(`/sessions/${view.session.id}/checkpoint?locale=de`)
+        ).json()
+      ).checkpoint.locale,
+    ).toBe("de");
     expect((await seed("fr")).status).toBe(400);
   });
 
@@ -122,169 +127,90 @@ describe("analysis validation", () => {
     expect(german.summary).not.toBe(english.summary);
   });
 
-  test("repairs malformed provider output once through the HTTP analysis interface", async () => {
+  test("repairs malformed output once in a paid job and includes refinement evidence", async () => {
+    const repository = new InMemoryAssessmentRepository();
+    const seeded = await createSeedSession(repository, "burned_out", "de");
+    const id = seeded.session.id;
+    await repository.saveCheckout(
+      id,
+      { id: "cs_test_analysis", url: "https://stripe.test/checkout" },
+      createDigitalPurchaseAgreement("de"),
+    );
+    await repository.markPurchasePaid({
+      checkoutSessionId: "cs_test_analysis",
+      recipientEmail: "test@example.com",
+      paymentIntentId: null,
+      currency: "eur",
+      amountTotal: 1900,
+      consentRecordedAt: new Date().toISOString(),
+    });
     let attempts = 0;
-    let receivedAnswers: Record<string, unknown> = {};
-    const receivedLocales: string[] = [];
+    const locales: string[] = [];
+    let answers: Record<string, unknown> = {};
     const provider: AIProvider = {
       name: "test-model",
-      async generateFollowUp(_questionId, _answer, _safetyIdentifier, locale) {
-        receivedLocales.push(locale ?? "missing");
-        return "What would that give you?";
+      async generateFollowUp() {
+        throw new Error("Not used");
       },
-      async generateCoachPrompt(_answers, _safetyIdentifier, locale) {
-        receivedLocales.push(locale ?? "missing");
-        return {
-          question: "What would that give you?",
-          evidenceQuestionIds: ["goals.current"],
-          promptVersion: COACH_PROMPT_VERSION,
-        };
+      async generateCoachPrompt() {
+        throw new Error("Not used");
       },
-      async analyzeAssessment(answers, repair, _safetyIdentifier, locale) {
-        receivedLocales.push(locale ?? "missing");
-        attempts += 1;
-        receivedAnswers = answers;
-        return repair ? validAnalysis : { summary: "missing everything else" };
+      async generateDirection(input, _id, locale) {
+        return localDirection(input, locale);
+      },
+      async analyzeAssessment(input, repair, _id, locale) {
+        attempts++;
+        answers = input;
+        locales.push(locale ?? "missing");
+        return repair
+          ? {
+              ...validAnalysis,
+              compass: localCompass(validAnalysis, input, locale ?? "en"),
+            }
+          : { summary: "missing required fields" };
       },
     };
-
-    const app = createApp({
-      repository: new InMemoryAssessmentRepository(),
+    const jobs = new InMemoryAIJobStore(repository);
+    const dependencies = {
+      repository,
+      jobs,
       aiProvider: provider,
-    });
-    const created = sessionViewSchema.parse(
-      await (await app.request("/sessions", { method: "POST" })).json(),
-    );
-    for (const question of assessmentQuestions) {
-      const value = (() => {
-        switch (question.type) {
-          case "long_text":
-            return `A considered answer for ${question.id}`;
-          case "multi_choice":
-            return [question.options[0]];
-          case "single_choice":
-            return question.options[0];
-          case "memories":
-            return {
-              memories: [
-                {
-                  story:
-                    "A long dinner with close friends after making something difficult.",
-                  with: "Friends",
-                  where: "Home",
-                  doing: "Cooking",
-                  special: "Nobody was rushing",
-                },
-              ],
-            };
-          case "three_lives":
-            return {
-              lives: threeLives.map((life) => ({
-                id: life.id,
-                attracts: "One useful attribute",
-                repels: "One honest cost",
-              })),
-            };
-          case "tradeoffs":
-            return {
-              choices: tradeoffPairs.map(() => 1),
-              touched: tradeoffPairs.map(() => true),
-            };
-          case "goals":
-            return {
-              goals: [
-                {
-                  goal: "Shape my own working week",
-                  why: "Have energy for people and chosen projects",
-                },
-              ],
-            };
-        }
-      })();
-      const response = await app.request(
-        `/sessions/${created.session.id}/answers/${question.id}`,
-        {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ value }),
-        },
-      );
-      expect(response.status).toBe(200);
-    }
-    await app.request(`/sessions/${created.session.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
+      publicAppUrl: "https://wtfiwant.test",
+    };
+    const app = createApp(dependencies);
+    await app.request(`/sessions/${id}/paid/start`, { method: "POST" });
+    await processAIJob(dependencies);
+    await app.request(`/sessions/${id}/paid/answers/q1`, {
+      method: "PUT",
       body: JSON.stringify({
-        currentChapter: "goals",
-        currentQuestionId: "goals.current",
+        response: "More unclaimed attention for friends",
       }),
     });
-
-    const generatedResponse = await app.request(
-      `/sessions/${created.session.id}/coach-prompt`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ chapter: "goals", locale: "de" }),
-      },
-    );
-    const generatedBody = (await generatedResponse.json()) as {
-      coachPrompt: unknown;
+    await app.request(`/sessions/${id}/paid/synthesize`, { method: "POST" });
+    await processAIJob(dependencies);
+    const draft = (await jobs.get(id, "synthesis"))?.result as {
+      northStar: string;
+      priority: string;
     };
-    const coachPrompt = coachPromptSchema.parse(generatedBody.coachPrompt);
-    await app.request(
-      `/sessions/${created.session.id}/coach-prompt/${coachPrompt.id}`,
-      {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          response:
-            "It would let me decide when my best attention is available.",
-        }),
-      },
-    );
-
-    const response = await app.request(
-      `/sessions/${created.session.id}/analyze`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ locale: "de" }),
-      },
-    );
-    const result = analysisResponseSchema.parse(await response.json());
-
-    expect(response.status).toBe(200);
-    expect(result.status).toBe("preview_ready");
-    if (result.status === "preview_ready")
-      expect(result.preview.summary).toEqual(validAnalysis.summary);
+    await app.request(`/sessions/${id}/paid/generate`, {
+      method: "POST",
+      body: JSON.stringify({
+        alignment: "fits",
+        northStar: draft.northStar,
+        priority: draft.priority,
+        feedback: "",
+      }),
+    });
+    await processAIJob(dependencies);
     expect(attempts).toBe(2);
-    expect(receivedLocales).toEqual(["de", "de", "de"]);
-    expect(
-      Object.values(receivedAnswers).some((value) =>
-        JSON.stringify(value).includes(
-          "It would let me decide when my best attention is available.",
-        ),
-      ),
-    ).toBe(true);
-
-    const translatedResponse = await app.request(
-      `/sessions/${created.session.id}/analyze`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ locale: "en" }),
-      },
-    );
-    const translated = analysisResponseSchema.parse(
-      await translatedResponse.json(),
-    );
-    expect(translated.status).toBe("preview_ready");
-    expect(receivedLocales).toEqual(["de", "de", "de", "en", "en"]);
-    expect(
-      Object.values(receivedAnswers).some((value) =>
-        JSON.stringify(value).includes("Additional answer from the reflection"),
-      ),
-    ).toBe(true);
+    expect(locales).toEqual(["de", "de"]);
+    expect(answers["refinement:q1"]).toMatchObject({
+      answer: "More unclaimed attention for friends",
+    });
+    const response = await app.request(`/sessions/${id}/compass`);
+    expect(response.status).toBe(200);
+    await app.request(`/sessions/${id}/paid/generate`, { method: "POST" });
+    expect(await processAIJob(dependencies)).toBe(false);
+    expect(attempts).toBe(2);
   });
 });

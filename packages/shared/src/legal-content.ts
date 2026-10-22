@@ -24,7 +24,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "1. What the service provides",
           paragraphs: [
-            "wtfiwant.app is a guided personal reflection. You answer questions about your experiences, priorities, and possible directions. Completing the reflection and viewing its Compass Preview are free. A Full Compass purchase unlocks the complete report for one Reflection Session, including patterns, tensions, possible directions, and an action plan, with delivery by email.",
+            "wtfiwant.app is a guided personal reflection. You answer questions about your experiences, priorities, and possible directions. Completing the initial reflection and viewing its checkpoint are free. The checkpoint mirrors your answers without AI. A Full Compass purchase unlocks the complete report for one Reflection Session, including patterns, tensions, possible directions, and an action plan, with delivery by email.",
             "Your report is generated with automated assistance and can contain mistakes or interpretations you disagree with. Treat it as material for your own reflection. It is not a diagnosis, therapy, crisis service, or professional medical, legal, or financial advice, and it does not promise a particular life outcome. Statutory rights concerning the quality of the digital product remain unaffected.",
           ],
         },
@@ -38,7 +38,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "3. Digital delivery and access",
           paragraphs: [
-            "The Full Compass becomes available in your browser after Stripe confirms successful payment. Some payment methods take longer to confirm. We also send the report to the email address supplied at Checkout. An email delivery problem does not remove paid browser access; you can request another email from your report page or contact us.",
+            "After Stripe confirms successful payment, optional AI follow-up questions help refine your reflection. You may skip them and review a proposed direction before requesting your report. You can accept, correct, or mark the direction as uncertain. After 30 minutes of inactivity during the questions, we prepare a provisional direction; after another 30 minutes without review, we generate the report from saved answers and label the direction as not reviewed. Report generation runs in the background; your Full Compass becomes available in your browser when generation completes. Some payment methods take longer to confirm. We also send the report to the email address supplied at Checkout. An email delivery problem does not remove paid browser access; you can request another email from your report page or contact us.",
             "You need an internet connection, a current web browser, and access to your email. There is no account sign-in. Keep your private result link safe: anyone who has it may be able to access your reflection. Save the report email or a personal copy if you want to keep it independently of the service.",
           ],
         },
@@ -123,7 +123,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "1. Was der Dienst bietet",
           paragraphs: [
-            "wtfiwant.app ist eine angeleitete persönliche Reflexion. Du beantwortest Fragen zu deinen Erfahrungen, Prioritäten und möglichen Richtungen. Die Reflexion und die Kompass-Vorschau sind kostenlos. Mit einem Kauf erhältst du den vollständigen Bericht für eine Reflexionssitzung, einschließlich Mustern, Spannungen, möglichen Richtungen und einem Handlungsplan sowie der Zustellung per E-Mail.",
+            "wtfiwant.app ist eine angeleitete persönliche Reflexion. Du beantwortest Fragen zu deinen Erfahrungen, Prioritäten und möglichen Richtungen. Die erste Reflexion und ihr Zwischenstand sind kostenlos. Der Zwischenstand spiegelt deine Antworten ohne KI. Mit einem Kauf erhältst du den vollständigen Bericht für eine Reflexionssitzung, einschließlich Mustern, Spannungen, möglichen Richtungen und einem Handlungsplan sowie der Zustellung per E-Mail.",
             "Dein Bericht wird mit automatisierter Unterstützung erstellt und kann Fehler oder Deutungen enthalten, denen du nicht zustimmst. Nutze ihn als Anregung für deine eigene Reflexion. Er ist keine Diagnose, Therapie, Krisenhilfe oder professionelle medizinische, rechtliche oder finanzielle Beratung und verspricht kein bestimmtes Lebensergebnis. Gesetzliche Rechte hinsichtlich der Qualität des digitalen Produkts bleiben unberührt.",
           ],
         },
@@ -137,7 +137,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "3. Digitale Bereitstellung und Zugriff",
           paragraphs: [
-            "Der vollständige Kompass wird im Browser verfügbar, sobald Stripe die erfolgreiche Zahlung bestätigt. Bei manchen Zahlungsmethoden dauert die Bestätigung länger. Zusätzlich senden wir den Bericht an die bei Checkout angegebene E-Mail-Adresse. Ein E-Mail-Zustellfehler hebt den bezahlten Browserzugriff nicht auf. Du kannst auf der Ergebnisseite einen erneuten Versand anfordern oder uns kontaktieren.",
+            "Nach erfolgreicher Zahlungsbestätigung durch Stripe kannst du optionale KI-Rückfragen beantworten oder überspringen. Anschließend kannst du eine vorgeschlagene Richtung bestätigen, korrigieren oder als unsicher kennzeichnen. Nach 30 Minuten ohne weitere Antworten bereiten wir eine vorläufige Richtung vor. Bleibt diese weitere 30 Minuten ungeprüft, erstellen wir den Bericht aus den gespeicherten Antworten und kennzeichnen die Richtung als ungeprüft. Die Erstellung läuft im Hintergrund. Sobald sie abgeschlossen ist, steht dein vollständiger Kompass im Browser bereit. Bei manchen Zahlungsmethoden dauert die Bestätigung länger. Zusätzlich senden wir den Bericht an die bei Checkout angegebene E-Mail-Adresse. Ein E-Mail-Zustellfehler hebt den bezahlten Browserzugriff nicht auf. Du kannst auf der Ergebnisseite einen erneuten Versand anfordern oder uns kontaktieren.",
             "Du benötigst eine Internetverbindung, einen aktuellen Webbrowser und Zugang zu deinem E-Mail-Postfach. Eine Kontoanmeldung gibt es nicht. Bewahre deinen privaten Ergebnislink sicher auf: Wer den Link kennt, kann möglicherweise auf deine Reflexion zugreifen. Sichere die Berichts-E-Mail oder eine persönliche Kopie, wenn du den Bericht unabhängig vom Dienst aufbewahren möchtest.",
           ],
         },

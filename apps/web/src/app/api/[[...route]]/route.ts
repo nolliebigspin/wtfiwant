@@ -2,6 +2,7 @@ import { createApp } from "@wtfiwant/api";
 import { createAIProvider } from "@wtfiwant/api/ai";
 import { createAnalytics } from "@wtfiwant/api/analytics";
 import { createCommerceProviders } from "@wtfiwant/api/commerce";
+import { PostgresAIJobStore } from "@wtfiwant/api/jobs";
 import { PostgresAssessmentRepository } from "@wtfiwant/api/repositories";
 import { after } from "next/server";
 
@@ -36,6 +37,7 @@ function getApp(): App {
     : undefined;
   app = createApp({
     repository: PostgresAssessmentRepository.connect(databaseUrl),
+    jobs: PostgresAIJobStore.connect(databaseUrl),
     aiProvider: createAIProvider(),
     ...createCommerceProviders(),
     ...analyticsDependencies,

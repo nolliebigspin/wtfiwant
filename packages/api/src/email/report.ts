@@ -41,6 +41,7 @@ export function renderFullCompassEmail(
 <p style="font-size:12px;text-transform:uppercase;color:#667056">${de ? "Eine Richtung, die zu dir passt" : "A direction that feels like yours"}</p>
 <h1 style="font-family:Georgia,serif;font-size:36px;line-height:1.15;font-weight:normal">${escaped(doc.title)}</h1>
 <p style="font-size:18px;line-height:1.65">${escaped(doc.summary)}</p>
+${doc.compass ? `<p style="font-size:12px;color:#667056">${escaped(doc.directionStatus ?? "")}</p><h2>${de ? "Deine wichtigste Veränderung jetzt" : "Your most important change now"}</h2>${paragraph(doc.compass.priority)}<h2>${de ? "Dein 90-Tage-Ziel" : "Your 90-day goal"}</h2>${paragraph(doc.compass.goal.outcome)}<h2>${de ? "Dein nächster Schritt" : "Your next step"}</h2>${paragraph(doc.compass.firstAction.action)}${paragraph(doc.compass.firstAction.when)}` : ""}
 <p style="margin:28px 0"><a href="${escaped(pdfUrl)}" style="display:inline-block;background:#263626;color:#fff;padding:12px 20px;text-decoration:none;border-radius:4px">${de ? "Kompass als PDF speichern" : "Save your Compass as PDF"}</a></p>
 ${doc.sections
   .filter((section) => section.items.length)
@@ -57,6 +58,15 @@ ${confirmation ? `<section style="margin-top:32px;border-top:1px solid #d8dccd;f
   const text = [
     doc.title,
     doc.summary,
+    ...(doc.compass
+      ? [
+          doc.directionStatus,
+          doc.compass.priority,
+          doc.compass.goal.outcome,
+          doc.compass.firstAction.action,
+          doc.compass.firstAction.when,
+        ]
+      : []),
     ...doc.sections.flatMap((section) => [
       section.title,
       ...section.items.flatMap((item) => [

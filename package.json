@@ -16,7 +16,8 @@
     "db:migrate": "bun run --cwd packages/api db:migrate",
     "commerce:reconcile": "bun run --cwd packages/api commerce:reconcile",
     "analytics:prune": "bun run --cwd packages/api analytics:prune",
-    "analytics:flush": "bun run --cwd packages/api analytics:flush"
+    "analytics:flush": "bun run --cwd packages/api analytics:flush",
+    "reports:work": "bun run --cwd packages/api reports:work"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",

@@ -36,13 +36,13 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    environment:
+    environment: &app_environment
       DATABASE_URL: postgres://${POSTGRES_USER:-wtfiwant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wtfiwant}
       PORT: 3000
       AI_PROVIDER: ${AI_PROVIDER:-local}
       AI_API_KEY: ${AI_API_KEY:-}
-      AI_MODEL: ${AI_MODEL:-gpt-5-mini}
-      AI_FOLLOWUP_MODEL: ${AI_FOLLOWUP_MODEL:-gpt-5-mini}
+      AI_MODEL: ${AI_MODEL:-gpt-6-luna}
+      AI_FOLLOWUP_MODEL: ${AI_FOLLOWUP_MODEL:-gpt-6-luna}
       PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-false}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:-}
       TERMS_URL: ${TERMS_URL:-}
@@ -67,6 +67,21 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Dedicated durable worker: generation continues when the browser closes.
+  report-worker:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    command: ["bun", "/app/report-worker.js"]
+    environment: *app_environment
+    restart: unless-stopped
+    init: true
     depends_on:
       postgres:
         condition: service_healthy

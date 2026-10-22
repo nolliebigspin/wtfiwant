@@ -52,50 +52,40 @@ function session(overrides: Partial<SessionView> = {}): SessionView {
 }
 
 describe("reflection journey", () => {
-  test("offers and resolves an optional Coach Prompt at a chapter boundary", async () => {
-    const resolved: Array<[string, string | null]> = [];
-    const progress: string[] = [];
+  test("uses a goal-dependent question without requesting an AI coach", async () => {
+    let coachCalls = 0;
     const client: ReflectionClient = {
       async getSession() {
         return session({
-          session: { ...session().session, currentQuestionId: "life.drifted" },
-          answers: { "life.drifted": "My calendar filled itself." },
+          session: {
+            ...session().session,
+            currentQuestionId: "noise.private_desire",
+          },
+          answers: { "noise.working_toward": "Become a team lead" },
         });
       },
       async saveAnswer() {},
-      async updateProgress(_id, _chapter, questionId) {
-        progress.push(questionId);
-      },
+      async updateProgress() {},
       async createCoachPrompt() {
-        return {
-          id: "4b129da1-e739-46d8-8898-5fed6f81885a",
-          question: "Which part of that drift costs the most energy?",
-          userResponse: null,
-          resolvedAt: null,
-        };
+        coachCalls++;
+        throw new Error("Must not call AI");
       },
-      async resolveCoachPrompt(_id, promptId, response) {
-        resolved.push([promptId, response]);
-      },
+      async resolveCoachPrompt() {},
     };
-
     renderJourney(
       <ReflectionJourney sessionId={session().session.id} client={client} />,
     );
-    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByText("Your current goal: Become a team lead"),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Probably not"));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(
       await screen.findByRole("heading", {
-        name: "Which part of that drift costs the most energy?",
+        name: "What do you think you're supposed to want?",
       }),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
-
-    await waitFor(() =>
-      expect(resolved).toEqual([
-        ["4b129da1-e739-46d8-8898-5fed6f81885a", null],
-      ]),
-    );
-    expect(progress).toEqual(["alive.memories"]);
+    expect(coachCalls).toBe(0);
   });
 
   test("shows German copy while saving canonical assessment values", async () => {
@@ -128,7 +118,7 @@ describe("reflection journey", () => {
         name: "Was beansprucht gerade den Großteil deiner Zeit und Energie?",
       }),
     ).toBeTruthy();
-    expect(document.querySelector('[aria-current="step"]')).toBeTruthy();
+    expect(screen.getByRole("progressbar")).toBeTruthy();
     await userEvent.click(screen.getByLabelText("Arbeit"));
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
 
@@ -180,9 +170,7 @@ describe("reflection journey", () => {
       ]),
     );
     expect(
-      await screen.findByText(
-        "What part feels like you somehow just ended up there?",
-      ),
+      await screen.findByText("When did you feel genuinely alive?"),
     ).toBeTruthy();
   });
 });

@@ -84,6 +84,10 @@ export function formatReflectionAnswer(
 
 /** Human-facing evidence; persistent IDs and form bookkeeping never become copy. */
 export function reflectionQuestionLabel(id: string, locale: Locale): string {
+  if (id === "direction:review")
+    return locale === "de"
+      ? "Deine gewählte Richtung"
+      : "Your chosen direction";
   const question = assessmentQuestions.find((item) => item.id === id);
   if (!question)
     return locale === "de"
@@ -111,6 +115,8 @@ export function formatReportAnswer(
       ? value.filter((item) => item && typeof item === "object")
       : [];
   const text = (value: unknown) => (typeof value === "string" ? value : "");
+  if (id === "direction:review" && typeof record.answer === "string")
+    return record.answer;
   if (id === "tradeoffs.choices") {
     const choices = Array.isArray(record.choices) ? record.choices : [];
     const touched = Array.isArray(record.touched) ? record.touched : [];

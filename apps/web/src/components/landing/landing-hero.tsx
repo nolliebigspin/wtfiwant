@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { PurchaseOfferNotice } from "@/components/purchase-offer";
 import { ResumeLink } from "@/components/resume-link";
 import { Link } from "@/i18n/navigation";
 import { eyebrowClassName, largePrimaryButtonClassName } from "@/lib/styles";
@@ -31,6 +32,7 @@ export function LandingHero() {
           </Link>
           <ResumeLink />
         </div>
+        <PurchaseOfferNotice />
       </div>
       <LandingOrbit />
     </section>

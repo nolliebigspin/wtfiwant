@@ -1,8 +1,11 @@
 import {
   type Analysis,
   COACH_PROMPT_VERSION,
+  type DirectionDraft,
+  type DirectionReview,
   type Locale,
 } from "@wtfiwant/shared";
+import { localCompass, localDirection } from "./local-compass";
 import type { AIProvider } from "./provider";
 
 function textOf(value: unknown): string {
@@ -22,7 +25,15 @@ function evidence(
 }
 
 export class LocalAIProvider implements AIProvider {
-  readonly name = "local-patterns-v1";
+  readonly name: string = "local-patterns-v1";
+
+  async generateDirection(
+    answers: Record<string, unknown>,
+    _safetyIdentifier: string,
+    locale: Locale,
+  ) {
+    return localDirection(answers, locale);
+  }
 
   async generateCoachPrompt(
     answers: Record<string, unknown>,
@@ -58,6 +69,7 @@ export class LocalAIProvider implements AIProvider {
     _repair?: boolean,
     _safetyIdentifier?: string,
     locale: Locale = "en",
+    direction?: { draft: DirectionDraft; review: DirectionReview | null },
   ): Promise<Analysis> {
     const allText = Object.values(answers).map(textOf).join(" ").toLowerCase();
     const connection = mentions(allText, [
@@ -304,7 +316,11 @@ export class LocalAIProvider implements AIProvider {
         },
       ],
     };
-    return locale === "de" ? translateLocalAnalysis(result) : result;
+    const localized = locale === "de" ? translateLocalAnalysis(result) : result;
+    return {
+      ...localized,
+      compass: localCompass(localized, answers, locale, direction),
+    };
   }
 }
 

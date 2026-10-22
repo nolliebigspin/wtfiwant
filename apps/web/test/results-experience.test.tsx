@@ -13,6 +13,7 @@ import type {
   AnalysisResponse,
   SessionView,
 } from "@wtfiwant/shared";
+import { buildCheckpoint, type PaidJourney } from "@wtfiwant/shared";
 import { NextIntlClientProvider } from "next-intl";
 import deMessages from "../messages/de.json";
 import enMessages from "../messages/en.json";
@@ -125,8 +126,35 @@ const storedAnalysis = {
   createdAt: "2026-08-08T10:30:00.000Z",
 };
 
+const paidReady: PaidJourney = {
+  locale: "en",
+  stage: "ready",
+  questions: [],
+  responses: {},
+  canSkip: false,
+  delivery: "sent",
+};
+const journeyClient = {
+  async getCheckpoint() {
+    return { checkpoint: buildCheckpoint(view().answers, "en") };
+  },
+  async startPaidJourney() {
+    return paidReady;
+  },
+  async getPaidJourney() {
+    return paidReady;
+  },
+  async saveRefinement() {},
+  async synthesizeDirection() {
+    return paidReady;
+  },
+  async generateReport() {
+    return paidReady;
+  },
+};
+
 describe("results experience", () => {
-  test("shows only a Compass Preview before payment", async () => {
+  test("shows an honest answer checkpoint before payment", async () => {
     const unpaid: SessionView = {
       ...view(),
       entitlements: ["assessment"],
@@ -138,6 +166,7 @@ describe("results experience", () => {
       },
     };
     const client: ResultsClient = {
+      ...journeyClient,
       async getSession() {
         return unpaid;
       },
@@ -169,16 +198,16 @@ describe("results experience", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Get my Full Compass" }),
+      await screen.findByRole("button", { name: "Unlock my AI Compass" }),
     ).toBeTruthy();
-    expect(screen.getByText(analysis.summary)).toBeTruthy();
-    fireEvent.click(screen.getByText("Why do you think this?"));
+    expect(screen.queryByText(analysis.summary)).toBeNull();
     expect(await screen.findByText("I chose flexible work.")).toBeTruthy();
     expect(screen.queryByText("Directions worth exploring")).toBeNull();
   });
 
   test("shows the results interface in German", async () => {
     const client: ResultsClient = {
+      ...journeyClient,
       async getSession() {
         const restored = view();
         restored.answers["life.chosen"] = ["Work"];
@@ -227,6 +256,7 @@ describe("results experience", () => {
   test("shows analysis evidence and saves a concrete action plan", async () => {
     const saved: ActionPlanInput[] = [];
     const client: ResultsClient = {
+      ...journeyClient,
       async getSession() {
         return view();
       },

@@ -1,13 +1,14 @@
 "use client";
 
-import type { Locale } from "@wtfiwant/shared";
 import {
-  assessmentQuestions,
   chapters,
+  freeJourney,
   isAnswerComplete,
+  type Locale,
+  missingFreeAnswers,
 } from "@wtfiwant/shared";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAnalyticsEvent } from "@/components/analytics/use-analytics-event";
 import { trackAnalytics } from "@/lib/analytics";
 import type { ReflectionClient } from "@/lib/api";
@@ -19,7 +20,7 @@ export function useReflectionJourney({
   sessionId: string;
   client: ReflectionClient;
 }) {
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
   const t = useTranslations("Reflection");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [index, setIndex] = useState(0);
@@ -27,11 +28,14 @@ export function useReflectionJourney({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [followUp, setFollowUp] = useState<{
-    id: string;
-    question: string;
-  } | null>(null);
-  const [followUpResponse, setFollowUpResponse] = useState("");
+  const writes = useRef<Promise<void>>(Promise.resolve());
+  const save = (id: string, value: unknown) => {
+    const task = writes.current
+      .catch(() => {})
+      .then(() => client.saveAnswer(sessionId, id, value));
+    writes.current = task;
+    return task;
+  };
 
   useEffect(() => {
     let active = true;
@@ -39,19 +43,32 @@ export function useReflectionJourney({
       .getSession(sessionId)
       .then((view) => {
         if (!active) return;
+        if (view.entitlements.includes("full_analysis")) {
+          window.location.assign(`/${locale}/result/${sessionId}`);
+          return;
+        }
+        const path = freeJourney(view.answers);
         setAnswers(view.answers);
-        const restoredIndex = assessmentQuestions.findIndex(
-          (question) => question.id === view.session.currentQuestionId,
+        const restored = path.findIndex(
+          (q) => q.id === view.session.currentQuestionId,
         );
-        setIndex(restoredIndex >= 0 ? restoredIndex : 0);
-        const restoredQuestion =
-          assessmentQuestions[restoredIndex >= 0 ? restoredIndex : 0];
-        const activePrompt = view.coachPrompts.find(
-          (prompt) =>
-            prompt.chapter === restoredQuestion.chapter && !prompt.resolvedAt,
+        const firstMissing = missingFreeAnswers(view.answers)[0];
+        const editing =
+          new URLSearchParams(window.location.search).get("edit") === "1";
+        if (!firstMissing && !editing) {
+          window.location.assign(`/${locale}/result/${sessionId}`);
+          return;
+        }
+        setIndex(
+          editing
+            ? 0
+            : restored >= 0
+              ? restored
+              : Math.max(
+                  0,
+                  path.findIndex((q) => q.id === firstMissing),
+                ),
         );
-        if (activePrompt)
-          setFollowUp({ id: activePrompt.id, question: activePrompt.question });
         localStorage.setItem("wtfiwant.sessionId", sessionId);
         setLoading(false);
       })
@@ -64,132 +81,106 @@ export function useReflectionJourney({
     return () => {
       active = false;
     };
-  }, [client, sessionId, t]);
+  }, [client, sessionId, locale, t]);
 
-  useAnalyticsEvent(
-    "step_view",
-    "reflection",
-    locale as Locale,
-    index,
-    !loading && !followUp,
-  );
-
-  const question = assessmentQuestions[index];
-  const chapterIndex = question
-    ? chapters.findIndex((chapter) => chapter.id === question.chapter)
-    : -1;
+  const questions = freeJourney(answers);
+  const question = questions[index];
   const value = question ? answers[question.id] : undefined;
+  const chapterIndex = chapters.findIndex(
+    (chapter) => chapter.id === question?.chapter,
+  );
+  useAnalyticsEvent("step_view", "reflection", locale, index, !loading);
+
+  // Valid answers are saved while typing. Serial writes prevent a slow older
+  // request from overwriting the latest value when Continue is pressed.
+  useEffect(() => {
+    if (loading || !question || !isAnswerComplete(question, value)) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      const task = writes.current
+        .catch(() => {})
+        .then(() => client.saveAnswer(sessionId, question.id, value));
+      writes.current = task;
+      void task
+        .then(() => {
+          if (active) setSaved(true);
+        })
+        .catch(() => {
+          if (active) setError(t("saveError"));
+        });
+    }, 800);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [loading, question, value, client, sessionId, t]);
 
   const complete = () => {
-    trackAnalytics("reflection_completed", "reflection", locale as Locale);
+    trackAnalytics("reflection_completed", "reflection", locale);
     window.location.assign(`/${locale}/result/${sessionId}`);
   };
-
-  const advance = async () => {
-    const next = assessmentQuestions[index + 1];
-    if (!next) return complete();
-    await client.updateProgress(sessionId, next.chapter, next.id);
-    setFollowUp(null);
-    setFollowUpResponse("");
-    setIndex(index + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const goBack = () => {
-    if (index === 0) return;
-    const previous = assessmentQuestions[index - 1];
-    setIndex(index - 1);
-    setError(null);
-    void client.updateProgress(sessionId, previous.chapter, previous.id);
-  };
-
   const continueJourney = async () => {
     if (!question || !isAnswerComplete(question, value)) {
       setError(t("required"));
       return;
     }
     setSaving(true);
-    setSaved(false);
     setError(null);
     try {
-      await client.saveAnswer(sessionId, question.id, value);
+      await save(question.id, value);
       setSaved(true);
-      trackAnalytics("answer_saved", "reflection", locale as Locale, index);
-      const next = assessmentQuestions[index + 1];
-      const chapterComplete = !next || next.chapter !== question.chapter;
-      if (chapterComplete) {
-        try {
-          const generated = await client.createCoachPrompt(
-            sessionId,
-            question.chapter,
-            locale as "en" | "de",
-          );
-          if (generated.resolvedAt) await advance();
-          else setFollowUp({ id: generated.id, question: generated.question });
-        } catch {
-          await advance();
-        }
-      } else await advance();
+      trackAnalytics("answer_saved", "reflection", locale, index);
+      const next = questions[index + 1];
+      if (!next) return complete();
+      await client.updateProgress(sessionId, next.chapter, next.id);
+      setIndex(index + 1);
+      setSaved(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setError(t("saveError"));
-      trackAnalytics("journey_error", "reflection", locale as Locale, index);
+      trackAnalytics("journey_error", "reflection", locale, index);
     } finally {
       setSaving(false);
     }
   };
-
-  const submitFollowUp = async () => {
+  const goBack = async () => {
+    if (!index || saving) return;
     setSaving(true);
     try {
-      await client.resolveCoachPrompt(
-        sessionId,
-        followUp?.id ?? "",
-        followUpResponse.trim() || null,
-      );
-      await advance();
+      if (question && isAnswerComplete(question, value))
+        await save(question.id, value);
+      const previous = questions[index - 1];
+      await client.updateProgress(sessionId, previous.chapter, previous.id);
+      setIndex(index - 1);
+      setError(null);
+      setSaved(false);
     } catch {
-      setError(t("followUpSaveError"));
+      setError(t("saveError"));
     } finally {
       setSaving(false);
     }
   };
-
-  const skipFollowUp = async () => {
-    setSaving(true);
-    try {
-      await client.resolveCoachPrompt(sessionId, followUp?.id ?? "", null);
-      await advance();
-    } catch {
-      setError(t("followUpSaveError"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const changeAnswer = (next: unknown) => {
-    if (!question) return;
-    setAnswers((current) => ({ ...current, [question.id]: next }));
-    setError(null);
-    setSaved(false);
+    if (question) {
+      setAnswers((current) => ({ ...current, [question.id]: next }));
+      setError(null);
+      setSaved(false);
+    }
   };
-
   return {
+    answers,
     chapterIndex,
+    questions,
     changeAnswer,
     complete,
     continueJourney,
     error,
-    followUp,
-    followUpResponse,
     goBack,
     index,
     loading,
     question,
     saved,
     saving,
-    setFollowUpResponse,
-    submitFollowUp,
-    skipFollowUp,
     value,
   };
 }

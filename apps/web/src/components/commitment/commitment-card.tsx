@@ -1,3 +1,4 @@
+import { PurchaseOfferNotice } from "@/components/purchase-offer";
 import { SeedButtons } from "@/components/seed-buttons";
 import { StartReflectionButton } from "@/components/start-reflection-button";
 import { eyebrowClassName } from "@/lib/styles";
@@ -16,6 +17,7 @@ export function CommitmentCard() {
         <p>{t("line3")}</p>
         <strong className="mt-2 block">{t("line4")}</strong>
       </div>
+      <PurchaseOfferNotice />
       <CommitmentChecklist />
       <div className="flex items-center gap-8 max-[520px]:flex-col max-[520px]:items-start [&>a]:text-sm [&>a]:text-muted">
         <StartReflectionButton />

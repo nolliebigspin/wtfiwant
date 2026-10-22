@@ -1,4 +1,4 @@
-import { paymentEventSchema } from "@wtfiwant/shared";
+import { type PurchaseOffer, paymentEventSchema } from "@wtfiwant/shared";
 import Stripe from "stripe";
 import type {
   CheckoutDetails,
@@ -15,6 +15,26 @@ const supportedEvents = new Set<PaymentEvent["type"]>([
 ]);
 
 export class StripePaymentProvider implements PaymentProvider {
+  private offer: { value: PurchaseOffer; until: number } | null = null;
+  async getOffer(): Promise<PurchaseOffer> {
+    if (this.offer && this.offer.until > Date.now()) return this.offer.value;
+    const price = await this.stripe.prices.retrieve(this.priceId);
+    if (
+      !price.active ||
+      price.type !== "one_time" ||
+      !price.unit_amount ||
+      price.billing_scheme !== "per_unit"
+    )
+      throw new Error("A fixed one-time price is required");
+    const value = {
+      amount: price.unit_amount,
+      currency: price.currency,
+      taxIncluded: price.tax_behavior === "inclusive",
+    };
+    this.offer = { value, until: Date.now() + 60_000 };
+    return value;
+  }
+
   constructor(
     apiKey: string,
     private readonly priceId: string,

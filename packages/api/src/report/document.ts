@@ -1,5 +1,8 @@
 import {
   type Analysis,
+  buildCompassSections,
+  compassHeadline,
+  directionStatusLabel,
   formatReportAnswer,
   type Locale,
   reflectionQuestionLabel,
@@ -96,8 +99,25 @@ export function buildReportDocument(
   ];
   return {
     title: de ? "Dein vollständiger Kompass" : "Your Full Compass",
-    summary: analysis.summary,
-    sections,
+    headline: compassHeadline(
+      analysis.directionStatus ?? "not_reviewed",
+      locale,
+    ),
+    summary: analysis.compass?.northStar ?? analysis.summary,
+    compass: analysis.compass ?? null,
+    directionStatus: analysis.compass
+      ? directionStatusLabel(analysis.directionStatus ?? "not_reviewed", locale)
+      : null,
+    sections: analysis.compass
+      ? buildCompassSections(analysis.compass, locale).map((section) => ({
+          ...section,
+          items: section.items.map((item) => ({
+            title: item.title,
+            paragraphs: item.paragraphs,
+            evidence: refs(item.evidenceQuestionIds),
+          })),
+        }))
+      : sections,
     evidence,
     evidenceTitle: de
       ? "Deine Antworten als Grundlage"

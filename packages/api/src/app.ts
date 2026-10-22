@@ -3,17 +3,22 @@ import {
   actionPlanInputSchema,
   analysisInputSchema,
   assessmentQuestions,
+  buildCheckpoint,
   checkoutInputSchema,
   checkoutSessionIdSchema,
-  coachPromptInputSchema,
+  checkpointSchema,
   coachPromptResponseInputSchema,
-  coachPromptResponseSchema,
   createDigitalPurchaseAgreement,
+  directionReviewSchema,
   followUpIdSchema,
   fulfillmentResponseSchema,
-  generatedCoachPromptSchema,
   localeSchema,
+  missingFreeAnswers,
+  paidJourneySchema,
   paymentEventSchema,
+  purchaseOfferSchema,
+  refinementAnswerSchema,
+  refinementPlanSchema,
   saveAnswerInputSchema,
   seedPersonaSchema,
   sessionIdSchema,
@@ -23,7 +28,7 @@ import {
   webhookResponseSchema,
 } from "@wtfiwant/shared";
 import { type Context, Hono, type Next } from "hono";
-import { analysisInLocale, buildAnalysisAnswers } from "./ai/analysis";
+import { buildAnalysisAnswers } from "./ai/analysis";
 import { LocalAIProvider } from "./ai/local";
 import type { AIProvider } from "./ai/provider";
 import { analyticsRoutes } from "./analytics/routes";
@@ -33,6 +38,8 @@ import type { PaymentEvent, PaymentProvider } from "./commerce/payment";
 import { withdrawalRoutes } from "./commerce/withdrawal";
 import { createSeedSession } from "./dev/personas";
 import type { EmailDeliveryProvider } from "./email/provider";
+import { ensurePaidPlan, paidJourneyView } from "./journey/service";
+import { type AIJobStore, InMemoryAIJobStore } from "./journey/store";
 import { renderCompassPdf } from "./report/pdf";
 import type {
   AssessmentRecord,
@@ -43,6 +50,7 @@ import { classifySafety, SAFETY_MESSAGE } from "./safety/classifier";
 
 type AppDependencies = {
   repository: AssessmentRepository;
+  jobs?: AIJobStore;
   analytics?: AnalyticsStore;
   aiProvider?: AIProvider;
   paymentProvider?: PaymentProvider;
@@ -85,8 +93,7 @@ function toSessionView(
     answers: record.answers,
     followUps: record.followUps,
     coachPrompts: record.coachPrompts,
-    preview:
-      record.session.status === "safety_paused" ? null : createPreview(record),
+    preview: null,
     actionPlan: full ? record.actionPlan : null,
     entitlements: record.entitlements,
     checkoutAvailable,
@@ -96,6 +103,7 @@ function toSessionView(
 
 export function createApp({
   repository,
+  jobs = new InMemoryAIJobStore(repository),
   analytics,
   aiProvider = new LocalAIProvider(),
   paymentProvider,
@@ -191,6 +199,14 @@ export function createApp({
       input.data.value,
     );
     if (!answer.success) return context.json({ error: answer.message }, 400);
+    const purchased = await repository.getPurchaseForSession(
+      context.req.param("id"),
+    );
+    if (purchased?.status === "paid")
+      return context.json(
+        { error: "Purchased reflection answers are frozen" },
+        409,
+      );
     const saved = await repository.saveAnswer(
       context.req.param("id"),
       context.req.param("questionId"),
@@ -198,6 +214,185 @@ export function createApp({
     );
     if (!saved) return context.json({ error: "Reflection not found" }, 404);
     return context.json({ saved: true });
+  });
+
+  app.get("/commerce/offer", async (context) => {
+    if (!checkoutAvailable || !paymentProvider?.getOffer)
+      return context.json({ offer: null });
+    try {
+      return context.json({
+        offer: purchaseOfferSchema.parse(await paymentProvider.getOffer()),
+      });
+    } catch {
+      return context.json(
+        { error: "Purchase price is temporarily unavailable" },
+        503,
+      );
+    }
+  });
+
+  app.get("/sessions/:id/checkpoint", async (context) => {
+    const locale = localeSchema.safeParse(context.req.query("locale") ?? "en");
+    if (!locale.success)
+      return context.json({ error: "Invalid language" }, 400);
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({
+        status: "safety_paused",
+        message: safetyMessage(locale.data),
+      });
+    const missing = missingFreeAnswers(record.answers);
+    if (missing.length)
+      return context.json(
+        { error: "Reflection is incomplete", details: missing },
+        409,
+      );
+    return context.json({
+      checkpoint: checkpointSchema.parse(
+        buildCheckpoint(record.answers, locale.data),
+      ),
+    });
+  });
+
+  app.post("/sessions/:id/paid/start", async (context) => {
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    if (!record.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    const purchase = await repository.getPurchaseForSession(record.session.id);
+    await ensurePaidPlan(
+      jobs,
+      record,
+      purchase?.agreement?.locale ?? record.analysis?.locale ?? "en",
+      aiProvider,
+    );
+    return context.json(
+      paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+    );
+  });
+
+  app.get("/sessions/:id/paid", async (context) => {
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json(
+        paidJourneySchema.parse({
+          locale: (await jobs.get(record.session.id, "plan"))?.locale ?? "en",
+          stage: "safety_paused",
+          questions: [],
+          responses: {},
+          canSkip: false,
+          delivery: "pending",
+        }),
+      );
+    if (!record.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    const journey = await paidJourneyView(jobs, record.session.id);
+    if (!journey)
+      return context.json({ error: "Paid journey has not started" }, 409);
+    return context.json(paidJourneySchema.parse(journey));
+  });
+
+  app.put("/sessions/:id/paid/answers/:questionId", async (context) => {
+    const input = refinementAnswerSchema.safeParse(
+      await context.req.json().catch(() => null),
+    );
+    if (!input.success)
+      return context.json({ error: "Invalid refinement answer" }, 400);
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    if (!record.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    const plan = await jobs.get(record.session.id, "plan");
+    const parsed = refinementPlanSchema.safeParse(plan?.result);
+    if (
+      !parsed.success ||
+      !parsed.data.questions.some(
+        (question) => question.id === context.req.param("questionId"),
+      )
+    )
+      return context.json({ error: "Unknown refinement question" }, 400);
+    const saved = await jobs.answer(
+      record.session.id,
+      context.req.param("questionId"),
+      input.data.response,
+    );
+    if (!saved)
+      return context.json({ error: "Refinement is already finished" }, 409);
+    if (
+      input.data.response &&
+      classifySafety({ response: input.data.response }) ===
+        "immediate_self_harm_risk"
+    ) {
+      await repository.setStatus(record.session.id, "safety_paused");
+      return context.json({ saved: true, status: "safety_paused" });
+    }
+    return context.json({ saved: true });
+  });
+
+  app.post("/sessions/:id/paid/synthesize", async (context) => {
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    if (!record.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    const plan = await jobs.get(record.session.id, "plan");
+    if (!plan)
+      return context.json({ error: "Start the paid journey first" }, 409);
+    await jobs.enqueue(record.session.id, "synthesis", plan.locale, plan.input);
+    return context.json(
+      paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+      202,
+    );
+  });
+
+  app.post("/sessions/:id/paid/generate", async (context) => {
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    if (!record.entitlements.includes("full_analysis"))
+      return context.json({ error: "Full Compass requires payment" }, 402);
+    // A replay cannot change the confirmed direction or create another paid AI job.
+    if (await jobs.get(record.session.id, "report"))
+      return context.json(
+        paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+      );
+    const input = directionReviewSchema.safeParse(
+      await context.req.json().catch(() => null),
+    );
+    if (!input.success)
+      return context.json(
+        { error: "Review your proposed direction first" },
+        400,
+      );
+    const synthesis = await jobs.get(record.session.id, "synthesis");
+    if (!synthesis || synthesis.status !== "ready")
+      return context.json(
+        { error: "Your direction is not ready to review" },
+        409,
+      );
+    if (classifySafety(input.data) === "immediate_self_harm_risk") {
+      await repository.setStatus(record.session.id, "safety_paused");
+      return context.json({ error: "Reflection paused for safety" }, 409);
+    }
+    await jobs.saveReview(record.session.id, input.data);
+    await jobs.enqueue(
+      record.session.id,
+      "report",
+      synthesis.locale,
+      synthesis.input,
+    );
+    return context.json(
+      paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+      202,
+    );
   });
 
   app.post("/sessions/:id/analyze", async (context) => {
@@ -222,107 +417,42 @@ export function createApp({
       });
     }
 
-    if (view.analysis?.locale === input.data.locale)
-      return view.entitlements.includes("full_analysis")
-        ? context.json({ status: "complete", analysis: view.analysis })
-        : context.json({
-            status: "preview_ready",
-            preview: createPreview(view),
-          });
-
-    const missing = assessmentQuestions
-      .filter((question) => question.required && !(question.id in view.answers))
-      .map((question) => question.id);
-    if (missing.length > 0) {
-      return context.json(
-        { error: "Reflection is incomplete", details: missing },
-        409,
-      );
+    // Retired generation endpoint: never allow unpaid previews or repeated
+    // locale requests to spend tokens. Paid generation uses immutable jobs.
+    if (!view.entitlements.includes("full_analysis")) {
+      const missing = missingFreeAnswers(view.answers);
+      if (missing.length)
+        return context.json(
+          { error: "Reflection is incomplete", details: missing },
+          409,
+        );
+      return context.json({
+        status: "checkpoint_ready",
+        checkpoint: buildCheckpoint(view.answers, input.data.locale),
+      });
     }
-
-    const analysis = await analysisInLocale(
-      aiProvider,
-      view,
-      input.data.locale,
-    );
-    await repository.saveAnalysis(id, analysis);
-    return view.entitlements.includes("full_analysis")
-      ? context.json({ status: "complete", analysis })
-      : context.json({
-          status: "preview_ready",
-          preview: createPreview({ ...view, analysis }),
-        });
+    if (
+      !view.analysis ||
+      ((await jobs.get(id, "plan")) &&
+        (await jobs.get(id, "report"))?.status !== "ready")
+    )
+      return context.json({ error: "Use the paid report workflow" }, 409);
+    return context.json({ status: "complete", analysis: view.analysis });
   });
 
   app.post("/sessions/:id/coach-prompt", async (context) => {
-    const id = context.req.param("id");
-    const input = coachPromptInputSchema.safeParse(
-      await context.req.json().catch(() => null),
-    );
-    if (!input.success)
-      return context.json({ error: "Invalid Coach Prompt request" }, 400);
-    const view = await repository.getSession(id);
-    if (!view) return context.json({ error: "Reflection not found" }, 404);
-    if (await isSafetyPaused(view))
+    const record = await repository.getSession(context.req.param("id"));
+    if (!record) return context.json({ error: "Reflection not found" }, 404);
+    if (await isSafetyPaused(record))
       return context.json({ error: "Reflection paused for safety" }, 409);
-    const existing = view.coachPrompts.find(
-      (prompt) => prompt.chapter === input.data.chapter,
+    return context.json(
+      {
+        error: record.entitlements.includes("full_analysis")
+          ? "Use the paid refinement workflow"
+          : "AI follow-ups require payment",
+      },
+      record.entitlements.includes("full_analysis") ? 410 : 402,
     );
-    if (existing) return context.json({ coachPrompt: existing });
-    const chapterQuestions = assessmentQuestions.filter(
-      (question) => question.chapter === input.data.chapter,
-    );
-    const atChapterBoundary =
-      view.session.currentChapter === input.data.chapter &&
-      view.session.currentQuestionId === chapterQuestions.at(-1)?.id;
-    const complete = chapterQuestions
-      .filter((question) => question.required)
-      .every((question) => question.id in view.answers);
-    if (!atChapterBoundary || !complete)
-      return context.json({ error: "Current chapter is incomplete" }, 409);
-    const chapterAnswers = Object.fromEntries(
-      chapterQuestions.flatMap((question) =>
-        question.id in view.answers
-          ? [[question.id, view.answers[question.id]]]
-          : [],
-      ),
-    );
-    if (Object.keys(chapterAnswers).length === 0)
-      return context.json({ error: "Chapter has no saved answers" }, 409);
-    if (classifySafety(chapterAnswers) === "immediate_self_harm_risk") {
-      await repository.setStatus(id, "safety_paused");
-      return context.json({ error: "Reflection paused for safety" }, 409);
-    }
-    const generated = generatedCoachPromptSchema.parse(
-      await aiProvider.generateCoachPrompt(
-        chapterAnswers,
-        id,
-        input.data.locale,
-      ),
-    );
-    const allowedIds = new Set(Object.keys(chapterAnswers));
-    if (
-      !generated.evidenceQuestionIds.every((answerId) =>
-        allowedIds.has(answerId),
-      )
-    )
-      return context.json(
-        { error: "Coach Prompt cited unknown evidence" },
-        502,
-      );
-    const coachPrompt = {
-      id: crypto.randomUUID(),
-      chapter: input.data.chapter,
-      question: generated.question,
-      evidenceQuestionIds: generated.evidenceQuestionIds,
-      promptVersion: generated.promptVersion,
-      locale: input.data.locale,
-      userResponse: null,
-      resolvedAt: null,
-      createdAt: new Date().toISOString(),
-    };
-    await repository.saveCoachPrompt(id, coachPrompt);
-    return context.json(coachPromptResponseSchema.parse({ coachPrompt }), 201);
   });
 
   app.put("/sessions/:id/coach-prompt/:promptId", async (context) => {
@@ -350,6 +480,11 @@ export function createApp({
     if (!view) return context.json({ error: "Reflection not found" }, 404);
     if (await isSafetyPaused(view))
       return context.json({ error: "Reflection paused for safety" }, 409);
+    if (
+      (await jobs.get(view.session.id, "plan")) &&
+      (await jobs.get(view.session.id, "report"))?.status !== "ready"
+    )
+      return context.json({ error: "Your report is being prepared" }, 409);
     if (!view.analysis)
       return context.json({ error: "Analysis is not ready" }, 404);
     if (!view.entitlements.includes("full_analysis"))
@@ -362,12 +497,21 @@ export function createApp({
     if (!view) return context.json({ error: "Reflection not found" }, 404);
     if (await isSafetyPaused(view))
       return context.json({ error: "Reflection paused for safety" }, 409);
+    if (
+      (await jobs.get(view.session.id, "plan")) &&
+      (await jobs.get(view.session.id, "report"))?.status !== "ready"
+    )
+      return context.json({ error: "Your report is being prepared" }, 409);
     if (!view.analysis)
       return context.json({ error: "Compass is not ready" }, 404);
     if (!view.entitlements.includes("full_analysis"))
       return context.json({ error: "Full Compass requires payment" }, 402);
     return context.json({
       analysis: view.analysis,
+      evidence: buildReportEvidence(
+        view,
+        (await jobs.get(view.session.id, "report"))?.input.answers,
+      ),
       actionPlan: view.actionPlan,
     });
   });
@@ -399,26 +543,51 @@ export function createApp({
     if (await isSafetyPaused(record)) {
       return context.json({ error: "Reflection paused for safety" }, 409);
     }
-    if (!record.analysis)
-      return context.json({ error: "Compass is not ready" }, 409);
+    const missing = missingFreeAnswers(record.answers);
+    if (missing.length)
+      return context.json(
+        { error: "Complete your free checkpoint first", details: missing },
+        409,
+      );
     const existing = await repository.getPurchaseForSession(id);
     if (existing?.status === "paid") return context.json({ status: "paid" });
     const attribution = input.data.analytics;
     if (existing?.status === "checkout_open") {
-      if (attribution)
-        await analyticsBestEffort(
-          () =>
-            analytics?.checkout(
-              existing.checkoutSessionId,
-              attribution,
-              input.data.locale,
-            ) ?? Promise.resolve(),
-        );
-      return context.json({
-        status: "checkout_open",
-        checkoutSessionId: existing.checkoutSessionId,
-        url: existing.checkoutUrl,
-      });
+      // An expiry webhook can be delayed or missed. Never send a returning
+      // customer to a dead Checkout, or create another payment if already paid.
+      const checkout = await paymentProvider.retrieveCheckout(
+        existing.checkoutSessionId,
+      );
+      if (checkout.paymentStatus === "paid") {
+        await fulfillCheckout({
+          checkoutSessionId: checkout.id,
+          repository,
+          paymentProvider,
+          aiProvider,
+          jobs,
+          analytics,
+          publicAppUrl,
+        });
+        return context.json({ status: "paid" });
+      }
+      if (checkout.checkoutStatus === "expired")
+        await repository.setPurchaseStatusByCheckout(checkout.id, "expired");
+      else {
+        if (attribution)
+          await analyticsBestEffort(
+            () =>
+              analytics?.checkout(
+                existing.checkoutSessionId,
+                attribution,
+                input.data.locale,
+              ) ?? Promise.resolve(),
+          );
+        return context.json({
+          status: "checkout_open",
+          checkoutSessionId: existing.checkoutSessionId,
+          url: existing.checkoutUrl,
+        });
+      }
     }
     const origin = publicAppUrl.replace(/\/$/, "");
     const agreement = createDigitalPurchaseAgreement(input.data.locale);
@@ -460,6 +629,7 @@ export function createApp({
     const status = await fulfillCheckout({
       checkoutSessionId: checkoutSessionId.data,
       aiProvider,
+      jobs,
       repository,
       paymentProvider,
       emailProvider,
@@ -494,6 +664,7 @@ export function createApp({
         await fulfillCheckout({
           checkoutSessionId: event.checkoutSessionId,
           aiProvider,
+          jobs,
           repository,
           paymentProvider,
           emailProvider,
@@ -519,6 +690,11 @@ export function createApp({
     if (!record) return context.json({ error: "Reflection not found" }, 404);
     if (await isSafetyPaused(record))
       return context.json({ error: "Reflection paused for safety" }, 409);
+    if (
+      (await jobs.get(record.session.id, "plan")) &&
+      (await jobs.get(record.session.id, "report"))?.status !== "ready"
+    )
+      return context.json({ error: "Your report is being prepared" }, 409);
     if (!record.entitlements.includes("full_analysis") || !record.analysis)
       return context.json({ error: "Full Compass requires payment" }, 402);
     const locale = localeSchema.safeParse(
@@ -526,11 +702,14 @@ export function createApp({
     );
     if (!locale.success)
       return context.json({ error: "Invalid report language" }, 400);
-    const analysis = await analysisInLocale(aiProvider, record, locale.data);
+    const analysis = record.analysis;
     const pdf = await renderCompassPdf(
       analysis.result,
       analysis.locale,
-      buildReportEvidence({ ...record, analysis }),
+      buildReportEvidence(
+        { ...record, analysis },
+        (await jobs.get(record.session.id, "report"))?.input.answers,
+      ),
       record.actionPlan,
     );
     return new Response(new Uint8Array(pdf), {
@@ -552,6 +731,11 @@ export function createApp({
     if (!record) return context.json({ error: "Reflection not found" }, 404);
     if (await isSafetyPaused(record))
       return context.json({ error: "Reflection paused for safety" }, 409);
+    if (
+      (await jobs.get(record.session.id, "plan")) &&
+      (await jobs.get(record.session.id, "report"))?.status !== "ready"
+    )
+      return context.json({ error: "Your report is being prepared" }, 409);
     if (!record.entitlements.includes("full_analysis") || !record.analysis)
       return context.json({ error: "Full Compass requires payment" }, 402);
     const purchase = await repository.getPurchaseForSession(record.session.id);
@@ -564,22 +748,23 @@ export function createApp({
         409,
       );
     try {
-      const analysis = await analysisInLocale(
-        aiProvider,
-        record,
-        purchase.agreement?.locale ?? record.analysis.locale,
-      );
+      const analysis = record.analysis;
       const sent = await emailProvider.sendFullCompass({
         to: purchase.recipientEmail,
         locale: analysis.locale,
         analysis,
-        evidence: buildReportEvidence({ ...record, analysis }),
+        evidence: buildReportEvidence(
+          { ...record, analysis },
+          (await jobs.get(record.session.id, "report"))?.input.answers,
+        ),
         actionPlan: record.actionPlan,
         resultUrl: `${publicAppUrl.replace(/\/$/, "")}/${analysis.locale}/result/${record.session.id}`,
         idempotencyKey: `full-compass/${purchase.id}/resend/${retry.attemptCount}`,
         purchase,
       });
       await repository.markDeliverySent(retry.deliveryId, sent.messageId);
+      const reportJob = await jobs.get(record.session.id, "report");
+      if (reportJob) await jobs.delivered(reportJob, "sent");
       return context.json({ sent: true });
     } catch (error) {
       await repository.markDeliveryFailed(
@@ -636,6 +821,7 @@ export function createApp({
   app.delete("/sessions/:id", async (context) => {
     const deleted = await repository.deleteSession(context.req.param("id"));
     if (!deleted) return context.json({ error: "Reflection not found" }, 404);
+    await jobs.delete(context.req.param("id"));
     return context.body(null, 204);
   });
 

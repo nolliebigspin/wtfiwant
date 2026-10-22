@@ -5,14 +5,20 @@ import {
   analysisResponseSchema,
   type ChapterId,
   type CheckoutResponse,
+  type Checkpoint,
   type CompassResponse,
   checkoutResponseSchema,
+  checkpointSchema,
   coachPromptResponseSchema,
   compassResponseSchema,
+  type DirectionReview,
   type FulfillmentStatus,
   fulfillmentResponseSchema,
   type Locale,
+  type PaidJourney,
+  paidJourneySchema,
   type SessionView,
+  safetyResponseSchema,
   sessionViewSchema,
 } from "@wtfiwant/shared";
 
@@ -62,6 +68,22 @@ export interface ReflectionClient {
 }
 
 export const api: ReflectionClient & {
+  getCheckpoint(
+    id: string,
+    locale: Locale,
+  ): Promise<
+    | { checkpoint: Checkpoint; status?: undefined }
+    | { status: "safety_paused"; message: string }
+  >;
+  startPaidJourney(id: string): Promise<PaidJourney>;
+  getPaidJourney(id: string): Promise<PaidJourney>;
+  saveRefinement(
+    id: string,
+    questionId: string,
+    response: string | null,
+  ): Promise<void>;
+  synthesizeDirection(id: string): Promise<PaidJourney>;
+  generateReport(id: string, review: DirectionReview): Promise<PaidJourney>;
   createSession(): Promise<SessionView>;
   analyze(id: string, locale?: Locale): Promise<AnalysisResponse>;
   getCompass(id: string): Promise<CompassResponse>;
@@ -72,6 +94,43 @@ export const api: ReflectionClient & {
   deleteSession(id: string): Promise<void>;
   seed(persona: string, locale?: Locale): Promise<SessionView>;
 } = {
+  async getCheckpoint(id, locale) {
+    const body = await request(`/sessions/${id}/checkpoint?locale=${locale}`);
+    const safety = safetyResponseSchema.safeParse(body);
+    if (safety.success) return safety.data;
+    return {
+      checkpoint: checkpointSchema.parse(
+        (body as { checkpoint: unknown }).checkpoint,
+      ),
+    };
+  },
+  async startPaidJourney(id) {
+    return paidJourneySchema.parse(
+      await request(`/sessions/${id}/paid/start`, { method: "POST" }),
+    );
+  },
+  async getPaidJourney(id) {
+    return paidJourneySchema.parse(await request(`/sessions/${id}/paid`));
+  },
+  async saveRefinement(id, questionId, response) {
+    await request(`/sessions/${id}/paid/answers/${questionId}`, {
+      method: "PUT",
+      body: JSON.stringify({ response }),
+    });
+  },
+  async synthesizeDirection(id) {
+    return paidJourneySchema.parse(
+      await request(`/sessions/${id}/paid/synthesize`, { method: "POST" }),
+    );
+  },
+  async generateReport(id, review) {
+    return paidJourneySchema.parse(
+      await request(`/sessions/${id}/paid/generate`, {
+        method: "POST",
+        body: JSON.stringify(review),
+      }),
+    );
+  },
   async createSession() {
     return sessionViewSchema.parse(
       await request("/sessions", { method: "POST" }),

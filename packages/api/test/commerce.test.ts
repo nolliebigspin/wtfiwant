@@ -4,6 +4,7 @@ import {
   createDigitalPurchaseAgreement,
   sessionViewSchema,
 } from "@wtfiwant/shared";
+import { LocalAIProvider } from "../src/ai/local";
 import { InMemoryAnalyticsStore } from "../src/analytics/in-memory";
 import { createApp } from "../src/app";
 import type {
@@ -18,6 +19,8 @@ import type {
   FullCompassEmail,
 } from "../src/email/provider";
 import { renderFullCompassEmail } from "../src/email/report";
+import { deliverReadyReports, processAIJob } from "../src/journey/process";
+import { InMemoryAIJobStore } from "../src/journey/store";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
 
 const legalLinks = {
@@ -84,12 +87,46 @@ class FakeEmail
   }
 }
 
+function commerceTestApp(options: Parameters<typeof createApp>[0]) {
+  const jobs = new InMemoryAIJobStore(options.repository);
+  const dependencies = {
+    ...options,
+    jobs,
+    aiProvider: options.aiProvider ?? new LocalAIProvider(),
+    publicAppUrl: options.publicAppUrl ?? "http://localhost:3000",
+  };
+  const app = createApp(dependencies);
+  return Object.assign(app, {
+    async finishReport(id: string) {
+      await processAIJob(dependencies);
+      await app.request(`/sessions/${id}/paid/synthesize`, { method: "POST" });
+      await processAIJob(dependencies);
+      const draft = (await jobs.get(id, "synthesis"))?.result as {
+        northStar: string;
+        priority: string;
+      };
+      const queued = await app.request(`/sessions/${id}/paid/generate`, {
+        method: "POST",
+        body: JSON.stringify({
+          alignment: "fits",
+          northStar: draft.northStar,
+          priority: draft.priority,
+          feedback: "",
+        }),
+      });
+      expect(queued.status).toBe(202);
+      await processAIJob(dependencies);
+      await deliverReadyReports(dependencies);
+    },
+  });
+}
+
 describe("paid Full Compass", () => {
   test("uses the selected locale for initial and resent report emails", async () => {
     let now = Date.now();
     const payments = new FakePayments();
     const email = new FakeEmail();
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository: new InMemoryAssessmentRepository(() => now),
       paymentProvider: payments,
@@ -112,6 +149,8 @@ describe("paid Full Compass", () => {
       method: "POST",
     });
     expect(fulfilled.status).toBe(200);
+    expect(email.sent).toHaveLength(0);
+    await app.finishReport(id);
     expect(email.sent[0].locale).toBe("de");
     expect(email.sent[0].analysis.locale).toBe("de");
     expect(email.sent[0].resultUrl).toBe(
@@ -140,12 +179,12 @@ describe("paid Full Compass", () => {
       email.sent[1].purchase,
     );
     expect(rendered.subject).toBe("Dein vollständiger Kompass");
-    expect(rendered.html).toContain("Was wichtig zu sein scheint");
+    expect(rendered.html).toContain("Dein Ziel für die nächsten 90 Tage");
   });
 
   test("validates Checkout IDs and normalized webhook events before fulfillment", async () => {
     const payments = new FakePayments();
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository: new InMemoryAssessmentRepository(),
       paymentProvider: payments,
@@ -173,7 +212,7 @@ describe("paid Full Compass", () => {
   });
 
   test("does not offer Checkout for a safety-paused Reflection", async () => {
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository: new InMemoryAssessmentRepository(),
       paymentProvider: new FakePayments(),
@@ -206,7 +245,7 @@ describe("paid Full Compass", () => {
     const payments = new FakePayments();
     const email = new FakeEmail();
     const analytics = new InMemoryAnalyticsStore();
-    const app = createApp({
+    const app = commerceTestApp({
       analytics,
       legalLinks,
       repository: new InMemoryAssessmentRepository(() => now),
@@ -249,6 +288,8 @@ describe("paid Full Compass", () => {
       expect(webhook.status).toBe(200);
     }
 
+    expect(email.sent).toHaveLength(0);
+    await app.finishReport(seeded.session.id);
     const full = await app.request(`/sessions/${seeded.session.id}/compass`);
     expect(full.status).toBe(200);
     expect(
@@ -311,7 +352,7 @@ describe("paid Full Compass", () => {
     const repository = new InMemoryAssessmentRepository();
     const payments = new FakePayments();
     const email = new FakeEmail();
-    const app = createApp({
+    const app = commerceTestApp({
       repository,
       paymentProvider: payments,
       emailProvider: email,
@@ -351,6 +392,7 @@ describe("paid Full Compass", () => {
     const purchase = await repository.getPurchaseByCheckout(checkout.id);
     expect(purchase?.agreement).toEqual(createDigitalPurchaseAgreement("de"));
     expect(purchase?.consentRecordedAt).toBeTruthy();
+    await app.finishReport(seeded.session.id);
     const message = email.sent[0];
     const rendered = renderFullCompassEmail(
       message.analysis.result,
@@ -371,7 +413,7 @@ describe("paid Full Compass", () => {
     const repository = new InMemoryAssessmentRepository();
     const payments = new FakePayments();
     const email = new FakeEmail();
-    const app = createApp({
+    const app = commerceTestApp({
       repository,
       paymentProvider: payments,
       emailProvider: email,
@@ -398,6 +440,7 @@ describe("paid Full Compass", () => {
         })
       ).status,
     ).toBe(200);
+    await app.finishReport(seeded.session.id);
     expect(email.sent[0].purchase?.agreement).toBeNull();
     expect(email.sent[0].purchase?.consentRecordedAt).toBeNull();
   });
@@ -405,7 +448,7 @@ describe("paid Full Compass", () => {
   test("keeps delayed payments locked and reports expired Checkouts as failed", async () => {
     const repository = new InMemoryAssessmentRepository();
     const payments = new FakePayments();
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository,
       paymentProvider: payments,
@@ -468,10 +511,38 @@ describe("paid Full Compass", () => {
     ).toEqual(["assessment", "full_analysis"]);
   });
 
+  test("replaces expired checkout even when its expiry webhook was missed", async () => {
+    const payments = new FakePayments();
+    const app = commerceTestApp({
+      legalLinks,
+      repository: new InMemoryAssessmentRepository(),
+      paymentProvider: payments,
+      emailProvider: new FakeEmail(),
+    });
+    const seeded = sessionViewSchema.parse(
+      await (
+        await app.request("/dev/seed/burned_out", { method: "POST" })
+      ).json(),
+    );
+    const path = `/sessions/${seeded.session.id}/checkout`;
+    const first = (await (
+      await app.request(path, { method: "POST" })
+    ).json()) as { checkoutSessionId: string };
+    const old = payments.checkouts.get(first.checkoutSessionId);
+    if (!old) throw new Error("Missing checkout");
+    old.checkoutStatus = "expired";
+    old.paymentStatus = "unpaid";
+    const replacement = (await (
+      await app.request(path, { method: "POST" })
+    ).json()) as { checkoutSessionId: string };
+    expect(replacement.checkoutSessionId).not.toBe(first.checkoutSessionId);
+    expect(payments.createCalls).toBe(2);
+  });
+
   test("retries a webhook after transient fulfillment failure", async () => {
     const repository = new InMemoryAssessmentRepository();
     const payments = new FakePayments();
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository,
       paymentProvider: payments,
@@ -509,7 +580,7 @@ describe("paid Full Compass", () => {
     const repository = new InMemoryAssessmentRepository();
     const payments = new FakePayments();
     const email = new FakeEmail();
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository,
       paymentProvider: payments,
@@ -551,7 +622,7 @@ describe("paid Full Compass", () => {
     const repository = new InMemoryAssessmentRepository();
     const payments = new FakePayments();
     const email = new FakeEmail();
-    const app = createApp({
+    const app = commerceTestApp({
       legalLinks,
       repository,
       paymentProvider: payments,
@@ -567,6 +638,7 @@ describe("paid Full Compass", () => {
     });
     const checkoutId = [...payments.checkouts.keys()][0];
     await app.request(`/checkout/${checkoutId}/fulfill`, { method: "POST" });
+    await app.finishReport(seeded.session.id);
     await repository.setStatus(seeded.session.id, "safety_paused");
 
     const [legacy, compass, resend] = await Promise.all([

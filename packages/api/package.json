@@ -8,7 +8,8 @@
     "./ai": "./src/ai/config.ts",
     "./commerce": "./src/commerce/config.ts",
     "./repositories": "./src/repositories/postgres.ts",
-    "./analytics": "./src/analytics/config.ts"
+    "./analytics": "./src/analytics/config.ts",
+    "./jobs": "./src/journey/postgres.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -16,13 +17,14 @@
     "db:migrate": "bun src/db/migrate.ts",
     "commerce:reconcile": "bun src/commerce/reconcile.ts",
     "analytics:prune": "bun src/analytics/prune.ts",
-    "analytics:flush": "bun src/analytics/flush.ts"
+    "analytics:flush": "bun src/analytics/flush.ts",
+    "reports:work": "bun src/journey/worker.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.2",
     "@wtfiwant/shared": "workspace:*",
     "hono": "^4.9.6",
-    "openai": "^5.19.1",
+    "openai": "^7.39.0",
     "pdfkit": "^0.20.2",
     "postgres": "^3.4.7",
     "resend": "^6.25.0",

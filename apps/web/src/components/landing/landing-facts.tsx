@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 export function LandingFacts() {
   const t = useTranslations("Landing");
   const facts = [
-    ["20–30", t("facts.minutes")],
+    ["7", t("facts.minutes")],
     ["0", t("facts.answers")],
     ["AI", t("facts.ai")],
     [t("facts.no"), t("facts.account")],

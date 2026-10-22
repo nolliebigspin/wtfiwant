@@ -2,6 +2,7 @@ import type {
   DigitalPurchaseAgreement,
   Locale,
   PaymentEvent,
+  PurchaseOffer,
 } from "@wtfiwant/shared";
 
 export type CheckoutRequest = {
@@ -30,6 +31,7 @@ export type CheckoutDetails = {
 export type { PaymentEvent } from "@wtfiwant/shared";
 
 export interface PaymentProvider {
+  getOffer?(): Promise<PurchaseOffer>;
   createCheckout(input: CheckoutRequest): Promise<{ id: string; url: string }>;
   retrieveCheckout(id: string): Promise<CheckoutDetails>;
   parseWebhook(payload: string, signature: string): PaymentEvent;

@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { analyticsContextSchema } from "./analytics";
+import {
+  compassGenerationSchema,
+  compassSchema,
+  directionStatusSchema,
+} from "./compass";
+import { checkpointSchema } from "./journey";
 import { localeSchema } from "./localization";
 
 export const sessionIdSchema = z.uuid();
@@ -68,6 +74,8 @@ const evidenceIdsSchema = z.array(z.string().min(1)).min(1);
 
 export const analysisSchema = z
   .object({
+    compass: compassSchema.optional(),
+    directionStatus: directionStatusSchema.optional(),
     summary: z.string().min(1),
     coreDrivers: z
       .array(
@@ -81,7 +89,7 @@ export const analysisSchema = z
           })
           .strict(),
       )
-      .min(3)
+      .min(1)
       .max(6),
     tensions: z
       .array(
@@ -122,7 +130,7 @@ export const analysisSchema = z
           })
           .strict(),
       )
-      .min(2)
+      .min(1)
       .max(4),
     goals: z.array(
       z
@@ -149,6 +157,13 @@ export const analysisSchema = z
       .max(4),
   })
   .strict();
+
+/** New AI responses must include an actionable compass; legacy reports still read. */
+export const compassAnalysisSchema = analysisSchema
+  .omit({ directionStatus: true })
+  .extend({
+    compass: compassGenerationSchema,
+  });
 
 export const storedAnalysisSchema = z
   .object({
@@ -315,6 +330,7 @@ export const checkoutResponseSchema = z.union([
 export const compassResponseSchema = z
   .object({
     analysis: storedAnalysisSchema,
+    evidence: z.record(z.string(), z.json()).optional(),
     actionPlan: actionPlanSchema.nullable(),
   })
   .strict();
@@ -343,6 +359,12 @@ export const safetyResponseSchema = z
   .strict();
 
 export const analysisResponseSchema = z.union([
+  z
+    .object({
+      status: z.literal("checkpoint_ready"),
+      checkpoint: checkpointSchema,
+    })
+    .strict(),
   z
     .object({ status: z.literal("complete"), analysis: storedAnalysisSchema })
     .strict(),

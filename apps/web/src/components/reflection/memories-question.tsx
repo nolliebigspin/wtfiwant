@@ -59,25 +59,32 @@ export function MemoriesQuestion({
             onChange={(event) => update(index, "story", event.target.value)}
             placeholder={storyPrompt}
           />
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {memoryMetadataFields.map((field, fieldIndex) => (
-              <label key={field.id}>
-                <span className="mb-2 block text-xs font-extrabold">
-                  {german?.memoryMetadataFields[fieldIndex] ?? field.label}{" "}
-                  <span className="font-normal text-muted">
-                    {t("optional")}
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm font-bold text-muted">
+              {locale === "de"
+                ? "Mehr Details hinzufügen (optional)"
+                : "Add more detail (optional)"}
+            </summary>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {memoryMetadataFields.map((field, fieldIndex) => (
+                <label key={field.id}>
+                  <span className="mb-2 block text-xs font-extrabold">
+                    {german?.memoryMetadataFields[fieldIndex] ?? field.label}{" "}
+                    <span className="font-normal text-muted">
+                      {t("optional")}
+                    </span>
                   </span>
-                </span>
-                <input
-                  className={questionInputClassName}
-                  value={memory[field.id] ?? ""}
-                  onChange={(event) =>
-                    update(index, field.id, event.target.value)
-                  }
-                />
-              </label>
-            ))}
-          </div>
+                  <input
+                    className={questionInputClassName}
+                    value={memory[field.id] ?? ""}
+                    onChange={(event) =>
+                      update(index, field.id, event.target.value)
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </details>
         </section>
       ))}
       {memories.length < maxMemories ? (

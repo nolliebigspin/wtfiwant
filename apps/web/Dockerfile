@@ -15,6 +15,7 @@ COPY packages/api packages/api
 COPY packages/shared packages/shared
 RUN cd apps/web && node node_modules/.bin/next build
 RUN bun build packages/api/src/analytics/flush.ts --target=bun --outfile=analytics-flush.js
+RUN bun build packages/api/src/journey/worker.ts --target=bun --outfile=report-worker.js
 
 # Migrations run under Bun against the source tree: `migrate.ts` reads the SQL
 # files with `Bun.file`, so the standalone output is the wrong shape for it.
@@ -33,5 +34,7 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build /app/analytics-flush.js ./analytics-flush.js
+COPY --from=build /app/report-worker.js ./report-worker.js
+COPY --from=build /app/packages/api/src/report/fonts ./fonts
 EXPOSE 3000
 CMD ["bun", "apps/web/server.js"]

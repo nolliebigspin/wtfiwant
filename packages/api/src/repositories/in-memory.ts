@@ -299,6 +299,13 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     return id;
   }
 
+  async getDeliveryStatus(purchaseId: string) {
+    const delivery = this.deliveries.get(purchaseId);
+    return delivery
+      ? { status: delivery.status, attempts: delivery.attemptCount }
+      : null;
+  }
+
   async prepareDeliveryRetry(
     purchaseId: string,
   ): Promise<{ deliveryId: string; attemptCount: number } | null> {

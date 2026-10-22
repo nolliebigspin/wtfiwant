@@ -91,6 +91,10 @@ export interface AssessmentRepository {
   completeWebhookEvent(provider: string, eventId: string): Promise<void>;
   releaseWebhookEvent(provider: string, eventId: string): Promise<void>;
   claimInitialDelivery(purchaseId: string): Promise<string | null>;
+  getDeliveryStatus(purchaseId: string): Promise<{
+    status: "pending" | "sent" | "failed";
+    attempts: number;
+  } | null>;
   prepareDeliveryRetry(
     purchaseId: string,
   ): Promise<{ deliveryId: string; attemptCount: number } | null>;

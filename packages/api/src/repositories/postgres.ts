@@ -463,6 +463,13 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     return rows[0]?.id ?? null;
   }
 
+  async getDeliveryStatus(purchaseId: string) {
+    const [row] = await this.sql<
+      Array<{ status: "pending" | "sent" | "failed"; attempt_count: number }>
+    >`SELECT status, attempt_count FROM report_deliveries WHERE purchase_id = ${purchaseId} AND delivery_kind = 'full_compass'`;
+    return row ? { status: row.status, attempts: row.attempt_count } : null;
+  }
+
   async prepareDeliveryRetry(
     purchaseId: string,
   ): Promise<{ deliveryId: string; attemptCount: number } | null> {

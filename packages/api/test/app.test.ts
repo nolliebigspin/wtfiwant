@@ -1,108 +1,34 @@
 import { describe, expect, test } from "bun:test";
-import {
-  COACH_PROMPT_VERSION,
-  coachPromptSchema,
-  sessionViewSchema,
-} from "@wtfiwant/shared";
+import { sessionViewSchema } from "@wtfiwant/shared";
 import { LocalAIProvider } from "../src/ai/local";
 import { createApp } from "../src/app";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
 
 describe("assessment API", () => {
-  test("offers one evidence-linked Coach Prompt for a completed chapter", async () => {
+  test("rejects AI coaching before payment", async () => {
     const repository = new InMemoryAssessmentRepository();
     const app = createApp({
       repository,
       aiProvider: {
-        name: "coach-test",
-        async generateCoachPrompt(answers) {
-          expect(Object.keys(answers)).toEqual([
-            "life.energy",
-            "life.chosen",
-            "life.drifted",
-          ]);
-          return {
-            question: "Which part of that drift costs you the most energy?",
-            evidenceQuestionIds: ["life.drifted"],
-            promptVersion: COACH_PROMPT_VERSION,
-          };
+        ...new LocalAIProvider(),
+        name: "no-unpaid-ai",
+        async generateCoachPrompt() {
+          throw new Error("Unpaid AI call");
         },
         async generateFollowUp() {
-          throw new Error("not used");
+          throw new Error("Unpaid AI call");
         },
         async analyzeAssessment() {
-          throw new Error("not used");
+          throw new Error("Unpaid AI call");
         },
       },
     });
-    const created = sessionViewSchema.parse(
-      await (await app.request("/sessions", { method: "POST" })).json(),
-    );
-    for (const [questionId, value] of [
-      ["life.energy", ["Work"]],
-      ["life.chosen", "I chose the people around me."],
-      ["life.drifted", "My calendar filled itself."],
-    ] as const) {
-      await app.request(
-        `/sessions/${created.session.id}/answers/${questionId}`,
-        {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ value }),
-        },
-      );
-    }
-    await app.request(`/sessions/${created.session.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        currentChapter: "you",
-        currentQuestionId: "life.drifted",
-      }),
-    });
-
+    const record = await repository.createSession();
     const response = await app.request(
-      `/sessions/${created.session.id}/coach-prompt`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ chapter: "you", locale: "en" }),
-      },
+      `/sessions/${record.session.id}/coach-prompt`,
+      { method: "POST", body: JSON.stringify({ chapter: "you" }) },
     );
-    const body = (await response.json()) as { coachPrompt: unknown };
-    const prompt = coachPromptSchema.parse(body.coachPrompt);
-
-    expect(response.status).toBe(201);
-    expect(prompt.question).toContain("drift");
-    expect(prompt.evidenceQuestionIds).toEqual(["life.drifted"]);
-    expect(prompt.promptVersion).toBe(COACH_PROMPT_VERSION);
-  });
-
-  test("rejects a Coach Prompt before the current chapter is complete", async () => {
-    const repository = new InMemoryAssessmentRepository();
-    const app = createApp({ repository });
-    const created = sessionViewSchema.parse(
-      await (await app.request("/sessions", { method: "POST" })).json(),
-    );
-    await app.request(`/sessions/${created.session.id}/answers/life.energy`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ value: ["Work"] }),
-    });
-
-    const response = await app.request(
-      `/sessions/${created.session.id}/coach-prompt`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ chapter: "you", locale: "en" }),
-      },
-    );
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: "Current chapter is incomplete",
-    });
+    expect(response.status).toBe(402);
   });
 
   test("creates an anonymous session ready at the first question", async () => {
@@ -126,8 +52,7 @@ describe("assessment API", () => {
     });
     const seeded = sessionViewSchema.parse(await seededResponse.json());
 
-    expect(seeded.preview?.summary).toBeTruthy();
-    expect(seeded.preview?.coreDriver.name).toBeTruthy();
+    expect(seeded.preview).toBeNull();
     expect("analysis" in seeded).toBe(false);
 
     const full = await app.request(`/sessions/${seeded.session.id}/compass`);

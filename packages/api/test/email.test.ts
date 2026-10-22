@@ -37,6 +37,11 @@ describe("Full Compass email", () => {
       "de",
     );
     analysis.coreDrivers[0].evidenceQuestionIds.push("life.energy");
+    analysis.compass?.evidenceQuestionIds.push(
+      "alive.memories",
+      "tradeoffs.choices",
+      "life.energy",
+    );
     const email = renderFullCompassEmail(
       analysis,
       "de",
@@ -81,13 +86,11 @@ describe("Full Compass email", () => {
     );
 
     for (const heading of [
-      "What seems to matter",
-      "Tensions",
-      "Your Anti-Life",
-      "Outside influences",
-      "Directions worth exploring",
-      "Beneath your goals",
-      "First steps",
+      "Why this direction may fit",
+      "Your goal for the next 90 days",
+      "Your next four weeks",
+      "When things get difficult",
+      "Review and adjust your course",
     ])
       expect(email.html).toContain(heading);
     expect(email.html).toContain("Evidence");

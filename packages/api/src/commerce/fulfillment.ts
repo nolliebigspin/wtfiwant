@@ -1,9 +1,11 @@
 import type { FulfillmentStatus } from "@wtfiwant/shared";
-import { analysisInLocale, buildAnalysisAnswers } from "../ai/analysis";
+import { buildAnalysisAnswers } from "../ai/analysis";
 import type { AIProvider } from "../ai/provider";
 import { type AnalyticsStore, analyticsBestEffort } from "../analytics/store";
 import type { EmailDeliveryProvider } from "../email/provider";
 import { buildEmailEvidence } from "../email/report";
+import { ensurePaidPlan } from "../journey/service";
+import type { AIJobStore } from "../journey/store";
 import type {
   AssessmentRecord,
   AssessmentRepository,
@@ -16,10 +18,9 @@ export async function fulfillCheckout({
   checkoutSessionId,
   repository,
   paymentProvider,
-  emailProvider,
-  publicAppUrl,
   aiProvider,
   analytics,
+  jobs,
 }: {
   checkoutSessionId: string;
   repository: AssessmentRepository;
@@ -28,6 +29,7 @@ export async function fulfillCheckout({
   publicAppUrl: string;
   aiProvider: AIProvider;
   analytics?: AnalyticsStore;
+  jobs: AIJobStore;
 }): Promise<FulfillmentStatus> {
   const storedPurchase =
     await repository.getPurchaseByCheckout(checkoutSessionId);
@@ -70,7 +72,7 @@ export async function fulfillCheckout({
   );
 
   const record = await repository.getSession(purchase.sessionId);
-  if (!record?.analysis) throw new Error("Paid Reflection has no Compass");
+  if (!record) throw new Error("Paid Reflection is unavailable");
   if (
     record.session.status === "safety_paused" ||
     classifySafety(buildSafetyAnswers(record)) === "immediate_self_harm_risk"
@@ -78,42 +80,24 @@ export async function fulfillCheckout({
     await repository.setStatus(record.session.id, "safety_paused");
     return "paid";
   }
-  if (!emailProvider) return "paid";
+  await ensurePaidPlan(
+    jobs,
+    record,
+    purchase.agreement?.locale ?? record.analysis?.locale ?? "en",
+    aiProvider,
+  );
+  // Delivery belongs to the background report job, never a Stripe webhook.
 
-  const deliveryId = await repository.claimInitialDelivery(purchase.id);
-  if (!deliveryId) return "paid";
-  try {
-    const analysis = await analysisInLocale(
-      aiProvider,
-      record,
-      purchase.agreement?.locale ?? record.analysis.locale,
-    );
-    const sent = await emailProvider.sendFullCompass({
-      to: checkout.recipientEmail,
-      locale: analysis.locale,
-      analysis,
-      evidence: buildReportEvidence({ ...record, analysis }),
-      actionPlan: record.actionPlan,
-      resultUrl: `${publicAppUrl}/${analysis.locale}/result/${record.session.id}`,
-      idempotencyKey: `full-compass/${purchase.id}`,
-      purchase,
-    });
-    await repository.markDeliverySent(deliveryId, sent.messageId);
-  } catch (error) {
-    await repository.markDeliveryFailed(
-      deliveryId,
-      error instanceof Error ? error.name : "EmailDeliveryError",
-    );
-  }
   return "paid";
 }
 
 export function buildReportEvidence(
   record: AssessmentRecord,
+  frozenAnswers?: Record<string, unknown>,
 ): Record<string, unknown> {
   if (!record.analysis) return {};
   return buildEmailEvidence(
     record.analysis.result,
-    buildAnalysisAnswers(record, record.analysis.locale),
+    frozenAnswers ?? buildAnalysisAnswers(record, record.analysis.locale),
   );
 }

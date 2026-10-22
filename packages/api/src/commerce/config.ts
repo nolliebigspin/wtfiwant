@@ -18,6 +18,8 @@ export function createCommerceProviders(env = process.env) {
               )
             : undefined,
     };
+  if (env.NODE_ENV === "production" && env.AI_PROVIDER !== "openai")
+    throw new Error("Production payments require AI_PROVIDER=openai");
   const required = (name: string) => {
     const value = env[name];
     if (!value)

@@ -11,7 +11,7 @@ export default async function PrivacyPage({
     ? [
         [
           "Deine Reflexion",
-          "Deine Antworten und dein Kompass werden auf unserem Server gespeichert, damit du die Reflexion fortsetzen und deinen Report abrufen kannst. Für die Erstellung kann der konfigurierte KI-Dienst eingesetzt werden. Dein privater Link gewährt Zugriff auf deine Reflexion: Teile ihn nur bewusst. Über den Kompass kannst du die Reflexion löschen.",
+          "Deine Antworten und dein Kompass werden auf unserem Server gespeichert, damit du die Reflexion fortsetzen und deinen Report abrufen kannst. Die kostenlose Reflexion und der Zwischenstand verwenden keine KI. Erst nach bestätigter Zahlung übermitteln wir deine Antworten und optionalen Vertiefungen an OpenAI zur Erstellung deiner Rückfragen und deines Berichts. Wir deaktivieren die Speicherung der Responses bei OpenAI (store:false); die Verarbeitung und Aufbewahrung beim Anbieter richten sich zusätzlich nach dessen API-Datenrichtlinien. Dein privater Link gewährt Zugriff auf deine Reflexion: Teile ihn nur bewusst. Über den Kompass kannst du die Reflexion löschen.",
         ],
         [
           "Kauf und Zustellung",
@@ -19,7 +19,7 @@ export default async function PrivacyPage({
         ],
         [
           "Optionale Analytics mit Umami",
-          "Mit dem selbst gehosteten Umami auf analytics.awinter.dev messen wir erst mit deiner Erlaubnis Seitenkategorien, Sprache, erreichte und gespeicherte Fragen als Positionsnummern, technische Fehlerereignisse, Vorschau, Checkout, bestätigte Käufe und PDF-Anforderungen. UTM-Quelle, Medium, Kampagne und Anzeige werden ausschließlich als kurze Kampagnen-Codes gespeichert. Antworten, Ergebnisinhalte, E-Mail-Adressen, private Sitzungs-IDs, vollständige URLs, IP-Adressen und Werbe-Klick-IDs werden nicht in der Analytics-Datenbank gespeichert. Hosting- und Zugriffsprotokolle sind davon unabhängig.",
+          "Mit dem selbst gehosteten Umami auf analytics.awinter.dev messen wir erst mit deiner Erlaubnis Seitenkategorien, Sprache, erreichte und gespeicherte Fragen als Positionsnummern, technische Fehlerereignisse, Zwischenstand, optionale Vertiefung, Berichtserstellung, Checkout, bestätigte Käufe und PDF-Anforderungen. UTM-Quelle, Medium, Kampagne und Anzeige werden ausschließlich als kurze Kampagnen-Codes gespeichert. Antworten, Ergebnisinhalte, E-Mail-Adressen, private Sitzungs-IDs, vollständige URLs, IP-Adressen und Werbe-Klick-IDs werden nicht in der Analytics-Datenbank gespeichert. Hosting- und Zugriffsprotokolle sind davon unabhängig.",
         ],
         [
           "Besuche und Aufbewahrung",
@@ -37,7 +37,7 @@ export default async function PrivacyPage({
     : [
         [
           "Your reflection",
-          "Your answers and Compass are stored on our server so you can resume and retrieve your report. The configured AI service may be used to generate it. Your private link grants access to your reflection; share it deliberately. You can delete your reflection from your Compass.",
+          "Your answers and Compass are stored on our server so you can resume and retrieve your report. The free reflection and checkpoint do not use AI. Only after verified payment do we send your answers and optional follow-ups to OpenAI to prepare questions and your report. We disable Responses storage at OpenAI (store:false); processing and retention at the provider are also subject to its API data policies. Your private link grants access to your reflection; share it deliberately. You can delete your reflection from your Compass.",
         ],
         [
           "Payment and delivery",
@@ -45,7 +45,7 @@ export default async function PrivacyPage({
         ],
         [
           "Optional analytics with Umami",
-          "Using self-hosted Umami at analytics.awinter.dev, we measure only with your permission page categories, language, question positions viewed and saved, technical error events, preview, checkout, confirmed purchases and PDF requests. UTM source, medium, campaign and content are stored only as short campaign codes. Analytics does not store answers, report content, email addresses, private reflection IDs, full URLs, IP addresses or advertising click IDs. Hosting and access logs are separate.",
+          "Using self-hosted Umami at analytics.awinter.dev, we measure only with your permission page categories, language, question positions viewed and saved, technical error events, checkpoint, optional refinement, report generation, checkout, confirmed purchases and PDF requests. UTM source, medium, campaign and content are stored only as short campaign codes. Analytics does not store answers, report content, email addresses, private reflection IDs, full URLs, IP addresses or advertising click IDs. Hosting and access logs are separate.",
         ],
         [
           "Visits and retention",

@@ -1,7 +1,5 @@
-import type { Locale, StoredAnalysis } from "@wtfiwant/shared";
-import { ANALYSIS_PROMPT_VERSION } from "../prompts/analysis";
+import type { Locale } from "@wtfiwant/shared";
 import type { AssessmentRecord } from "../repositories/types";
-import { type AIProvider, analyzeAnswers } from "./provider";
 
 export function buildAnalysisAnswers(record: AssessmentRecord, locale: Locale) {
   const additionalAnswer =
@@ -46,27 +44,5 @@ export function buildAnalysisAnswers(record: AssessmentRecord, locale: Locale) {
           : [],
       ),
     ),
-  };
-}
-
-/** Reuse only a report in the requested language; never relabel cached content. */
-export async function analysisInLocale(
-  provider: AIProvider,
-  record: AssessmentRecord,
-  locale: Locale,
-): Promise<StoredAnalysis> {
-  if (record.analysis?.locale === locale) return record.analysis;
-  const result = await analyzeAnswers(
-    provider,
-    buildAnalysisAnswers(record, locale),
-    record.session.id,
-    locale,
-  );
-  return {
-    version: ANALYSIS_PROMPT_VERSION,
-    model: provider.name,
-    locale,
-    result,
-    createdAt: new Date().toISOString(),
   };
 }

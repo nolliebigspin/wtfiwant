@@ -71,7 +71,7 @@ Open [http://localhost:3000](http://localhost:3000). The API health endpoint is 
 | `AI_API_KEY` | Server | Required only for `AI_PROVIDER=openai` |
 | `AI_MODEL` | Server | Structured analysis model |
 | `AI_FOLLOWUP_MODEL` | Server | Targeted follow-up model |
-| `PAYMENTS_ENABLED` | Server | `true` enables paid Full Compass Checkout; otherwise the app remains preview-only |
+| `PAYMENTS_ENABLED` | Server | `true` enables paid Full Compass Checkout; otherwise the app remains free-checkpoint-only |
 | `PAYMENT_TEST_ENABLED` | Server | `true` shows the instant payment test form on `/commitment` in development; default `false`, ignored in production |
 | `EMAIL_PROVIDER` | Server | `resend` sends reports; `local` captures them in memory outside production |
 | `TERMS_URL`, `REFUND_POLICY_URL` | Server | Public merchant policies linked beside the purchase action; required when payments are enabled |
@@ -124,6 +124,32 @@ report email and resends even if the result page is later viewed in another
 language. Evidence labels and saved choice values are localized; written answers
 are quoted as entered.
 
+## Free checkpoint and paid AI journey
+
+`packages/shared/src/journey.ts` defines a seven-screen free path. The fifth answer selects either a question about life by default or outside expectations. The checkpoint mirrors explicit answers and trade-offs and supplies a rule-based reflection prompt. It never calls an AI provider. The actual Stripe price is disclosed on landing, commitment and checkpoint through `/api/commerce/offer`.
+
+After Stripe independently confirms payment, the server enqueues one refinement-plan job. Up to five AI questions clarify ordinary life, priority, compromises and constraints. Users can skip them, then review one proposed north star and priority. They actively accept, edit or mark it uncertain; their wording and alignment status are preserved in the report. A synthesis job freezes the refinement answers; the final report freezes that draft and its review. The worker creates, validates and saves an actionable compass (90-day goal, first action, four weeks, obstacles, decision rules and review) before delivering its email/PDF. Web, email and PDF use the same underlying compass data. PDFs use a vector direction map, a four-week roadmap, a three-way review guide, space for the reader’s own decision and a separate source appendix. These diagrams do not assign personality scores or imply completed progress. Optional evidence fields keep existing saved reports readable; new AI outputs must cite constraints in the goal, first action, obstacles and decision rules. Responses and report language are pinned to the purchase. Refreshes, duplicate webhooks, downloads, resends and locale changes do not create additional AI generations. Old local previews are never reused by the paid job.
+
+Start a separate worker during local development (in addition to `dev`):
+
+```bash
+mise exec -- bun run --env-file=.env packages/api/src/journey/worker.ts
+```
+
+Dokploy Compose includes `report-worker` automatically, using the web service's runtime environment. Keep both services running. Migrations `0009_paid_ai_jobs.sql` and `0010_direction_review.sql` add the durable queue and review stage; no Redis or external queue account is needed. Test the final Docker image as well as the Next build because the worker bundles PDF/email dependencies and fonts.
+
+Each stage has an atomic five-minute lease and at most three job attempts. Each stage attempt can make one schema/evidence repair request. A paid report also receives one validated editorial pass before publication; it checks contradictions, controllable progress criteria, source support and natural wording. With 90-second request timeouts this bounds a report attempt to three requests (270 seconds) within its five-minute lease. Editing never runs on downloads, resends or saved report reads. Evidence identifiers in generated prose are rejected as well as unknown reference IDs. SDK retries are disabled; requests have a 90-second timeout and bounded output. A timed-out provider request may already have been billed, so this is a bounded retry policy, not a promise of exactly-once API billing. The report is saved atomically with completion of its job. Email failures retry separately without regenerating AI content.
+
+If optional questions are abandoned for 30 minutes after planning/the last saved answer, the worker prepares a synthesis. After another 30 minutes without review it generates a report labelled not reviewed; it never invents user approval. Failed question preparation falls back to synthesis; exhausted synthesis attempts fall back to an unconfirmed report. A saved review with an interrupted report enqueue is automatically recovered by the worker. Each of the three stages has one unique job; browser refreshes cannot start an unbounded conversation. After the report's retry budget is exhausted the UI preserves the purchase and points to merchant support; browser requests cannot reset the budget. Inspect only job kind/status/attempts when investigating—never log job input, model output, or provider error bodies. Session deletion cascades to the queue.
+
+Production purchases require `AI_PROVIDER=openai` and a funded API project. Both models default to `gpt-6-luna`; override `AI_MODEL` and `AI_FOLLOWUP_MODEL` independently if evaluated report quality warrants it. The OpenAI SDK must support Zod 4; the adapter's HTTP contract test guards against serializing the object schema as a scalar.
+
+### Compass quality gate
+
+Before changing the paid prompts or model, inspect complete outputs for a career-focused case, a constrained caregiving case, sparse/uncertain answers, and a user correction that reverses the initial priority, in both supported languages. The current change was manually exercised with real German and English OpenAI outputs; automated tests enforce structure, evidence references, correction persistence, uncertainty labels, stage idempotency and recovery.
+
+A useful report must preserve the person's chosen wording, let that choice govern the **whole** plan (including the first action), name one observable 90-day goal within their influence, offer four feasible weekly steps with done conditions, handle real obstacles, and provide a week-four continue/adjust/stop decision. Unknown areas must remain unknown, and unreviewed proposals must never appear confirmed. Reject generic praise, invented constraints, unsupported identity claims, raw evidence IDs in prose and a report that merely repeats the user's own suggested experiment. Structured validation cannot establish personal usefulness: beta users should be able to name their direction and next action, then explain after a real trial what they would keep or change. Future habit/planning integrations should follow that chosen goal; none are enabled here.
+
 ## AI prompts and output
 
 Prompts are not scattered through routes:
@@ -134,6 +160,8 @@ packages/api/src/prompts/
   coach.ts
   follow-up.ts
   action-plan.ts
+  refinement.ts
+  context.ts
 ```
 
 `ANALYSIS_PROMPT_VERSION` is stored with every analysis. The strict Zod contract is `analysisSchema` in `packages/shared/src/schemas.ts`. Generated data must pass both structural validation and an evidence check proving every cited question ID exists in the submitted answers. Invalid output receives one repair attempt, then fails closed.
@@ -284,11 +312,11 @@ Create an application in Dokploy, point it at this repository, choose **Docker C
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | yes | Deploy fails without it. |
-| `AI_PROVIDER` | no | `local` by default; `openai` opts in to remote calls. |
+| `AI_PROVIDER` | no | `local` is for template-only development. Production payments require `openai`. |
 | `AI_API_KEY` | when `AI_PROVIDER=openai` | The API refuses to start otherwise. |
 | `POSTGRES_DB`, `POSTGRES_USER` | no | Default to `wtfiwant`. |
-| `AI_MODEL`, `AI_FOLLOWUP_MODEL` | no | Default to `gpt-5-mini`. |
-| `PAYMENTS_ENABLED` | no | `false` keeps the deployment preview-only. |
+| `AI_MODEL`, `AI_FOLLOWUP_MODEL` | no | Default to `gpt-6-luna`. |
+| `PAYMENTS_ENABLED` | no | `false` keeps the deployment free-checkpoint-only. |
 | `PUBLIC_APP_URL`, `STRIPE_*`, `RESEND_API_KEY`, `REPORT_EMAIL_FROM`, `TERMS_URL`, `REFUND_POLICY_URL` | when payments are enabled | Checkout, webhook, report-delivery, and merchant-policy configuration. |
 
 Add a domain pointing at the `web` service on port 3000. `DATABASE_URL` is assembled from the PostgreSQL variables, so it should not be set by hand.
@@ -350,21 +378,23 @@ browser skips collection on localhost, even if runtime settings enable it.
 | --- | --- |
 | Page view | Native Umami pageview for a finite page, e.g. `/de/result`; no private IDs |
 | `reflection_started` | A new reflection was created |
-| `question_01_viewed` … `question_15_viewed` | Question reached; numbers follow the form order |
-| `question_01_answered` … `question_15_answered` | Answer saved successfully; no answer content |
-| `reflection_completed` | Last question and optional coach step finished |
-| `preview_viewed` | Free Compass Preview shown |
+| `question_01_viewed` … `question_07_viewed` | Question reached; numbers follow the form order |
+| `question_01_answered` … `question_07_answered` | Answer saved successfully; no answer content |
+| `reflection_completed` | Last free question finished |
+| `checkpoint_viewed` | Free answer checkpoint shown |
 | `checkout_clicked` | Purchase button clicked |
 | `checkout_started` | Checkout created or first associated with this consenting visit |
 | `checkout_cancelled` | Visitor returned through Stripe's cancellation link |
 | `purchase` | Stripe payment independently verified by the server |
+| `paid_refinement_viewed`, `paid_refinement_answered` | Optional paid question viewed/answered; finite position only |
+| `generation_started`, `report_ready` | Generation requested / finished report opened in a consenting browser |
 | `report_viewed` | Paid report shown |
 | `pdf_download` | Website PDF link clicked; not proof of a completed download |
 | `action_plan_saved` | Action plan saved successfully |
 | `journey_error`, `checkout_error`, `report_error` | Technical failure; no error text or content |
 
 In Umami, choose **the menu → Funnels**, then use events:
-`reflection_started → reflection_completed → preview_viewed → checkout_started → purchase → report_viewed`.
+`reflection_started → reflection_completed → checkpoint_viewed → checkout_started → purchase → report_viewed`.
 Create a second funnel using the question-view events to see where people stop.
 Umami lists event names after it has received them; configure the production
 funnel once the first production reflection has run after deployment.

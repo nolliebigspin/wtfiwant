@@ -1,6 +1,6 @@
 import {
   type AssessmentQuestion,
-  assessmentQuestions,
+  freeQuestionContext,
   type Locale,
 } from "@wtfiwant/shared";
 import { useTranslations } from "next-intl";
@@ -21,6 +21,8 @@ type CurrentQuestionProps = {
   locale: Locale;
   chapterIndex: number;
   questionIndex: number;
+  questionCount: number;
+  answers: Record<string, unknown>;
   value: unknown;
   error: string | null;
   saving: boolean;
@@ -35,6 +37,8 @@ export function CurrentQuestion({
   locale,
   chapterIndex,
   questionIndex,
+  questionCount,
+  answers,
   value,
   error,
   saving,
@@ -51,7 +55,7 @@ export function CurrentQuestion({
     <section className="motion-question-enter" key={question.id}>
       <p className={eyebrowClassName}>
         {localizedChapters[chapterIndex].label} · {questionIndex + 1} {t("of")}{" "}
-        {assessmentQuestions.length}
+        {questionCount}
       </p>
       <p className="mb-5 font-serif text-base text-muted italic">
         {localizedChapters[chapterIndex].eyebrow}
@@ -62,6 +66,11 @@ export function CurrentQuestion({
       {localizedQuestion.description ? (
         <p className="mb-9 max-w-[42rem] text-[1.05rem] leading-relaxed text-muted">
           {localizedQuestion.description}
+        </p>
+      ) : null}
+      {freeQuestionContext(question.id, answers, locale) ? (
+        <p className="mb-6 border-l-2 border-accent pl-4 text-sm leading-relaxed text-muted">
+          {freeQuestionContext(question.id, answers, locale)}
         </p>
       ) : null}
       <QuestionInput
@@ -97,8 +106,10 @@ export function CurrentQuestion({
           >
             {saving
               ? t("saving")
-              : questionIndex === assessmentQuestions.length - 1
-                ? t("finish")
+              : questionIndex === questionCount - 1
+                ? locale === "de"
+                  ? "Meinen Zwischenstand ansehen"
+                  : "See my checkpoint"
                 : t("continue")}
           </button>
         </div>

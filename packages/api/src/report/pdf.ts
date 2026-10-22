@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { ActionPlanInput, Analysis, Locale } from "@wtfiwant/shared";
 import PDFDocument from "pdfkit";
-import { buildReportDocument } from "./document";
+import { renderDesignedCompassPdf } from "./compass-pdf";
+import { buildReportDocument, type ReportItem } from "./document";
 
 const fonts = {
   body: readFileSync(new URL("./fonts/NotoSans-Regular.ttf", import.meta.url)),
@@ -19,6 +20,13 @@ export async function renderCompassPdf(
   evidence: Record<string, unknown>,
   plan?: ActionPlanInput | null,
 ): Promise<Buffer> {
+  if (analysis.compass)
+    return renderDesignedCompassPdf(
+      { ...analysis, compass: analysis.compass },
+      locale,
+      evidence,
+      plan,
+    );
   const report = buildReportDocument(analysis, locale, evidence);
   const de = locale === "de";
   const pdf = new PDFDocument({
@@ -43,7 +51,9 @@ export async function renderCompassPdf(
   });
   const width = pdf.page.width - 112;
   const ensure = (height: number) => {
-    if (pdf.y + height > pdf.page.height - 66) pdf.addPage();
+    const usable = pdf.page.height - 132;
+    if (pdf.y > 67 && pdf.y + Math.min(height, usable) > pdf.page.height - 66)
+      pdf.addPage();
   };
   const text = (value: string, size = 11, font = "body", color = "#30362d") => {
     pdf
@@ -52,6 +62,21 @@ export async function renderCompassPdf(
       .fillColor(color)
       .text(value, 56, pdf.y, { width, lineGap: 4, paragraphGap: 8 });
   };
+  const heightOf = (value: string, size = 11, font = "body") =>
+    pdf
+      .font(font)
+      .fontSize(size)
+      .heightOfString(value, { width, lineGap: 4, paragraphGap: 8 });
+  const evidenceText = (item: ReportItem) =>
+    `${de ? "Grundlage" : "Evidence"}: ${item.evidence.map((value) => `[${value}]`).join(", ")}`;
+  const itemHeight = (item: ReportItem) =>
+    (item.title ? heightOf(item.title, 13, "bold") + 5 : 0) +
+    item.paragraphs.reduce(
+      (total, paragraph) => total + heightOf(paragraph) + 5,
+      0,
+    ) +
+    (item.evidence.length ? heightOf(evidenceText(item), 8.5) : 0) +
+    20;
   const rule = () => {
     pdf
       .moveTo(56, pdf.y)
@@ -62,7 +87,7 @@ export async function renderCompassPdf(
     pdf.y += 22;
   };
   text("WTFIWANT / COMPASS", 10, "bold", "#556747");
-  pdf.y = 155;
+  pdf.y = report.compass ? 108 : 155;
   text(
     de
       ? "Eine Richtung, die zu dir passt."
@@ -72,29 +97,71 @@ export async function renderCompassPdf(
     "#556747",
   );
   pdf.moveDown();
-  text(report.title, 36, "display", "#263626");
+  text(
+    report.compass
+      ? de
+        ? "Was du wirklich willst."
+        : "What you actually want."
+      : report.title,
+    report.compass ? 29 : 36,
+    "display",
+    "#263626",
+  );
   pdf.moveDown(0.6);
-  text(report.summary, 15);
-  pdf.moveDown(1.5);
-  rule();
-  text(
-    de ? "Dein persönlicher Wegweiser" : "Your personal field guide",
-    12,
-    "bold",
-  );
-  text(
-    de
-      ? "Lies ihn in Ruhe. Prüfe, was sich stimmig anfühlt. Nutze die ersten Schritte als kleine Experimente, nicht als feste Vorgaben."
-      : "Read at your own pace. Notice what feels right. Use the first steps as small experiments, rather than fixed instructions.",
-  );
-  pdf.moveDown();
-  text(report.disclaimer, 9, "body", "#65705e");
+  text(report.summary, report.compass ? 17 : 15, "display");
+  if (report.compass) {
+    pdf.moveDown(0.5);
+    text(report.directionStatus ?? "", 9, "bold", "#65705e");
+    pdf.moveDown(1);
+    text(
+      de
+        ? "Deine wichtigste Veränderung jetzt"
+        : "Your most important change now",
+      11,
+      "bold",
+    );
+    text(report.compass.priority, 12);
+    pdf.moveDown(0.6);
+    ensure(110);
+    text(de ? "Dein 90-Tage-Ziel" : "Your 90-day goal", 11, "bold");
+    text(report.compass.goal.outcome, 12);
+    pdf.moveDown(0.6);
+    ensure(110);
+    text(de ? "Dein nächster Schritt" : "Your next step", 11, "bold");
+    text(report.compass.firstAction.action, 11);
+    text(report.compass.firstAction.when, 9, "body", "#65705e");
+  }
+  if (report.compass) {
+    const note = `${de ? "Ein anpassbarer Vorschlag für deinen Alltag." : "An adaptable proposal for your everyday life."} ${report.disclaimer}`;
+    if (pdf.y + heightOf(note, 8) + 20 < pdf.page.height - 66) {
+      pdf.moveDown(0.5);
+      text(note, 8, "body", "#65705e");
+    }
+  } else {
+    pdf.moveDown(1);
+    rule();
+    ensure(130);
+    text(
+      de ? "Dein persönlicher Wegweiser" : "Your personal field guide",
+      12,
+      "bold",
+    );
+    text(
+      de
+        ? "Dein Plan ist ein anpassbarer Vorschlag. Prüfe ihn an deinen Möglichkeiten. Setze den ersten Schritt um und nutze die Auswertung, um deine Richtung zu bestätigen oder zu verändern."
+        : "Your plan is an adaptable proposal. Check it against your circumstances. Take the first step, then use the review to confirm or change your direction.",
+    );
+    pdf.moveDown();
+    text(report.disclaimer, 9, "body", "#65705e");
+  }
   pdf.addPage();
   let sectionIndex = 0;
   for (const section of report.sections.filter((item) => item.items.length)) {
-    if (section === report.sections[6] && pdf.y > 120) pdf.addPage();
-    ensure(240);
-    if (sectionIndex > 0) {
+    const heading = `${String(sectionIndex + 1).padStart(2, "0")} / ${section.title}`;
+    ensure(
+      heightOf(heading, 23, "display") + itemHeight(section.items[0]) + 60,
+    );
+    if (sectionIndex > 0 && pdf.y > 67) {
       pdf.y += 20;
       rule();
     }
@@ -105,8 +172,8 @@ export async function renderCompassPdf(
       "#263626",
     );
     pdf.moveDown(0.5);
-    for (const item of section.items) {
-      ensure(110);
+    for (const [itemIndex, item] of section.items.entries()) {
+      if (itemIndex > 0) ensure(itemHeight(item));
       if (item.title) {
         text(item.title, 13, "bold");
         pdf.moveDown(0.2);
@@ -116,12 +183,7 @@ export async function renderCompassPdf(
         pdf.moveDown(0.3);
       }
       if (item.evidence.length)
-        text(
-          `${de ? "Grundlage" : "Evidence"}: ${item.evidence.map((value) => `[${value}]`).join(", ")}`,
-          8.5,
-          "body",
-          "#65705e",
-        );
+        text(evidenceText(item), 8.5, "body", "#65705e");
       pdf.moveDown(1);
     }
   }
@@ -146,7 +208,7 @@ export async function renderCompassPdf(
       plan.ifCondition,
       plan.thenAction,
     ].forEach((value, index) => {
-      ensure(80);
+      ensure(heightOf(fields[index], 10, "bold") + heightOf(value) + 20);
       text(fields[index], 10, "bold");
       text(value);
       pdf.moveDown(0.5);
@@ -165,7 +227,11 @@ export async function renderCompassPdf(
   );
   pdf.moveDown(1);
   for (const item of report.evidence) {
-    ensure(100);
+    ensure(
+      heightOf(`[${item.number}] ${item.label}`, 11, "bold") +
+        heightOf(item.body, 10) +
+        24,
+    );
     text(`[${item.number}] ${item.label}`, 11, "bold");
     pdf.moveDown(0.3);
     text(item.body, 10);
