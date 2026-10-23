@@ -8,4 +8,5 @@ export * from "./format-answer";
 export * from "./journey";
 export * from "./legal-content";
 export * from "./localization";
+export * from "./privacy-content";
 export * from "./schemas";

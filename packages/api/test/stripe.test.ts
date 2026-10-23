@@ -43,6 +43,7 @@ describe("Stripe digital delivery consent", () => {
         idempotencyKey: "test-only",
       });
       expect(body.get("consent_collection[terms_of_service]")).toBe("required");
+      expect(body.get("submit_type")).toBe("pay");
       expect(
         body.get("custom_text[terms_of_service_acceptance][message]"),
       ).toBe(agreement.statement);

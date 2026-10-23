@@ -47,6 +47,7 @@ export class StripePaymentProvider implements PaymentProvider {
     const session = await this.stripe.checkout.sessions.create(
       {
         mode: "payment",
+        submit_type: "pay",
         line_items: [{ price: this.priceId, quantity: 1 }],
         client_reference_id: input.sessionId,
         metadata: {
@@ -59,8 +60,8 @@ export class StripePaymentProvider implements PaymentProvider {
           submit: {
             message:
               input.locale === "de"
-                ? `Premium-Kauf ohne freiwillige Erstattung. Gesetzliche Rechte bleiben unberührt. [Nutzungsbedingungen](${input.termsUrl}) · [Widerruf und Erstattungen](${input.refundPolicyUrl})`
-                : `Premium purchase with no voluntary refunds. Statutory rights remain unaffected. [Terms of service](${input.termsUrl}) · [Withdrawal and refunds](${input.refundPolicyUrl})`,
+                ? `Einmaliger Kauf, kein Abo. Gesetzliche Widerrufs- und Mängelrechte bleiben unberührt; keine zusätzliche freiwillige Geld-zurück-Garantie. [Nutzungsbedingungen](${input.termsUrl}) · [Widerruf und Erstattungen](${input.refundPolicyUrl})`
+                : `One-time purchase, no subscription. Statutory withdrawal and defect remedies remain unaffected; no additional voluntary money-back guarantee. [Terms of service](${input.termsUrl}) · [Withdrawal and refunds](${input.refundPolicyUrl})`,
           },
         },
         locale: input.locale,

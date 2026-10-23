@@ -5,6 +5,39 @@ import { createApp } from "../src/app";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
 
 describe("assessment API", () => {
+  test("protects private responses and errors from caches and indexing at either mount path", async () => {
+    for (const basePath of ["/", "/api"]) {
+      const app = createApp({
+        repository: new InMemoryAssessmentRepository(),
+        basePath,
+      });
+      const prefix = basePath === "/" ? "" : basePath;
+      const created = await app.request(`${prefix}/sessions`, {
+        method: "POST",
+      });
+      const { session } = await created.json();
+      const responses = [
+        created,
+        await app.request(`${prefix}/sessions/${session.id}`),
+        await app.request(`${prefix}/sessions/${session.id}/paid`),
+        await app.request(`${prefix}/sessions/${crypto.randomUUID()}`),
+        await app.request(`${prefix}/withdrawals`, {
+          method: "POST",
+          body: "{}",
+        }),
+      ];
+      expect(responses.map((response) => response.status)).toEqual([
+        201, 200, 402, 404, 400,
+      ]);
+      for (const response of responses) {
+        expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+        expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+        expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+        expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+      }
+    }
+  });
+
   test("rejects AI coaching before payment", async () => {
     const repository = new InMemoryAssessmentRepository();
     const app = createApp({

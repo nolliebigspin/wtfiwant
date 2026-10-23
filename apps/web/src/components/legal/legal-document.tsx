@@ -1,4 +1,4 @@
-import type { Locale } from "@wtfiwant/shared";
+import { LEGAL_DOCUMENT_UPDATED_AT, type Locale } from "@wtfiwant/shared";
 import { BrandLink } from "@/components/ui/brand-link";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { Link } from "@/i18n/navigation";
@@ -31,9 +31,11 @@ export function LegalDocument({
           {document.title}
         </h1>
         <p className="mt-4 text-sm text-muted">
-          {german
-            ? "Stand: 7. September 2026"
-            : "Last updated: September 7, 2026"}
+          {german ? "Stand: " : "Last updated: "}
+          {new Intl.DateTimeFormat(locale, {
+            dateStyle: "long",
+            timeZone: "UTC",
+          }).format(new Date(LEGAL_DOCUMENT_UPDATED_AT))}
         </p>
         <p className="my-8 text-lg leading-relaxed">{document.intro}</p>
         <nav

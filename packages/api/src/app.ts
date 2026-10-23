@@ -113,6 +113,14 @@ export function createApp({
   basePath = "/",
 }: AppDependencies) {
   const app = new Hono().basePath(basePath);
+  // Private responses and errors must not be retained by browsers or proxies.
+  app.use("*", async (context, next) => {
+    context.header("Cache-Control", "private, no-store");
+    context.header("Referrer-Policy", "no-referrer");
+    context.header("X-Robots-Tag", "noindex, nofollow");
+    context.header("X-Content-Type-Options", "nosniff");
+    await next();
+  });
   app.get("/analytics/config", (context) => {
     context.header("Cache-Control", "no-store");
     return context.json({ enabled: Boolean(analytics) });

@@ -24,7 +24,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "1. What the service provides",
           paragraphs: [
-            "wtfiwant.app is a guided personal reflection. You answer questions about your experiences, priorities, and possible directions. Completing the initial reflection and viewing its checkpoint are free. The checkpoint mirrors your answers without AI. A Full Compass purchase unlocks the complete report for one Reflection Session, including patterns, tensions, possible directions, and an action plan, with delivery by email.",
+            "wtfiwant.app is a guided personal reflection. You answer questions about your experiences, priorities, and possible directions. Completing the initial reflection and viewing its checkpoint are free. The checkpoint mirrors your answers without AI. A Full Compass purchase unlocks up to five optional AI follow-up questions, a proposed direction you can review, and a personal report for one Reflection Session. The report includes a provisional north star, priorities, a 90-day goal, a four-week plan, practical next steps and supporting evidence. It is available in your browser, as a PDF and by email.",
             "Your report is generated with automated assistance and can contain mistakes or interpretations you disagree with. Treat it as material for your own reflection. It is not a diagnosis, therapy, crisis service, or professional medical, legal, or financial advice, and it does not promise a particular life outcome. Statutory rights concerning the quality of the digital product remain unaffected.",
           ],
         },
@@ -59,7 +59,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "6. Refunds and consumer rights",
           paragraphs: [
-            "The Full Compass is a premium digital feature. Purchases are final and we offer no voluntary refunds, including for a change of mind or subjective dissatisfaction. Before payment, you must expressly consent to early delivery and acknowledge the resulting loss of your statutory withdrawal right when the legal requirements are met. Our Refund Policy explains these requirements and your remaining statutory rights.",
+            "Statutory withdrawal rights and remedies for a defective or undelivered digital product take priority. We do not offer an additional voluntary money-back guarantee. A change of mind or disagreement with an interpretation does not create an additional voluntary refund right, but does not remove any statutory rights. Before payment, you must expressly consent to early delivery and acknowledge the resulting loss of your statutory withdrawal right only when the legal requirements are met. Our Refund Policy explains these requirements.",
             "Nothing in these terms limits mandatory consumer rights or excludes liability that cannot lawfully be excluded. The descriptions of the report’s purpose do not remove your rights if the digital product fails to meet the contract.",
           ],
         },
@@ -74,10 +74,10 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
     refunds: {
       title: "Refunds & withdrawal",
       intro:
-        "The Full Compass is a premium digital feature. All purchases are final. We do not offer voluntary refunds. This does not affect refunds or other remedies required by law.",
+        "Your statutory withdrawal rights and remedies for non-delivery, defects or incorrect charges remain unaffected. We do not offer an additional voluntary money-back guarantee for the Full Compass.",
       sections: [
         {
-          title: "1. Premium purchases are final",
+          title: "1. Statutory rights and voluntary refunds",
           paragraphs: [
             "You pay once to unlock the complete report for your Reflection Session. There is no subscription to cancel. We do not offer a money-back guarantee or voluntary refunds for a change of mind, disagreement with the report’s interpretations, or not using the premium feature.",
             "This policy does not exclude mandatory consumer rights, including any applicable right of withdrawal and remedies for non-delivery, defects, or incorrect charges.",
@@ -123,7 +123,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "1. Was der Dienst bietet",
           paragraphs: [
-            "wtfiwant.app ist eine angeleitete persönliche Reflexion. Du beantwortest Fragen zu deinen Erfahrungen, Prioritäten und möglichen Richtungen. Die erste Reflexion und ihr Zwischenstand sind kostenlos. Der Zwischenstand spiegelt deine Antworten ohne KI. Mit einem Kauf erhältst du den vollständigen Bericht für eine Reflexionssitzung, einschließlich Mustern, Spannungen, möglichen Richtungen und einem Handlungsplan sowie der Zustellung per E-Mail.",
+            "wtfiwant.app ist eine angeleitete persönliche Reflexion. Du beantwortest Fragen zu deinen Erfahrungen, Prioritäten und möglichen Richtungen. Die erste Reflexion und ihr Zwischenstand sind kostenlos. Der Zwischenstand spiegelt deine Antworten ohne KI. Mit einem Kauf erhältst du bis zu fünf optionale KI-Rückfragen, einen von dir prüfbaren Richtungsvorschlag und einen persönlichen Bericht für eine Reflexionssitzung. Der Bericht enthält einen vorläufigen Nordstern, Prioritäten, ein 90-Tage-Ziel, einen Vier-Wochen-Plan, konkrete nächste Schritte und Belege aus deinen Antworten. Er steht im Browser, als PDF und per E-Mail bereit.",
             "Dein Bericht wird mit automatisierter Unterstützung erstellt und kann Fehler oder Deutungen enthalten, denen du nicht zustimmst. Nutze ihn als Anregung für deine eigene Reflexion. Er ist keine Diagnose, Therapie, Krisenhilfe oder professionelle medizinische, rechtliche oder finanzielle Beratung und verspricht kein bestimmtes Lebensergebnis. Gesetzliche Rechte hinsichtlich der Qualität des digitalen Produkts bleiben unberührt.",
           ],
         },
@@ -158,7 +158,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "6. Erstattungen und Verbraucherrechte",
           paragraphs: [
-            "Der vollständige Kompass ist eine digitale Premium-Funktion. Käufe sind endgültig; wir bieten keine freiwilligen Erstattungen an, auch nicht bei Meinungsänderung oder subjektiver Unzufriedenheit. Vor der Zahlung musst du der vorzeitigen Bereitstellung ausdrücklich zustimmen und bestätigen, dass du den damit verbundenen Verlust deines Widerrufsrechts bei Vorliegen der gesetzlichen Voraussetzungen kennst. Unsere Erstattungsrichtlinie erklärt diese Voraussetzungen und deine verbleibenden gesetzlichen Rechte.",
+            "Gesetzliche Widerrufsrechte und Ansprüche bei einem mangelhaften oder nicht bereitgestellten digitalen Produkt haben Vorrang. Wir bieten keine zusätzliche freiwillige Geld-zurück-Garantie. Ein Meinungswechsel oder eine abweichende Einschätzung einer Deutung begründet kein zusätzliches freiwilliges Erstattungsrecht, beseitigt aber keine gesetzlichen Rechte. Vor der Zahlung musst du der vorzeitigen Bereitstellung ausdrücklich zustimmen und bestätigen, dass dein Widerrufsrecht erst bei Erfüllung der gesetzlichen Voraussetzungen erlischt. Unsere Erstattungsrichtlinie erklärt diese Voraussetzungen.",
             "Diese Bedingungen beschränken keine zwingenden Verbraucherrechte und schließen keine Haftung aus, die rechtlich nicht ausgeschlossen werden darf. Die Beschreibung des Berichtszwecks beseitigt keine Rechte, wenn das digitale Produkt nicht dem Vertrag entspricht.",
           ],
         },
@@ -173,10 +173,10 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
     refunds: {
       title: "Widerruf & Erstattungen",
       intro:
-        "Der vollständige Kompass ist eine digitale Premium-Funktion. Alle Käufe sind endgültig. Wir bieten keine freiwilligen Erstattungen an. Gesetzlich vorgeschriebene Erstattungen und andere gesetzliche Ansprüche bleiben unberührt.",
+        "Deine gesetzlichen Widerrufsrechte und Ansprüche bei Nichtbereitstellung, Mängeln oder falschen Abbuchungen bleiben unberührt. Für den vollständigen Kompass bieten wir keine zusätzliche freiwillige Geld-zurück-Garantie.",
       sections: [
         {
-          title: "1. Premium-Käufe sind endgültig",
+          title: "1. Gesetzliche Rechte und freiwillige Erstattungen",
           paragraphs: [
             "Du zahlst einmalig für die Freischaltung des vollständigen Berichts deiner Reflexionssitzung. Es gibt kein Abonnement zu kündigen. Wir bieten keine Geld-zurück-Garantie und keine freiwillige Erstattung bei Meinungsänderung, abweichender Einschätzung der Berichtsdeutungen oder Nichtnutzung der Premium-Funktion.",
             "Diese Richtlinie schließt keine zwingenden Verbraucherrechte aus. Dazu gehören ein anwendbares gesetzliches Widerrufsrecht und Ansprüche wegen fehlender Bereitstellung, Mängeln oder fehlerhaften Abbuchungen.",
@@ -219,7 +219,8 @@ export function getLegalDocument(kind: LegalDocumentKind, locale: Locale) {
   return documents[locale][kind];
 }
 
-export const DIGITAL_PURCHASE_VERSION = "2026-09-07.1";
+export const LEGAL_DOCUMENT_UPDATED_AT = "2026-10-23";
+export const DIGITAL_PURCHASE_VERSION = `${LEGAL_DOCUMENT_UPDATED_AT}.1`;
 
 export function createDigitalPurchaseAgreement(locale: Locale) {
   const asText = (kind: LegalDocumentKind) => {
