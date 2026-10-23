@@ -1,4 +1,4 @@
-import type { Analysis, Locale } from "@wtfiwant/shared";
+import type { Analysis, Locale, PurchaseReceipt } from "@wtfiwant/shared";
 import { buildReportDocument } from "../report/document";
 import type { ReportPurchase } from "../repositories/types";
 
@@ -93,7 +93,10 @@ ${confirmation ? `<section style="margin-top:32px;border-top:1px solid #d8dccd;f
   return { subject: doc.title, html, text };
 }
 
-function purchaseConfirmation(purchase?: ReportPurchase): string {
+export function purchaseConfirmation(
+  purchase?: ReportPurchase | PurchaseReceipt,
+  deliversReport = true,
+): string {
   if (!purchase?.agreement || !purchase.consentRecordedAt) return "";
   const { agreement } = purchase;
   const de = agreement.locale === "de";
@@ -117,9 +120,13 @@ function purchaseConfirmation(purchase?: ReportPurchase): string {
     agreement.statement,
     `${de ? "Textfassung" : "Text version"}: ${agreement.version}`,
     `${de ? "Zustimmung von Stripe abgerufen (UTC)" : "Consent retrieved from Stripe (UTC)"}: ${purchase.consentRecordedAt}`,
-    de
-      ? "Mit dieser E-Mail erhältst du den digitalen Inhalt und die Bestätigung deiner Zustimmung und Kenntnisnahme. Mit Beginn der Bereitstellung und Erhalt dieser Vertragsbestätigung erlischt dein Widerrufsrecht, soweit die gesetzlichen Voraussetzungen erfüllt sind. Andere zwingende gesetzliche Rechte, insbesondere bei Mängeln, bleiben unberührt."
-      : "This email delivers the digital content and confirms your consent and acknowledgement. Once delivery has begun and you have received this contract confirmation, your withdrawal right expires where the statutory conditions are met. Other mandatory rights, including remedies for defects, remain unaffected.",
+    deliversReport
+      ? de
+        ? "Mit dieser E-Mail erhältst du den digitalen Inhalt und die Bestätigung deiner Zustimmung und Kenntnisnahme. Mit Beginn der Bereitstellung und Erhalt dieser Vertragsbestätigung erlischt dein Widerrufsrecht, soweit die gesetzlichen Voraussetzungen erfüllt sind. Andere zwingende gesetzliche Rechte, insbesondere bei Mängeln, bleiben unberührt."
+        : "This email delivers the digital content and confirms your consent and acknowledgement. Once delivery has begun and you have received this contract confirmation, your withdrawal right expires where the statutory conditions are met. Other mandatory rights, including remedies for defects, remain unaffected."
+      : de
+        ? "Diese E-Mail bestätigt deinen Kauf sowie deine Zustimmung und Kenntnisnahme. Sie enthält noch keine Reflexionsantworten und keinen Bericht. Dein Bericht wird separat bereitgestellt, sofern die Verarbeitung nicht etwa wegen einer Erstattung oder aus Sicherheitsgründen angehalten wird. Allein diese Bestätigung lässt dein Widerrufsrecht nicht erlöschen; dafür müssen sämtliche gesetzlichen Voraussetzungen erfüllt sein. Gesetzliche Rechte bei Mängeln oder Nichtbereitstellung bleiben unberührt."
+        : "This email confirms your purchase, consent and acknowledgement. It contains no reflection answers or report; your report is provided separately unless processing is stopped, for example following a refund or for safety reasons. This confirmation alone does not end your withdrawal right; all statutory requirements must be met. Statutory remedies for defects or non-delivery remain unaffected.",
     agreement.terms,
     agreement.refundPolicy,
   ].join("\n\n");

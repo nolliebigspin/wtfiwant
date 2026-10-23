@@ -1,6 +1,7 @@
-import { withdrawalReceiptSchema } from "@wtfiwant/shared";
 import postgres from "postgres";
+import { PostgresAssessmentRepository } from "../repositories/postgres";
 import { createCommerceProviders } from "./config";
+import { deliverCommerceNotifications } from "./notifications";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
@@ -45,38 +46,34 @@ try {
       )
     ORDER BY purchase.paid_at
   `;
-  console.log(JSON.stringify({ issueCount: issues.length, issues }, null, 2));
-  const pending = await sql<
-    Array<{
-      request_id: string;
-      name: string;
-      email: string;
-      contract_reference: string;
-      locale: string;
-      received_at: Date;
-    }>
-  >`SELECT * FROM withdrawal_requests WHERE confirmation_sent_at IS NULL ORDER BY received_at`;
+  console.log(JSON.stringify({ reportIssueCount: issues.length }));
+  const counts =
+    await sql`SELECT kind, status, count(*)::int AS count FROM commerce_notifications GROUP BY kind, status ORDER BY kind, status`;
+  const [withdrawals] =
+    await sql`SELECT count(*)::int AS count FROM withdrawal_requests WHERE confirmation_sent_at IS NULL`;
+  const [unmatched] =
+    await sql`SELECT count(*)::int AS count FROM unmatched_payment_adjustments`;
+  const [disputes] =
+    await sql`SELECT count(*)::int AS count FROM payment_adjustments WHERE event_type = 'charge.dispute.created'`;
   console.log(
-    JSON.stringify({ pendingWithdrawalConfirmations: pending.length }),
+    JSON.stringify({
+      notifications: counts,
+      pendingWithdrawalConfirmations: withdrawals.count,
+      unmatchedPaymentEvents: unmatched.count,
+      recordedDisputes: disputes.count,
+    }),
   );
-  if (process.argv.includes("--retry-withdrawals")) {
+  if (
+    process.argv.includes("--retry-notifications") ||
+    process.argv.includes("--retry-withdrawals")
+  ) {
     const { emailProvider } = createCommerceProviders();
     if (!emailProvider) throw new Error("Email delivery is not configured");
-    for (const row of pending) {
-      const receipt = withdrawalReceiptSchema.parse({
-        requestId: row.request_id,
-        name: row.name,
-        email: row.email,
-        contractReference: row.contract_reference,
-        locale: row.locale,
-        receivedAt: row.received_at.toISOString(),
-      });
-      await emailProvider.sendWithdrawalConfirmation(receipt);
-      await sql`UPDATE withdrawal_requests SET confirmation_sent_at = now() WHERE request_id = ${receipt.requestId}`;
-    }
-    console.log(
-      JSON.stringify({ withdrawalConfirmationsRetried: pending.length }),
+    await deliverCommerceNotifications(
+      new PostgresAssessmentRepository(sql).commerce,
+      emailProvider,
     );
+    console.log(JSON.stringify({ dueNotificationsProcessed: true }));
   }
 } finally {
   await sql.end();

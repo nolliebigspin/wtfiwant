@@ -12,6 +12,7 @@ import type {
 } from "../repositories/types";
 import { buildSafetyAnswers } from "../safety/answers";
 import { classifySafety } from "../safety/classifier";
+import { deliverCommerceNotifications } from "./notifications";
 import type { PaymentProvider } from "./payment";
 
 export async function fulfillCheckout({
@@ -21,6 +22,7 @@ export async function fulfillCheckout({
   aiProvider,
   analytics,
   jobs,
+  emailProvider,
 }: {
   checkoutSessionId: string;
   repository: AssessmentRepository;
@@ -34,8 +36,14 @@ export async function fulfillCheckout({
   const storedPurchase =
     await repository.getPurchaseByCheckout(checkoutSessionId);
   if (
+    !storedPurchase &&
+    (await repository.commerce.getPurchase(checkoutSessionId))
+  )
+    return "paid";
+  if (
     storedPurchase?.status === "failed" ||
-    storedPurchase?.status === "expired"
+    storedPurchase?.status === "expired" ||
+    storedPurchase?.status === "refunded"
   )
     return "failed";
   const checkout = await paymentProvider.retrieveCheckout(checkoutSessionId);
@@ -62,6 +70,12 @@ export async function fulfillCheckout({
       : null,
   });
   if (!purchase) throw new Error("Checkout is not linked to a Reflection");
+  if (purchase.status !== "paid") return "failed";
+  await deliverCommerceNotifications(
+    repository.commerce,
+    emailProvider,
+    purchase.id,
+  );
   await analyticsBestEffort(
     () =>
       analytics?.purchase(

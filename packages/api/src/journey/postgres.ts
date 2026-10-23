@@ -107,7 +107,11 @@ export class PostgresAIJobStore implements AIJobStore {
       .sql`UPDATE paid_ai_jobs SET status = 'failed', lease_token = NULL WHERE status = 'running' AND lease_until < now() AND attempts >= 3`;
     const [row] = await this.sql<Row[]>`
       UPDATE paid_ai_jobs SET status = 'running', attempts = attempts + 1, lease_token = gen_random_uuid(), lease_until = now() + interval '5 minutes'
-      WHERE id = (SELECT id FROM paid_ai_jobs AS candidate WHERE NOT (kind <> 'report' AND EXISTS (SELECT 1 FROM paid_ai_jobs AS downstream WHERE downstream.session_id = candidate.session_id AND (downstream.kind = 'report' OR (candidate.kind = 'plan' AND downstream.kind = 'synthesis')))) AND attempts < 3 AND next_attempt_at <= now() AND
+      WHERE id = (SELECT id FROM paid_ai_jobs AS candidate WHERE NOT EXISTS (
+        SELECT 1 FROM report_purchases AS purchase LEFT JOIN purchase_legal_records AS receipt ON receipt.purchase_id = purchase.id
+        WHERE purchase.session_id = candidate.session_id AND purchase.agreement->>'confirmationBeforeAI' = 'true'
+        AND receipt.confirmation_sent_at IS NULL
+      ) AND NOT (kind <> 'report' AND EXISTS (SELECT 1 FROM paid_ai_jobs AS downstream WHERE downstream.session_id = candidate.session_id AND (downstream.kind = 'report' OR (candidate.kind = 'plan' AND downstream.kind = 'synthesis')))) AND attempts < 3 AND next_attempt_at <= now() AND
         (status = 'queued' OR (status = 'running' AND lease_until < now())) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`;
     return row ? map(row) : null;
   }

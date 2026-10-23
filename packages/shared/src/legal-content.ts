@@ -32,13 +32,13 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
           title: "2. Your purchase and payment",
           paragraphs: [
             "Each purchase is a one-time payment for one Reflection Session. It is not a subscription and does not renew automatically. The applicable price, currency, and total payable are shown in Stripe Checkout before you confirm payment. A later change in price does not change an existing purchase.",
-            "You place an order by confirming the payment in Stripe Checkout. We accept the order when payment is confirmed and the Full Compass is made available. Stripe processes payment details; the app does not receive or store your card number. Provide an email address you can access so we can deliver your report and help with purchase questions.",
+            "You place an order by confirming the payment in Stripe Checkout. We accept the order when Stripe confirms successful payment. We send a separate contract confirmation to your Checkout email before starting the paid AI processing. Stripe processes payment details; the app does not receive or store your card number. Provide an email address you can access so we can deliver your report and help with purchase questions.",
           ],
         },
         {
           title: "3. Digital delivery and access",
           paragraphs: [
-            "After Stripe confirms successful payment, optional AI follow-up questions help refine your reflection. You may skip them and review a proposed direction before requesting your report. You can accept, correct, or mark the direction as uncertain. After 30 minutes of inactivity during the questions, we prepare a provisional direction; after another 30 minutes without review, we generate the report from saved answers and label the direction as not reviewed. Report generation runs in the background; your Full Compass becomes available in your browser when generation completes. Some payment methods take longer to confirm. We also send the report to the email address supplied at Checkout. An email delivery problem does not remove paid browser access; you can request another email from your report page or contact us.",
+            "After Stripe confirms successful payment, we send the contract confirmation separately, including the terms and digital-delivery consent recorded for your order. If sending fails, it is retried automatically and paid AI processing waits. Once the confirmation has been sent, optional AI follow-up questions help refine your reflection. You may skip them and review a proposed direction before requesting your report. You can accept, correct, or mark the direction as uncertain. After 30 minutes of inactivity during the questions, we prepare a provisional direction; after another 30 minutes without review, we generate the report from saved answers and label the direction as not reviewed. Report generation runs in the background; your Full Compass becomes available in your browser when generation completes. Some payment methods take longer to confirm. We also send the report to the email address supplied at Checkout. An email delivery problem does not remove paid browser access; you can request another email from your report page or contact us.",
             "You need an internet connection, a current web browser, and access to your email. There is no account sign-in. Keep your private result link safe: anyone who has it may be able to access your reflection. Save the report email or a personal copy if you want to keep it independently of the service.",
           ],
         },
@@ -46,7 +46,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
           title: "4. Personal content and deletion",
           paragraphs: [
             "Only submit information you are entitled to share, and avoid unnecessary personal information about other people. Your report email contains personal reflection content and a private result link. Consider who can access your inbox before purchasing.",
-            "You can delete your Reflection Session using the delete control in the app. This removes the locally stored reflection, report, and associated records and ends access through that session. It cannot recall emails or copies already delivered, or delete financial records retained by payment providers. Deleting a reflection does not create a right to a refund. Statutory rights remain unaffected.",
+            "You can delete your Reflection Session using the delete control in the app. This removes the stored answers, reflection, report and related AI jobs and ends access through that session. Minimal purchase, contract, consent and payment-adjustment evidence is stored separately for accounting, purchase support and legally required retention; it contains no reflection answers, report or private result link. It cannot recall emails or copies already delivered, or delete financial records retained by payment providers. Deleting a reflection does not create a right to a refund. Statutory rights remain unaffected.",
           ],
         },
         {
@@ -94,14 +94,14 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
           title: "3. Consumer right of withdrawal",
           paragraphs: [
             "If you are a consumer with a statutory right of withdrawal, you may withdraw from the contract without giving a reason. For consumers in Germany and the EU, the usual period is 14 days from the conclusion of the contract, subject to the applicable rules on when the period starts and any extensions. Sending a clear withdrawal statement before the applicable deadline is sufficient.",
-            "For immediate digital delivery, Checkout requires your express consent to begin performance before the withdrawal period ends and your acknowledgement that your withdrawal right expires when performance begins. The right expires only when the statutory conditions are met, including the start of delivery and provision of the contract confirmation recording your consent and acknowledgement on a durable medium. We include that confirmation in your report email. Merely paying or ticking a checkbox does not by itself extinguish the right.",
+            "For immediate digital delivery, Checkout requires your express consent to begin performance before the withdrawal period ends and your acknowledgement that your withdrawal right expires when performance begins. The right expires only when the statutory conditions are met, including the start of delivery and provision of the contract confirmation recording your consent and acknowledgement on a durable medium. We send that confirmation separately before the paid AI processing; it is also included in your report email. Merely paying or ticking a checkbox does not by itself extinguish the right.",
           ],
         },
         {
           title: "4. Refund method and timing",
           paragraphs: [
             "Where a statutory withdrawal is effective, we reimburse you without undue delay and no later than 14 days after receiving your withdrawal. Other legally required refunds follow the applicable statutory rules. We use the original payment method unless we expressly agree otherwise with you. We do not charge a refund processing fee. Your payment provider may take additional time to show the credit on your account.",
-            "Refunds are handled by support through Stripe. The app does not offer an automatic refund button. A refund does not delete your reflection; use the app’s delete control if you also want the stored reflection removed. Emails and copies already delivered cannot be recalled.",
+            "Refunds are handled by support through Stripe. The app does not offer an automatic refund button. A full refund ends paid browser access; partial refunds do not automatically remove access. A payment dispute alone does not automatically block access. A refund does not delete your reflection; use the app’s delete control if you also want the stored reflection removed. Emails and copies already delivered cannot be recalled.",
           ],
         },
         {
@@ -131,13 +131,13 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
           title: "2. Kauf und Zahlung",
           paragraphs: [
             "Jeder Kauf ist eine einmalige Zahlung für eine Reflexionssitzung. Es gibt kein Abonnement und keine automatische Verlängerung. Preis, Währung und zu zahlender Gesamtbetrag werden vor deiner Zahlungsbestätigung in Stripe Checkout angezeigt. Spätere Preisänderungen ändern einen bestehenden Kauf nicht.",
-            "Mit der Zahlungsbestätigung in Stripe Checkout gibst du eine Bestellung ab. Wir nehmen sie an, wenn die Zahlung bestätigt und der vollständige Kompass bereitgestellt wird. Stripe verarbeitet die Zahlungsdaten; die App erhält oder speichert deine Kartennummer nicht. Gib eine erreichbare E-Mail-Adresse an, damit wir den Bericht zustellen und Fragen zum Kauf klären können.",
+            "Mit der Zahlungsbestätigung in Stripe Checkout gibst du eine Bestellung ab. Wir nehmen sie an, sobald Stripe die erfolgreiche Zahlung bestätigt. Vor Beginn der kostenpflichtigen KI-Verarbeitung senden wir eine gesonderte Vertragsbestätigung an deine Checkout-E-Mail-Adresse. Stripe verarbeitet die Zahlungsdaten; die App erhält oder speichert deine Kartennummer nicht. Gib eine erreichbare E-Mail-Adresse an, damit wir den Bericht zustellen und Fragen zum Kauf klären können.",
           ],
         },
         {
           title: "3. Digitale Bereitstellung und Zugriff",
           paragraphs: [
-            "Nach erfolgreicher Zahlungsbestätigung durch Stripe kannst du optionale KI-Rückfragen beantworten oder überspringen. Anschließend kannst du eine vorgeschlagene Richtung bestätigen, korrigieren oder als unsicher kennzeichnen. Nach 30 Minuten ohne weitere Antworten bereiten wir eine vorläufige Richtung vor. Bleibt diese weitere 30 Minuten ungeprüft, erstellen wir den Bericht aus den gespeicherten Antworten und kennzeichnen die Richtung als ungeprüft. Die Erstellung läuft im Hintergrund. Sobald sie abgeschlossen ist, steht dein vollständiger Kompass im Browser bereit. Bei manchen Zahlungsmethoden dauert die Bestätigung länger. Zusätzlich senden wir den Bericht an die bei Checkout angegebene E-Mail-Adresse. Ein E-Mail-Zustellfehler hebt den bezahlten Browserzugriff nicht auf. Du kannst auf der Ergebnisseite einen erneuten Versand anfordern oder uns kontaktieren.",
+            "Nach erfolgreicher Zahlungsbestätigung durch Stripe versenden wir zunächst die gesonderte Vertragsbestätigung einschließlich der für deinen Kauf gespeicherten Bedingungen und Zustimmung zur digitalen Bereitstellung. Schlägt der Versand fehl, wird er automatisch wiederholt; die kostenpflichtige KI-Verarbeitung wartet. Nach dem Versand kannst du optionale KI-Rückfragen beantworten oder überspringen. Anschließend kannst du eine vorgeschlagene Richtung bestätigen, korrigieren oder als unsicher kennzeichnen. Nach 30 Minuten ohne weitere Antworten bereiten wir eine vorläufige Richtung vor. Bleibt diese weitere 30 Minuten ungeprüft, erstellen wir den Bericht aus den gespeicherten Antworten und kennzeichnen die Richtung als ungeprüft. Die Erstellung läuft im Hintergrund. Sobald sie abgeschlossen ist, steht dein vollständiger Kompass im Browser bereit. Bei manchen Zahlungsmethoden dauert die Bestätigung länger. Zusätzlich senden wir den Bericht an die bei Checkout angegebene E-Mail-Adresse. Ein E-Mail-Zustellfehler hebt den bezahlten Browserzugriff nicht auf. Du kannst auf der Ergebnisseite einen erneuten Versand anfordern oder uns kontaktieren.",
             "Du benötigst eine Internetverbindung, einen aktuellen Webbrowser und Zugang zu deinem E-Mail-Postfach. Eine Kontoanmeldung gibt es nicht. Bewahre deinen privaten Ergebnislink sicher auf: Wer den Link kennt, kann möglicherweise auf deine Reflexion zugreifen. Sichere die Berichts-E-Mail oder eine persönliche Kopie, wenn du den Bericht unabhängig vom Dienst aufbewahren möchtest.",
           ],
         },
@@ -145,7 +145,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
           title: "4. Persönliche Inhalte und Löschung",
           paragraphs: [
             "Übermittle nur Informationen, die du teilen darfst, und vermeide unnötige personenbezogene Angaben über andere Menschen. Die Berichts-E-Mail enthält persönliche Reflexionsinhalte und einen privaten Ergebnislink. Berücksichtige vor dem Kauf, wer auf dein Postfach zugreifen kann.",
-            "Du kannst deine Reflexionssitzung über die Löschfunktion der App entfernen. Dabei werden die in der Anwendung gespeicherte Reflexion, der Bericht und zugehörige Datensätze gelöscht; der Zugriff über diese Sitzung endet. Bereits zugestellte E-Mails oder Kopien sowie vom Zahlungsanbieter aufbewahrte Finanzunterlagen werden dadurch nicht gelöscht. Durch die Löschung entsteht kein Erstattungsanspruch. Gesetzliche Rechte bleiben unberührt.",
+            "Du kannst deine Reflexionssitzung über die Löschfunktion der App entfernen. Dabei werden die Antworten, die Reflexion, der Bericht und zugehörige KI-Aufträge gelöscht; der Zugriff über diese Sitzung endet. Minimale Kauf-, Vertrags-, Zustimmungs- und Zahlungsnachweise bleiben für Abrechnung, Kaufabwicklung und gesetzlich erforderliche Aufbewahrung getrennt gespeichert. Sie enthalten keine Reflexionsantworten, keinen Bericht und keinen privaten Ergebnislink. Bereits zugestellte E-Mails oder Kopien sowie vom Zahlungsanbieter aufbewahrte Finanzunterlagen werden dadurch nicht gelöscht. Durch die Löschung entsteht kein Erstattungsanspruch. Gesetzliche Rechte bleiben unberührt.",
           ],
         },
         {
@@ -193,14 +193,14 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
           title: "3. Gesetzliches Widerrufsrecht",
           paragraphs: [
             "Steht dir als Verbraucher ein gesetzliches Widerrufsrecht zu, kannst du den Vertrag ohne Angabe von Gründen widerrufen. Für Verbraucher in Deutschland und der EU beträgt die Frist üblicherweise 14 Tage ab Vertragsschluss, vorbehaltlich der anwendbaren Vorschriften zum Fristbeginn und zu einer Verlängerung. Zur Fristwahrung genügt die rechtzeitige Absendung einer eindeutigen Widerrufserklärung.",
-            "Für die sofortige digitale Bereitstellung verlangt Checkout deine ausdrückliche Zustimmung zum Beginn der Vertragserfüllung vor Ablauf der Widerrufsfrist und deine Bestätigung, dass du den Verlust deines Widerrufsrechts mit Beginn der Vertragserfüllung kennst. Das Recht erlischt nur bei Vorliegen der gesetzlichen Voraussetzungen, einschließlich des Beginns der Bereitstellung und einer Vertragsbestätigung auf einem dauerhaften Datenträger, die deine Zustimmung und Kenntnisnahme festhält. Diese Bestätigung ist in deiner Berichts-E-Mail enthalten. Allein die Zahlung oder das Ankreuzen eines Kästchens lässt das Recht nicht erlöschen.",
+            "Für die sofortige digitale Bereitstellung verlangt Checkout deine ausdrückliche Zustimmung zum Beginn der Vertragserfüllung vor Ablauf der Widerrufsfrist und deine Bestätigung, dass du den Verlust deines Widerrufsrechts mit Beginn der Vertragserfüllung kennst. Das Recht erlischt nur bei Vorliegen der gesetzlichen Voraussetzungen, einschließlich des Beginns der Bereitstellung und einer Vertragsbestätigung auf einem dauerhaften Datenträger, die deine Zustimmung und Kenntnisnahme festhält. Wir versenden diese Bestätigung gesondert vor der kostenpflichtigen KI-Verarbeitung; sie ist zusätzlich in deiner Berichts-E-Mail enthalten. Allein die Zahlung oder das Ankreuzen eines Kästchens lässt das Recht nicht erlöschen.",
           ],
         },
         {
           title: "4. Zahlungsweg und Bearbeitung",
           paragraphs: [
             "Bei einem wirksamen gesetzlichen Widerruf erstatten wir unverzüglich und spätestens 14 Tage nach Eingang des Widerrufs. Für andere gesetzlich vorgeschriebene Erstattungen gelten die jeweiligen gesetzlichen Regeln. Wir verwenden das ursprüngliche Zahlungsmittel, sofern mit dir nicht ausdrücklich etwas anderes vereinbart wird. Wir berechnen keine Erstattungsgebühr. Bis die Gutschrift bei dir sichtbar ist, kann dein Zahlungsanbieter zusätzliche Zeit benötigen.",
-            "Erstattungen bearbeitet der Support über Stripe. Die App bietet keine automatische Erstattungsfunktion. Eine Erstattung löscht deine Reflexion nicht. Verwende die Löschfunktion der App, wenn du auch die gespeicherte Reflexion entfernen möchtest. Bereits zugestellte E-Mails und Kopien können nicht zurückgerufen werden.",
+            "Erstattungen bearbeitet der Support über Stripe. Die App bietet keine automatische Erstattungsfunktion. Eine vollständige Erstattung beendet den bezahlten Browserzugriff; bei einer Teil-Erstattung wird der Zugriff nicht automatisch entzogen. Eine Zahlungsbeanstandung allein führt ebenfalls nicht zu einer automatischen Sperre. Eine Erstattung löscht deine Reflexion nicht. Verwende die Löschfunktion der App, wenn du auch die gespeicherte Reflexion entfernen möchtest. Bereits zugestellte E-Mails und Kopien können nicht zurückgerufen werden.",
           ],
         },
         {
@@ -220,7 +220,7 @@ export function getLegalDocument(kind: LegalDocumentKind, locale: Locale) {
 }
 
 export const LEGAL_DOCUMENT_UPDATED_AT = "2026-10-23";
-export const DIGITAL_PURCHASE_VERSION = `${LEGAL_DOCUMENT_UPDATED_AT}.1`;
+export const DIGITAL_PURCHASE_VERSION = `${LEGAL_DOCUMENT_UPDATED_AT}.2`;
 
 export function createDigitalPurchaseAgreement(locale: Locale) {
   const asText = (kind: LegalDocumentKind) => {
@@ -236,6 +236,7 @@ export function createDigitalPurchaseAgreement(locale: Locale) {
   };
   return digitalPurchaseAgreementSchema.parse({
     version: DIGITAL_PURCHASE_VERSION,
+    confirmationBeforeAI: true,
     locale,
     statement:
       locale === "de"

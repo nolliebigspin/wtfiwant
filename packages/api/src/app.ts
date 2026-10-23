@@ -132,6 +132,19 @@ export function createApp({
     paymentProvider && emailProvider && legalLinks,
   );
 
+  const journeyView = async (sessionId: string) => {
+    const view = await paidJourneyView(jobs, sessionId);
+    const purchase = await repository.getPurchaseForSession(sessionId);
+    if (
+      view &&
+      purchase?.agreement?.confirmationBeforeAI &&
+      !(await repository.commerce.purchaseConfirmed(purchase.id))
+    ) {
+      return { ...view, canSkip: false, purchaseConfirmationPending: true };
+    }
+    return view;
+  };
+
   const isSafetyPaused = async (record: AssessmentRecord) => {
     if (
       record.session.status !== "safety_paused" &&
@@ -278,7 +291,7 @@ export function createApp({
       aiProvider,
     );
     return context.json(
-      paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+      paidJourneySchema.parse(await journeyView(record.session.id)),
     );
   });
 
@@ -298,7 +311,7 @@ export function createApp({
       );
     if (!record.entitlements.includes("full_analysis"))
       return context.json({ error: "Full Compass requires payment" }, 402);
-    const journey = await paidJourneyView(jobs, record.session.id);
+    const journey = await journeyView(record.session.id);
     if (!journey)
       return context.json({ error: "Paid journey has not started" }, 409);
     return context.json(paidJourneySchema.parse(journey));
@@ -355,7 +368,7 @@ export function createApp({
       return context.json({ error: "Start the paid journey first" }, 409);
     await jobs.enqueue(record.session.id, "synthesis", plan.locale, plan.input);
     return context.json(
-      paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+      paidJourneySchema.parse(await journeyView(record.session.id)),
       202,
     );
   });
@@ -370,7 +383,7 @@ export function createApp({
     // A replay cannot change the confirmed direction or create another paid AI job.
     if (await jobs.get(record.session.id, "report"))
       return context.json(
-        paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+        paidJourneySchema.parse(await journeyView(record.session.id)),
       );
     const input = directionReviewSchema.safeParse(
       await context.req.json().catch(() => null),
@@ -398,7 +411,7 @@ export function createApp({
       synthesis.input,
     );
     return context.json(
-      paidJourneySchema.parse(await paidJourneyView(jobs, record.session.id)),
+      paidJourneySchema.parse(await journeyView(record.session.id)),
       202,
     );
   });
@@ -558,6 +571,14 @@ export function createApp({
         409,
       );
     const existing = await repository.getPurchaseForSession(id);
+    if (existing?.status === "refunded")
+      return context.json(
+        {
+          error:
+            "This purchase was refunded. Start a new reflection to purchase again.",
+        },
+        409,
+      );
     if (existing?.status === "paid") return context.json({ status: "paid" });
     const attribution = input.data.analytics;
     if (existing?.status === "checkout_open") {
@@ -573,6 +594,7 @@ export function createApp({
           paymentProvider,
           aiProvider,
           jobs,
+          emailProvider,
           analytics,
           publicAppUrl,
         });
@@ -656,7 +678,7 @@ export function createApp({
     let event: PaymentEvent;
     try {
       event = paymentEventSchema.parse(
-        paymentProvider.parseWebhook(await context.req.text(), signature),
+        await paymentProvider.parseWebhook(await context.req.text(), signature),
       );
     } catch {
       return context.json({ error: "Invalid Stripe signature" }, 400);
@@ -665,7 +687,9 @@ export function createApp({
     if (!claimed)
       return context.json(webhookResponseSchema.parse({ received: true }));
     try {
-      if (
+      if (!("checkoutSessionId" in event)) {
+        await repository.commerce.recordAdjustment(event);
+      } else if (
         event.type === "checkout.session.completed" ||
         event.type === "checkout.session.async_payment_succeeded"
       ) {

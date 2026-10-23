@@ -34,5 +34,8 @@ export interface PaymentProvider {
   getOffer?(): Promise<PurchaseOffer>;
   createCheckout(input: CheckoutRequest): Promise<{ id: string; url: string }>;
   retrieveCheckout(id: string): Promise<CheckoutDetails>;
-  parseWebhook(payload: string, signature: string): PaymentEvent;
+  parseWebhook(
+    payload: string,
+    signature: string,
+  ): PaymentEvent | Promise<PaymentEvent>;
 }

@@ -8,7 +8,9 @@ import { LocalAIProvider } from "../src/ai/local";
 import { localCompass, localDirection } from "../src/ai/local-compass";
 import type { AIProvider } from "../src/ai/provider";
 import { createApp } from "../src/app";
+import { deliverCommerceNotifications } from "../src/commerce/notifications";
 import { createSeedSession } from "../src/dev/personas";
+import { LocalEmailDeliveryProvider } from "../src/email/local";
 import { processAIJob } from "../src/journey/process";
 import { InMemoryAIJobStore } from "../src/journey/store";
 import { InMemoryAssessmentRepository } from "../src/repositories/in-memory";
@@ -145,6 +147,10 @@ describe("analysis validation", () => {
       consentRecordedAt: new Date().toISOString(),
     });
     let attempts = 0;
+    await deliverCommerceNotifications(
+      repository.commerce,
+      new LocalEmailDeliveryProvider(),
+    );
     const locales: string[] = [];
     let answers: Record<string, unknown> = {};
     const provider: AIProvider = {

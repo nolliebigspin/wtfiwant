@@ -1,6 +1,7 @@
 import type {
   ActionPlanInput,
   Locale,
+  PurchaseReceipt,
   StoredAnalysis,
   WithdrawalReceipt,
 } from "@wtfiwant/shared";
@@ -18,6 +19,9 @@ export type FullCompassEmail = {
 };
 
 export interface EmailDeliveryProvider {
+  sendPurchaseConfirmation(
+    input: PurchaseReceipt,
+  ): Promise<{ messageId: string }>;
   sendFullCompass(input: FullCompassEmail): Promise<{ messageId: string }>;
   sendWithdrawalConfirmation(
     input: WithdrawalReceipt,

@@ -233,6 +233,7 @@ export function ResultsExperience({
   if (!analysis && checkpoint)
     return (
       <ReflectionCheckpoint
+        onDelete={client.deleteSession}
         checkpoint={checkpoint}
         sessionId={sessionId}
         view={view}

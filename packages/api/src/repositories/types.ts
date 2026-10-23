@@ -10,6 +10,7 @@ import type {
   WithdrawalInput,
   WithdrawalReceipt,
 } from "@wtfiwant/shared";
+import type { CommerceRecords } from "../commerce/records";
 
 export type AssessmentRecord = Omit<
   SessionView,
@@ -46,6 +47,7 @@ export type ReportPurchase = {
 };
 
 export interface AssessmentRepository {
+  readonly commerce: CommerceRecords;
   createSession(): Promise<AssessmentRecord>;
   getSession(id: string): Promise<AssessmentRecord | null>;
   updateProgress(

@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import { createAIProvider } from "../ai/config";
 import { createCommerceProviders } from "../commerce/config";
+import { deliverCommerceNotifications } from "../commerce/notifications";
 import { PostgresAssessmentRepository } from "../repositories/postgres";
 import { PostgresAIJobStore } from "./postgres";
 import { deliverReadyReports, processAIJob } from "./process";
@@ -15,6 +16,7 @@ const dependencies = {
   ...createCommerceProviders(),
 };
 let stopping = false;
+let nextCommerceCleanup = 0;
 process.on("SIGTERM", () => {
   stopping = true;
 });
@@ -24,6 +26,14 @@ process.on("SIGINT", () => {
 try {
   do {
     try {
+      if (Date.now() >= nextCommerceCleanup) {
+        await dependencies.repository.commerce.pruneUnmatchedAdjustments();
+        nextCommerceCleanup = Date.now() + 3600_000;
+      }
+      await deliverCommerceNotifications(
+        dependencies.repository.commerce,
+        dependencies.emailProvider,
+      );
       const processed = await processAIJob(dependencies);
       await deliverReadyReports(dependencies);
       if (!processed && !process.argv.includes("--once")) await Bun.sleep(2000);

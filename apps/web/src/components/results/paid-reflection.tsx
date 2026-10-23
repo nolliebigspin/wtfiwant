@@ -138,31 +138,39 @@ export function PaidReflection({
         ) : waiting ? (
           <>
             <h1 className="text-5xl leading-tight tracking-tight">
-              {journey.stage === "planning"
+              {journey.purchaseConfirmationPending
                 ? de
-                  ? "Wir schauen genauer hin."
-                  : "Let’s look a little closer."
-                : journey.stage === "synthesizing"
+                  ? "Dein Kauf ist bestätigt."
+                  : "Your purchase is confirmed."
+                : journey.stage === "planning"
                   ? de
-                    ? "Eine Richtung zum Prüfen."
-                    : "A direction to consider."
-                  : de
-                    ? "Dein Kompass entsteht."
-                    : "Your Compass is taking shape."}
+                    ? "Wir schauen genauer hin."
+                    : "Let’s look a little closer."
+                  : journey.stage === "synthesizing"
+                    ? de
+                      ? "Eine Richtung zum Prüfen."
+                      : "A direction to consider."
+                    : de
+                      ? "Dein Kompass entsteht."
+                      : "Your Compass is taking shape."}
             </h1>
             <output className="my-8 flex items-center gap-3">
               <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-accent-ink" />
-              {journey.stage === "planning"
+              {journey.purchaseConfirmationPending
                 ? de
-                  ? "Passende Rückfragen werden vorbereitet…"
-                  : "Preparing relevant follow-up questions…"
-                : journey.stage === "synthesizing"
+                  ? "Deine Vertragsbestätigung wird versendet. Anschließend starten deine KI-Rückfragen. Bei Verzögerungen erreichst du uns unter contact@awinter.dev."
+                  : "Your contract confirmation is being sent. Your AI questions start afterwards. Contact contact@awinter.dev if delivery is delayed."
+                : journey.stage === "planning"
                   ? de
-                    ? "Dein vorläufiger Nordstern wird vorbereitet…"
-                    : "Preparing your provisional north star…"
-                  : de
-                    ? "Deine Antworten werden ausgewertet und Belege geprüft…"
-                    : "Reading your answers and checking the supporting evidence…"}
+                    ? "Passende Rückfragen werden vorbereitet…"
+                    : "Preparing relevant follow-up questions…"
+                  : journey.stage === "synthesizing"
+                    ? de
+                      ? "Dein vorläufiger Nordstern wird vorbereitet…"
+                      : "Preparing your provisional north star…"
+                    : de
+                      ? "Deine Antworten werden ausgewertet und Belege geprüft…"
+                      : "Reading your answers and checking the supporting evidence…"}
             </output>
             <p className="text-sm leading-relaxed text-muted">
               {de

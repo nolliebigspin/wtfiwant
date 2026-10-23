@@ -185,6 +185,7 @@ export const paidJourneySchema = z
     review: directionReviewSchema.nullable().optional(),
     responses: z.record(z.string(), z.string().nullable()),
     canSkip: z.boolean(),
+    purchaseConfirmationPending: z.boolean().optional(),
     delivery: z.enum(["pending", "sent", "failed"]),
   })
   .strict();

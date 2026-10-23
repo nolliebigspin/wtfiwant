@@ -12,6 +12,8 @@ import {
   withdrawalReceiptSchema,
 } from "@wtfiwant/shared";
 import postgres, { type Sql } from "postgres";
+import { legalReceipt } from "../commerce/records";
+import { PostgresCommerceRecords } from "../commerce/records-postgres";
 import type {
   AssessmentRecord,
   AssessmentRepository,
@@ -78,7 +80,10 @@ function mapSession(row: SessionRow): Session {
 }
 
 export class PostgresAssessmentRepository implements AssessmentRepository {
-  constructor(private readonly sql: Sql) {}
+  readonly commerce: PostgresCommerceRecords;
+  constructor(private readonly sql: Sql) {
+    this.commerce = new PostgresCommerceRecords(sql);
+  }
 
   static connect(databaseUrl: string): PostgresAssessmentRepository {
     return new PostgresAssessmentRepository(postgres(databaseUrl));
@@ -360,7 +365,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         agreement = EXCLUDED.agreement,
         consent_recorded_at = NULL,
         updated_at = now()
-      WHERE report_purchases.status <> 'paid'
+      WHERE report_purchases.status NOT IN ('paid', 'refunded')
       RETURNING *
     `;
     const row = rows[0];
@@ -381,12 +386,15 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     consentRecordedAt: string | null;
   }): Promise<ReportPurchase | null> {
     return this.sql.begin(async (transaction) => {
+      if (input.paymentIntentId)
+        await transaction`SELECT pg_advisory_xact_lock(hashtextextended(${input.paymentIntentId}, 9182))`;
       const locked = await transaction<PurchaseRow[]>`
         SELECT * FROM report_purchases
         WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
         FOR UPDATE
       `;
       if (!locked[0]) return null;
+      if (locked[0].status === "refunded") return mapPurchase(locked[0]);
       const rows = await transaction<PurchaseRow[]>`
         UPDATE report_purchases SET
           status = 'paid',
@@ -400,7 +408,15 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         WHERE stripe_checkout_session_id = ${input.checkoutSessionId}
         RETURNING *
       `;
-      return rows[0] ? mapPurchase(rows[0]) : null;
+      const purchase = rows[0] ? mapPurchase(rows[0]) : null;
+      if (purchase)
+        await new PostgresCommerceRecords(
+          transaction as unknown as Sql,
+        ).archivePurchase(legalReceipt(purchase));
+      const [latest] = await transaction<
+        PurchaseRow[]
+      >`SELECT * FROM report_purchases WHERE stripe_checkout_session_id = ${input.checkoutSessionId}`;
+      return latest ? mapPurchase(latest) : null;
     });
   }
 
@@ -556,7 +572,8 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
   }
 
   async saveWithdrawal(input: WithdrawalInput): Promise<WithdrawalReceipt> {
-    const [row] = await this.sql<Array<{ received_at: Date }>>`
+    return this.sql.begin(async (tx) => {
+      const [row] = await tx<Array<{ received_at: Date }>>`
       INSERT INTO withdrawal_requests (request_id, name, email, contract_reference, locale)
       VALUES (${input.requestId}, ${input.name}, ${input.email}, ${input.contractReference}, ${input.locale})
       ON CONFLICT (request_id) DO UPDATE SET request_id = EXCLUDED.request_id
@@ -566,10 +583,15 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         AND withdrawal_requests.locale = EXCLUDED.locale
       RETURNING received_at
     `;
-    if (!row) throw new Error("Withdrawal request ID already used");
-    return withdrawalReceiptSchema.parse({
-      ...input,
-      receivedAt: row.received_at.toISOString(),
+      if (!row) throw new Error("Withdrawal request ID already used");
+      const receipt = withdrawalReceiptSchema.parse({
+        ...input,
+        receivedAt: row.received_at.toISOString(),
+      });
+      await new PostgresCommerceRecords(tx as unknown as Sql).queueWithdrawal(
+        receipt,
+      );
+      return receipt;
     });
   }
 

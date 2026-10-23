@@ -13,7 +13,8 @@ eligible sales countries. No tax registrations or business details were changed.
 
 Payments work technically. There are unresolved launch issues, particularly
 provider identification, international VAT, sensitive reflection data and
-contract-record retention. Expected low sales and a planned LLC do not settle
+retention schedules. The technical purchase-record and confirmation gaps below
+have been addressed, but the business/legal inputs remain unresolved. Expected low sales and a planned LLC do not settle
 these issues. No VAT liability is inferred merely from the absence of Stripe Tax.
 Conversely, a tax-inclusive Stripe price does not establish correct taxation.
 
@@ -35,6 +36,40 @@ Conversely, a tax-inclusive Stripe price does not establish correct taxation.
   processing, existing retention behavior and additional data-subject rights.
   These additions do not resolve the outstanding GDPR items below.
 
+## Follow-up implemented on 23 October 2026
+
+- Migration `0011_commerce_legal_records.sql` separates the original contract,
+  consent, amount, recipient and Stripe payment references from reflection data.
+  Existing paid purchases are backfilled without changing their agreement or
+  sending historical buyers a new email. Reflection deletion still removes
+  answers, reports and AI jobs; it leaves only the separate purchase ledger.
+- New purchases receive a separate contract-confirmation email containing their
+  original terms and consent snapshot before any paid AI job can start. A leased
+  database queue retries delivery, with stable provider idempotency keys. A
+  provider accepting the message is not proof that it reached the inbox, and this
+  technical sequencing does not establish the contract's legal classification or
+  lawful expiry of the withdrawal right.
+- Withdrawal declarations are persisted before sending and queued atomically.
+  Failed receipts are retried by the report worker without the customer submitting
+  the declaration again. Support still decides/processes refunds and resolves
+  cases; the app does not silently treat receipt of a withdrawal as a refund.
+- Signed refund and dispute events are normalised to minimal payment records.
+  A full refund removes paid access and cancels outstanding AI jobs; a partial
+  refund or dispute alone does not remove access. Event replay and out-of-order
+  delivery cannot restore a fully refunded purchase. Short-lived unmatched
+  payment references are pruned after seven days.
+- Deletion is available at the free checkpoint too. German/English deletion,
+  terms, refund and privacy text now explain the actual separate records,
+  confirmation sequence and refund behavior.
+- The reconciliation command reports aggregate delivery/payment issues without
+  answers, email addresses, private session links or raw Stripe payloads.
+  See [commerce operations](commerce-operations.md) for monitoring and recovery.
+
+These changes do not supply missing merchant information, choose retention
+periods, establish tax registrations or replace legal review. The independent
+confirmation stage applies to new version `.2` agreements; older purchases retain
+exactly their stored terms and continue under the existing flow.
+
 ## Outstanding work
 
 | Priority | Issue and evidence | Required resolution |
@@ -44,11 +79,11 @@ Conversely, a tax-inclusive Stripe price does not establish correct taxation.
 | Before selling | The activity's classification is unresolved. The operator's existing freelance status and planned trade deregistration do not classify automated report sales. | Confirm with tax/business-registration advice whether this activity is covered by existing registration and whether the deregistration has taken effect. Coordinate the eventual LLC change separately, including existing contracts and data-controller identity. |
 | Before selling | Free-text answers can reveal health, religion, sexual life or other Article 9 information. The local safety classifier also examines answers. The current contract/analytics consent is not an explicit sensitive-data processing mechanism. | Decide and document a lawful Article 9 approach where applicable, beginning before collection. Consider data minimisation, a separate recorded consent/withdrawal flow, restricted processing and a DPIA assessment. A warning to avoid sensitive details is only a minimisation measure, not a complete fix. |
 | Before selling | Public policies are not evidence of account-specific data-processing terms, international-transfer safeguards, hosting location or retention settings. | Verify and retain the applicable OpenAI, Resend, hosting and payment terms/DPAs and roles; document locations, subprocessors, safeguards and retention. Complete the controller address and the GDPR information accordingly. `store:false` alone is not zero retention. |
-| Before selling | `report_purchases` references `assessment_sessions` with `ON DELETE CASCADE`. Deleting a reflection removes the local contract snapshot, consent evidence, payment mapping and delivery evidence too. Stripe does not hold the full stored terms snapshot. | Separate a minimal legal/financial ledger from reflection content. Determine retention periods for each category with accounting/legal advice. Keep answers and reports out of that ledger and preserve their deletion behavior. Review backups and restore/deletion procedures too. |
-| Before relying on early expiry of withdrawal | The contract confirmation is appended to the final report email. There is no independent confirmation immediately after payment. Paid AI questions/browser access can start earlier; failed generation or email delays can leave the customer without a durable confirmation. | Confirm whether the offered package is digital content, a digital service or a mixed contract. Add a reliable independent contract-confirmation delivery stage, using the original terms/consent snapshot; have the timing and early-performance statement reviewed against that classification. Never treat payment/checkbox alone as expiry. |
-| Before selling | The withdrawal page includes a general explanation/example statement, not a complete statutory model form with the merchant address. Contract acceptance is described as payment confirmation **and** report availability; the delivery commitment/access duration is not precisely defined. | Complete the withdrawal instructions/model form once the address is known. Set a clear contract-acceptance moment, delivery commitment and access/download terms; reflect these consistently in Checkout and confirmation. |
-| Operational | Withdrawal requests are persisted and emailed to the customer with support BCC. Failed receipts need reconciliation/manual retry; the report worker does not retry withdrawal receipts. There is no support case/closure state or refund automation. | Monitor the support inbox and pending withdrawal confirmations, process valid claims in time and add a reliable retry/alert workflow. An incoming withdrawal must not be lost just because email failed. Whether to stop pending fulfillment needs a defined support rule. |
-| Operational | Stripe webhooks cover Checkout completion, delayed payment success/failure and expiration. Refund/dispute events are not synchronised to access/fulfillment even though a `refunded` status exists. | Define refund, partial-refund, dispute and access policies; synchronise appropriate events without denying mandatory consumer remedies. Accounting refund records must remain independent of reflection deletion. |
+| Before selling | Minimal purchase/contract/consent/payment evidence is now stored independently of reflection deletion and existing paid purchases are backfilled. The ledger has no answers, report, private result URL or reflection ID. No approved retention schedule is established. | Determine justified legal/accounting retention periods for purchase, withdrawal, refund/dispute and delivery records. Document backup, restore and deletion procedures. The implementation deliberately does not invent a multi-year period or retroactively destroy records. |
+| Before relying on early expiry of withdrawal | A separate durable confirmation with the original snapshot is now sent before new paid AI jobs start; failures are queued/retried. Provider acceptance alone is not proof of receipt. The legal classification remains unresolved. | Confirm whether the package is digital content, a digital service or a mixed contract; review the consent language, sequencing and early-performance consequences accordingly. Never treat payment, checkbox or send acknowledgement alone as conclusive expiry. |
+| Before selling | The withdrawal page still lacks a complete statutory model form with the merchant address. New terms now set acceptance at Stripe confirmation of successful payment and describe the separate confirmation stage. The delivery commitment/access duration is not precisely defined. | Complete the withdrawal instructions/model form once the address is known. Set a realistic delivery commitment and access/download terms; reflect them consistently in Checkout and confirmation. |
+| Operational | Withdrawal declarations and receipt jobs are now persisted atomically; the worker retries failed receipts. After eight attempts or 23 hours from the first attempt, automatic retries stop for reconciliation. There is no case/closure state or automatic refund. | Monitor the support inbox and failed/pending receipts; process valid claims in time. Check the provider before any manual resend beyond its idempotency window. Define support case ownership, closure and whether a pending withdrawal should stop fulfillment. |
+| Operational | Refund/dispute event handling is implemented with signature validation, idempotency, out-of-order matching and durable minimal records. Full refunds revoke access; partial refunds/disputes alone retain it. | Keep the live Stripe endpoint subscribed to the seven events in the operations guide; review dispute/refund cases in Stripe and support. There is no automatic reimbursement or dispute response, and a lost dispute is not silently treated as a merchant refund. |
 | Data minimisation | Reflections have no automatic time-based expiry. Umami statistics remain until administrative deletion. A private result link grants access without a separate login, and report/PDF content is sent through email. | Set justified retention schedules for abandoned sessions, paid content, Umami, logs and backups. Assess link access, email copies and email-provider tracking. Keep sensitive content out of support/analytics. |
 | Before wider marketing | No explicit adult-only/minor handling policy or verified microenterprise/accessibility assessment is recorded. | Establish the intended age group and contract-capacity handling. Assess BFSG scope/exemption, accessibility of form/payment/PDF and any required information. Check applicable dispute-resolution notices. Do not add an obsolete EU ODR link. |
 | Before wider marketing | AI is disclosed, but a complete AI Act role/transparency assessment and operator literacy measures are not documented. Later Meta Ads measurement would introduce another purpose and recipient. | Review the applicable provider/deployer obligations, including content marking and transparency, and document operator competence and safety handling. Assess any later Meta integration separately; existing Umami consent is not blanket permission for advertising tracking. |
@@ -95,8 +130,8 @@ does not determine the tax category or make the product a reduced-rate e-book.
 - Deterministic free reflection; no AI provider call before verified payment.
 - Required, unticked hosted-Checkout digital-delivery consent; acceptance is
   independently retrieved from Stripe, not trusted from the browser.
-- Original contract/consent text is stored with the purchase and included in the
-  report email. Statutory defect/non-delivery remedies are expressly reserved.
+- Original contract/consent text is stored independently of reflection content
+  and included in a separate confirmation for new purchases and the report email. Statutory defect/non-delivery remedies are expressly reserved.
 - A visible two-step “Vertrag widerrufen” flow works without an account or reason.
   Receipt timestamp is persisted before email and stays stable on retry.
 - Signed Stripe webhooks and idempotent fulfillment. A live expired QA Checkout
@@ -118,6 +153,8 @@ does not determine the tax category or make the product a reduced-rate e-book.
 - [German small-business exemption: §19 UStG](https://www.gesetze-im-internet.de/ustg_1980/__19.html)
 - [European Commission: cross-border SME scheme](https://sme-vat-rules.ec.europa.eu/sme-scheme/cross-border-sme-scheme_en)
 - [EU One Stop Shop](https://vat-one-stop-shop.ec.europa.eu/one-stop-shop_en)
+- [Stripe event types](https://docs.stripe.com/api/events/types)
+- [Resend idempotency window](https://resend.com/docs/dashboard/emails/idempotency-keys)
 - [Stripe automatic tax in Checkout](https://docs.stripe.com/tax/checkout/page)
 - [Stripe tax compliance steps](https://docs.stripe.com/tax/how-tax-works)
 - [DSGVO information requirements: Saxon supervisory authority](https://www.datenschutz.sachsen.de/informationspflichten.html)

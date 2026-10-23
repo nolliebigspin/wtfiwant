@@ -298,23 +298,59 @@ export const checkoutSessionIdSchema = z
   .max(255)
   .regex(/^cs_[A-Za-z0-9_-]+$/);
 
-export const paymentEventSchema = z
-  .object({
-    id: z
-      .string()
-      .trim()
-      .min(6)
-      .max(255)
-      .regex(/^evt_[A-Za-z0-9_-]+$/),
-    type: z.enum([
-      "checkout.session.completed",
-      "checkout.session.async_payment_succeeded",
-      "checkout.session.async_payment_failed",
-      "checkout.session.expired",
-    ]),
-    checkoutSessionId: checkoutSessionIdSchema,
-  })
-  .strict();
+const stripeEventIdSchema = z
+  .string()
+  .trim()
+  .min(6)
+  .max(255)
+  .regex(/^evt_[A-Za-z0-9_-]+$/);
+const paymentIntentReferenceSchema = z
+  .string()
+  .max(255)
+  .regex(/^pi_[A-Za-z0-9_-]+$/)
+  .nullable();
+export const paymentAdjustmentSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      id: stripeEventIdSchema,
+      type: z.literal("charge.refunded"),
+      paymentIntentId: paymentIntentReferenceSchema,
+      amount: z.number().int().nonnegative(),
+      amountRefunded: z.number().int().nonnegative(),
+      currency: z.string().regex(/^[a-z]{3}$/),
+    })
+    .strict(),
+  z
+    .object({
+      id: stripeEventIdSchema,
+      type: z.enum(["charge.dispute.created", "charge.dispute.closed"]),
+      paymentIntentId: paymentIntentReferenceSchema,
+      amount: z.number().int().nonnegative(),
+      currency: z.string().regex(/^[a-z]{3}$/),
+      status: z
+        .string()
+        .min(1)
+        .max(80)
+        .regex(/^[a-z_]+$/),
+    })
+    .strict(),
+]);
+export type PaymentAdjustment = z.infer<typeof paymentAdjustmentSchema>;
+export const paymentEventSchema = z.union([
+  z
+    .object({
+      id: stripeEventIdSchema,
+      type: z.enum([
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.async_payment_failed",
+        "checkout.session.expired",
+      ]),
+      checkoutSessionId: checkoutSessionIdSchema,
+    })
+    .strict(),
+  paymentAdjustmentSchema,
+]);
 
 export const checkoutResponseSchema = z.union([
   z

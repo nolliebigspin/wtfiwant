@@ -12,6 +12,77 @@ function httpClient(
 }
 
 describe("Stripe digital delivery consent", () => {
+  test("continues to verify signed Checkout events with async crypto", async () => {
+    const secret = "whsec_checkout_unit_test";
+    const provider = new StripePaymentProvider(
+      "sk_test_example",
+      "price_test",
+      secret,
+      false,
+    );
+    const payload = JSON.stringify({
+      id: "evt_signed_checkout",
+      object: "event",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_test_signed" } },
+    });
+    const signature = await Stripe.webhooks.generateTestHeaderStringAsync({
+      payload,
+      secret,
+    });
+    expect(await provider.parseWebhook(payload, signature)).toEqual({
+      id: "evt_signed_checkout",
+      type: "checkout.session.completed",
+      checkoutSessionId: "cs_test_signed",
+    });
+    await expect(
+      provider.parseWebhook(
+        payload.replace("cs_test_signed", "cs_test_tampered"),
+        signature,
+      ),
+    ).rejects.toThrow();
+  });
+  test("normalizes signed refund/dispute events without storing card or customer details", async () => {
+    const secret = "whsec_unit_test_only";
+    const provider = new StripePaymentProvider(
+      "sk_test_example",
+      "price_test",
+      secret,
+      false,
+    );
+    for (const type of [
+      "charge.refunded",
+      "charge.dispute.created",
+      "charge.dispute.closed",
+    ] as const) {
+      const payload = JSON.stringify({
+        id: "evt_signed_adjustment",
+        object: "event",
+        type,
+        data: {
+          object: {
+            id: "ch_or_dp_example",
+            payment_intent: "pi_example",
+            amount: 1900,
+            amount_refunded: 1900,
+            currency: "eur",
+            status: "won",
+            customer: "customer_secret",
+            billing_details: { email: "not-retained@example.com" },
+          },
+        },
+      });
+      const signature = await Stripe.webhooks.generateTestHeaderStringAsync({
+        payload,
+        secret,
+      });
+      const result = await provider.parseWebhook(payload, signature);
+      expect(result.type).toBe(type);
+      expect(JSON.stringify(result)).not.toContain("not-retained@example.com");
+      expect(JSON.stringify(result)).not.toContain("customer_secret");
+      await expect(provider.parseWebhook(payload, "invalid")).rejects.toThrow();
+    }
+  });
   for (const locale of ["en", "de"] as const) {
     test(`requires an explicit checkbox with the ${locale} consent text on hosted Checkout`, async () => {
       let body = new URLSearchParams();

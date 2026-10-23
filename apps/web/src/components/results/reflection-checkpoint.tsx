@@ -2,6 +2,7 @@ import type { Checkpoint, Locale, SessionView } from "@wtfiwant/shared";
 import { useState } from "react";
 import { formatOffer, usePurchaseOffer } from "@/components/purchase-offer";
 import { primaryButtonClassName, secondaryButtonClassName } from "@/lib/styles";
+import { PrivacyActions } from "./privacy-actions";
 import { ResultShell } from "./result-shell";
 
 export function ReflectionCheckpoint({
@@ -11,6 +12,7 @@ export function ReflectionCheckpoint({
   purchasing,
   error,
   onPurchase,
+  onDelete,
 }: {
   checkpoint: Checkpoint;
   sessionId: string;
@@ -18,6 +20,7 @@ export function ReflectionCheckpoint({
   purchasing: boolean;
   error: string | null;
   onPurchase: () => void;
+  onDelete: (sessionId: string) => Promise<void>;
 }) {
   const locale: Locale = checkpoint.locale;
   const de = locale === "de";
@@ -195,6 +198,7 @@ export function ReflectionCheckpoint({
           ) : null}
         </section>
       </main>
+      <PrivacyActions sessionId={sessionId} onDelete={onDelete} />
     </ResultShell>
   );
 }

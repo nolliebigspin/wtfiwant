@@ -110,12 +110,46 @@ export class StripePaymentProvider implements PaymentProvider {
     };
   }
 
-  parseWebhook(payload: string, signature: string): PaymentEvent {
-    const event = this.stripe.webhooks.constructEvent(
+  async parseWebhook(
+    payload: string,
+    signature: string,
+  ): Promise<PaymentEvent> {
+    const event = await this.stripe.webhooks.constructEventAsync(
       payload,
       signature,
       this.webhookSecret,
     );
+    if (event.type === "charge.refunded") {
+      const charge = event.data.object;
+      return paymentEventSchema.parse({
+        id: event.id,
+        type: event.type,
+        paymentIntentId:
+          typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : (charge.payment_intent?.id ?? null),
+        amount: charge.amount,
+        amountRefunded: charge.amount_refunded,
+        currency: charge.currency,
+      });
+    }
+    if (
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.closed"
+    ) {
+      const dispute = event.data.object;
+      return paymentEventSchema.parse({
+        id: event.id,
+        type: event.type,
+        paymentIntentId:
+          typeof dispute.payment_intent === "string"
+            ? dispute.payment_intent
+            : (dispute.payment_intent?.id ?? null),
+        amount: dispute.amount,
+        currency: dispute.currency,
+        status: dispute.status,
+      });
+    }
     if (!supportedEvents.has(event.type as PaymentEvent["type"]))
       throw new Error("Unsupported Stripe event");
     const checkoutSessionId =

@@ -130,6 +130,15 @@ export class InMemoryAIJobStore implements AIJobStore {
   }
   async claim() {
     for (const job of this.jobs.values()) {
+      const purchase = await this.repository.getPurchaseForSession(
+        job.sessionId,
+      );
+      if (purchase?.status === "refunded") continue;
+      if (
+        purchase?.agreement?.confirmationBeforeAI &&
+        !(await this.repository.commerce.purchaseConfirmed(purchase.id))
+      )
+        continue;
       if (
         (job.kind === "plan" &&
           this.jobs.has(this.key(job.sessionId, "synthesis"))) ||
@@ -158,6 +167,11 @@ export class InMemoryAIJobStore implements AIJobStore {
   async complete(job: AIJob, result: unknown) {
     const stored = this.jobs.get(this.key(job.sessionId, job.kind));
     const record = await this.repository.getSession(job.sessionId);
+    if (
+      (await this.repository.getPurchaseForSession(job.sessionId))?.status ===
+      "refunded"
+    )
+      return false;
     if (
       !record ||
       record.session.status === "safety_paused" ||

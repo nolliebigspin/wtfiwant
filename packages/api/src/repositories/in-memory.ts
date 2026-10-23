@@ -8,6 +8,8 @@ import {
   type WithdrawalInput,
   type WithdrawalReceipt,
 } from "@wtfiwant/shared";
+import { legalReceipt } from "../commerce/records";
+import { InMemoryCommerceRecords } from "../commerce/records-memory";
 import type {
   AssessmentRecord,
   AssessmentRepository,
@@ -21,6 +23,7 @@ function copy<T>(value: T): T {
 }
 
 export class InMemoryAssessmentRepository implements AssessmentRepository {
+  readonly commerce: InMemoryCommerceRecords;
   private readonly sessions = new Map<string, AssessmentRecord>();
   private readonly purchases = new Map<string, ReportPurchase>();
   private readonly withdrawals = new Map<string, WithdrawalReceipt>();
@@ -38,7 +41,14 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     }
   >();
 
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(private readonly now: () => number = Date.now) {
+    this.commerce = new InMemoryCommerceRecords(now, (purchaseId) => {
+      const purchase = [...this.purchases.values()].find(
+        (item) => item.id === purchaseId,
+      );
+      if (purchase) purchase.status = "refunded";
+    });
+  }
 
   async createSession(): Promise<AssessmentRecord> {
     const now = new Date().toISOString();
@@ -172,6 +182,8 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     agreement?: DigitalPurchaseAgreement,
   ): Promise<ReportPurchase> {
     const existing = this.purchases.get(sessionId);
+    if (existing?.status === "paid" || existing?.status === "refunded")
+      return copy(existing);
     const purchase: ReportPurchase = {
       id: existing?.id ?? crypto.randomUUID(),
       sessionId,
@@ -202,6 +214,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
       (candidate) => candidate.checkoutSessionId === input.checkoutSessionId,
     );
     if (!purchase) return null;
+    if (purchase.status === "refunded") return copy(purchase);
     purchase.status = "paid";
     purchase.paymentIntentId = input.paymentIntentId;
     purchase.recipientEmail = input.recipientEmail;
@@ -209,6 +222,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
     purchase.amountTotal = input.amountTotal;
     purchase.paidAt ??= new Date().toISOString();
     purchase.consentRecordedAt ??= input.consentRecordedAt;
+    await this.commerce.archivePurchase(legalReceipt(purchase));
     return copy(purchase);
   }
 
@@ -229,6 +243,7 @@ export class InMemoryAssessmentRepository implements AssessmentRepository {
       receivedAt: new Date(this.now()).toISOString(),
     };
     this.withdrawals.set(input.requestId, receipt);
+    await this.commerce.queueWithdrawal(receipt);
     return copy(receipt);
   }
 
