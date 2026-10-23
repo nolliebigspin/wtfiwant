@@ -1,7 +1,6 @@
 import {
   getPrivacySections,
   LEGAL_DOCUMENT_UPDATED_AT,
-  type Locale,
 } from "@wtfiwant/shared";
 
 export default async function PrivacyPage({
@@ -18,10 +17,9 @@ export default async function PrivacyPage({
       <h1 className="font-serif text-5xl">{de ? "Datenschutz" : "Privacy"}</h1>
       <p className="mt-4 text-sm text-muted">
         {de ? "Stand: " : "Last updated: "}
-        {new Intl.DateTimeFormat(locale as Locale, {
-          dateStyle: "long",
-          timeZone: "UTC",
-        }).format(new Date(LEGAL_DOCUMENT_UPDATED_AT))}
+        {de
+          ? LEGAL_DOCUMENT_UPDATED_AT.split("-").reverse().join(".")
+          : LEGAL_DOCUMENT_UPDATED_AT}
       </p>
       {sections.map(([title, body]) => (
         <section className="mt-10" key={title}>

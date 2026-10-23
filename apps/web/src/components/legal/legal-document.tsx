@@ -32,10 +32,9 @@ export function LegalDocument({
         </h1>
         <p className="mt-4 text-sm text-muted">
           {german ? "Stand: " : "Last updated: "}
-          {new Intl.DateTimeFormat(locale, {
-            dateStyle: "long",
-            timeZone: "UTC",
-          }).format(new Date(LEGAL_DOCUMENT_UPDATED_AT))}
+          {german
+            ? LEGAL_DOCUMENT_UPDATED_AT.split("-").reverse().join(".")
+            : LEGAL_DOCUMENT_UPDATED_AT}
         </p>
         <p className="my-8 text-lg leading-relaxed">{document.intro}</p>
         <nav
