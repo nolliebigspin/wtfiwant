@@ -63,11 +63,11 @@ worker cannot acknowledge another worker's lease.
 
 ## Monitoring and recovery
 
-Run in an authorised server container with its existing environment:
+Run in the Dokploy `web` or `report-worker` container with its existing environment:
 
 ```sh
-bun run commerce:reconcile
-bun run commerce:reconcile --retry-notifications
+bun /app/commerce-reconcile.js
+bun /app/commerce-reconcile.js --retry-notifications
 ```
 
 For local tooling, use `mise exec -- bun run commerce:reconcile`; do not copy
