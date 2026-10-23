@@ -4,15 +4,19 @@ Scope: published German/English legal pages, source code, Stripe Checkout and
 current live configuration. This records technical evidence and issues for legal
 and tax review; it is not a certification of compliance in every jurisdiction.
 
-The operator describes a current freelance/small business and an application to
-deregister a trade, with a possible LLC later. This does **not** establish the
-current legal business address, VAT exemption, effective deregistration date or
-eligible sales countries. No tax registrations or business details were changed.
+The operator has now supplied these provider details: Alec Winter, sole
+proprietor, Blumenau 89, 22089 Hamburg, Germany; contact@awinter.dev;
++49 178 1705600. The operator declares use of §19 UStG and reports no VAT ID,
+OSS registration or cross-border EU SME registration. These are operator-supplied
+facts, not independent tax-status verification. The trade deregistration is not
+confirmed; the exact classification of this product activity remains unresolved.
+The operator explicitly wants worldwide sales. No registrations, tax calculation,
+Stripe business identity, or country restrictions were changed in this update.
 
 ## Result
 
 Payments work technically. There are unresolved launch issues, particularly
-provider identification, international VAT, sensitive reflection data and
+international VAT, business/activity classification, sensitive reflection data and
 retention schedules. The technical purchase-record and confirmation gaps below
 have been addressed, but the business/legal inputs remain unresolved. Expected low sales and a planned LLC do not settle
 these issues. No VAT liability is inferred merely from the absence of Stripe Tax.
@@ -61,32 +65,63 @@ Conversely, a tax-inclusive Stripe price does not establish correct taxation.
 - Deletion is available at the free checkpoint too. German/English deletion,
   terms, refund and privacy text now explain the actual separate records,
   confirmation sequence and refund behavior.
+- A linked German/English provider notice (`/de/imprint`, `/en/imprint`) now
+  identifies the actual sole proprietor with the supplied address, telephone and
+  email. The same identity is used in terms, withdrawal information, the online
+  withdrawal page, privacy/controller information and withdrawal receipts.
+- New agreement version `.3` freezes those provider details and a voluntary
+  withdrawal form template into the terms/refund snapshot delivered by email.
+  Earlier stored agreements are unchanged. The template offers buyer address,
+  order/receipt date and paper-only signature fields; those fields are not newly
+  mandatory in the account-free online declaration. The text does not claim a
+  worldwide VAT exemption or a confirmed professional/business registration.
 - The reconciliation command reports aggregate delivery/payment issues without
   answers, email addresses, private session links or raw Stripe payloads.
   See [commerce operations](commerce-operations.md) for monitoring and recovery.
 
 These changes do not supply missing merchant information, choose retention
 periods, establish tax registrations or replace legal review. The independent
-confirmation stage applies to new version `.2` agreements; older purchases retain
+confirmation stage applies from version `.2` onwards; older purchases retain
 exactly their stored terms and continue under the existing flow.
 
 ## Outstanding work
 
 | Priority | Issue and evidence | Required resolution |
 | --- | --- | --- |
-| Before selling | No complete provider notice. `merchant` contains only name/email; there is no Impressum route. The address is also absent from terms, contract confirmation and withdrawal information. | Confirm the actual operator, serviceable business address, business contact telephone, and any applicable VAT/business ID or register details. Publish a linked Impressum and use the same identity throughout the purchase documents. Never invent an address or present a future LLC as the seller. |
-| Before selling | International tax handling is not established. Production has `STRIPE_AUTOMATIC_TAX=false`; the verified unpaid live Checkout had no automatic calculation. A country allowlist is not enforced. | Establish business location and actual §19 status, target markets and registration obligations. Configure the relevant tax registrations/product classification and then enable/test calculation, or limit sales to the markets whose treatment is established. Do not toggle Stripe Tax merely to make the warning disappear. |
+| Supplied details implemented | The operator-provided name, sole-proprietor status, service address, telephone and email are now published in the provider notice, privacy information and new contract documents. No VAT ID was supplied, and none is invented. | Confirm the address remains serviceable and report any future registration/identity changes. Account-level Stripe seller details, any register entry, additional regulated-activity duties and other case-specific disclosures still need verification where applicable. |
+| Before worldwide selling | The operator declares German §19 status, no OSS/cross-border SME registration, and requests global sales. Production remains `STRIPE_AUTOMATIC_TAX=false`; no country allowlist is enforced. | Establish country-specific VAT/GST/sales-tax treatment and applicable registrations, product classification, evidence and filing requirements. A worldwide merchant-of-record arrangement is an alternative commercial path to investigate; it is not part of current Stripe Checkout. German §19 status is not a worldwide tax exemption. |
 | Before selling | The activity's classification is unresolved. The operator's existing freelance status and planned trade deregistration do not classify automated report sales. | Confirm with tax/business-registration advice whether this activity is covered by existing registration and whether the deregistration has taken effect. Coordinate the eventual LLC change separately, including existing contracts and data-controller identity. |
 | Before selling | Free-text answers can reveal health, religion, sexual life or other Article 9 information. The local safety classifier also examines answers. The current contract/analytics consent is not an explicit sensitive-data processing mechanism. | Decide and document a lawful Article 9 approach where applicable, beginning before collection. Consider data minimisation, a separate recorded consent/withdrawal flow, restricted processing and a DPIA assessment. A warning to avoid sensitive details is only a minimisation measure, not a complete fix. |
 | Before selling | Public policies are not evidence of account-specific data-processing terms, international-transfer safeguards, hosting location or retention settings. | Verify and retain the applicable OpenAI, Resend, hosting and payment terms/DPAs and roles; document locations, subprocessors, safeguards and retention. Complete the controller address and the GDPR information accordingly. `store:false` alone is not zero retention. |
 | Before selling | Minimal purchase/contract/consent/payment evidence is now stored independently of reflection deletion and existing paid purchases are backfilled. The ledger has no answers, report, private result URL or reflection ID. No approved retention schedule is established. | Determine justified legal/accounting retention periods for purchase, withdrawal, refund/dispute and delivery records. Document backup, restore and deletion procedures. The implementation deliberately does not invent a multi-year period or retroactively destroy records. |
 | Before relying on early expiry of withdrawal | A separate durable confirmation with the original snapshot is now sent before new paid AI jobs start; failures are queued/retried. Provider acceptance alone is not proof of receipt. The legal classification remains unresolved. | Confirm whether the package is digital content, a digital service or a mixed contract; review the consent language, sequencing and early-performance consequences accordingly. Never treat payment, checkbox or send acknowledgement alone as conclusive expiry. |
-| Before selling | The withdrawal page still lacks a complete statutory model form with the merchant address. New terms now set acceptance at Stripe confirmation of successful payment and describe the separate confirmation stage. The delivery commitment/access duration is not precisely defined. | Complete the withdrawal instructions/model form once the address is known. Set a realistic delivery commitment and access/download terms; reflect them consistently in Checkout and confirmation. |
+| Before relying on complete consumer information | The provider address and a voluntary withdrawal form template are now on the site and in new refund-policy snapshots. Terms set acceptance at confirmed Stripe payment. The product combines automated questions, browser use and report/PDF delivery. | Have the digital-content/service classification and the complete withdrawal instructions/template reviewed together. Set a realistic delivery commitment and access/download duration. The template and provider address alone do not settle all pre-contract information or withdrawal-expiry requirements. |
 | Operational | Withdrawal declarations and receipt jobs are now persisted atomically; the worker retries failed receipts. After eight attempts or 23 hours from the first attempt, automatic retries stop for reconciliation. There is no case/closure state or automatic refund. | Monitor the support inbox and failed/pending receipts; process valid claims in time. Check the provider before any manual resend beyond its idempotency window. Define support case ownership, closure and whether a pending withdrawal should stop fulfillment. |
 | Operational | Refund/dispute event handling is implemented with signature validation, idempotency, out-of-order matching and durable minimal records. Full refunds revoke access; partial refunds/disputes alone retain it. | Keep the live Stripe endpoint subscribed to the seven events in the operations guide; review dispute/refund cases in Stripe and support. There is no automatic reimbursement or dispute response, and a lost dispute is not silently treated as a merchant refund. |
 | Data minimisation | Reflections have no automatic time-based expiry. Umami statistics remain until administrative deletion. A private result link grants access without a separate login, and report/PDF content is sent through email. | Set justified retention schedules for abandoned sessions, paid content, Umami, logs and backups. Assess link access, email copies and email-provider tracking. Keep sensitive content out of support/analytics. |
 | Before wider marketing | No explicit adult-only/minor handling policy or verified microenterprise/accessibility assessment is recorded. | Establish the intended age group and contract-capacity handling. Assess BFSG scope/exemption, accessibility of form/payment/PDF and any required information. Check applicable dispute-resolution notices. Do not add an obsolete EU ODR link. |
 | Before wider marketing | AI is disclosed, but a complete AI Act role/transparency assessment and operator literacy measures are not documented. Later Meta Ads measurement would introduce another purpose and recipient. | Review the applicable provider/deployer obligations, including content marking and transparency, and document operator competence and safety handling. Assess any later Meta integration separately; existing Umami consent is not blanket permission for advertising tracking. |
+
+## Activity description and global sales
+
+Working activity description for review with the registration office/tax adviser:
+“Betrieb einer Online-Plattform zur automatisierten Erstellung und Bereitstellung
+personalisierter Reflexionsberichte und digitaler Premium-Inhalte.”
+
+The product is sold as a standardised, automated online offering. The working
+assessment is commercial operation/sale of digital products rather than a
+personally performed freelance consultation. This is an inference from the
+implementation, not an administrative ruling. Unlocking “premium content” does
+not itself determine a tax exemption, free-profession status or reduced VAT rate.
+Do not represent this activity as covered by the previous freelance registration
+or a pending trade deregistration without confirmation.
+
+Worldwide sales remain a business goal, not a compliance finding. Germany's §19
+exemption does not override foreign rules. For example, HMRC states that foreign
+suppliers of taxable digital services to UK consumers must register; no German
+small-business safe harbour follows. Current standard Stripe Checkout is not a
+merchant of record. No country exclusion, tax registration or blanket zero-rate
+setting was silently applied.
 
 ## Tax treatment: decision framework
 
@@ -142,6 +177,8 @@ does not determine the tax category or make the product a reduced-rate e-book.
 
 ## Sources checked
 
+- [Activity classification: §18 EStG](https://www.gesetze-im-internet.de/estg/__18.html)
+- [Federal start-up portal: software self-distribution (orientation; archived guidance)](https://www.existenzgruendungsportal.de/Redaktion/DE/BMWK-Infopool/Antworten/Gruendungsplanung/Freie-Berufe/gemischte-Taetig/Software-entwickeln-und-vertreiben-freiberufliche-Taetigkeiten)
 - [Provider information: §5 DDG](https://www.gesetze-im-internet.de/ddg/__5.html)
 - [Pre-contract information: Art. 246a §1 EGBGB](https://www.gesetze-im-internet.de/bgbeg/art_246a__1.html)
 - [Payment button: §312j BGB](https://www.gesetze-im-internet.de/bgb/__312j.html)

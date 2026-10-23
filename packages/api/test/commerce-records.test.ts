@@ -71,6 +71,11 @@ describe("legal purchase evidence and reliable confirmations", () => {
     expect(purchaseConfirmation(receipt ?? undefined, false)).toContain(
       purchase.agreement?.terms ?? "missing",
     );
+    const confirmation = purchaseConfirmation(receipt ?? undefined, false);
+    expect(confirmation).toContain("Blumenau 89");
+    expect(confirmation).toContain("22089 Hamburg");
+    expect(confirmation).toContain("+49 178 1705600");
+    expect(confirmation).toContain("Anschrift der widerrufenden Person(en)");
     expect(purchaseConfirmation(receipt ?? undefined, false)).not.toContain(
       "FICTIONAL_PRIVATE_ANSWER",
     );

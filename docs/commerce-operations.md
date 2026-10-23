@@ -42,8 +42,10 @@ purchase evidence. No code here initiates refunds or submits dispute evidence.
 
 ## Confirmation queue
 
-New agreement version `2026-10-23.2` requires the independent contract email before
-paid AI work. Original terms and consent are frozen per purchase. The browser
+Agreements from version `2026-10-23.2` onwards require the independent contract email before
+paid AI work. Original terms and consent are frozen per purchase. Version `2026-10-23.3` adds
+the operator-provided postal/contact details and voluntary withdrawal template;
+this does not rewrite old purchases or establish worldwide tax compliance. The browser
 shows a waiting message while its confirmation is pending. Provider acceptance
 is recorded; it does not prove inbox receipt or legally establish withdrawal
 expiry. Monitor bounces in Resend and contact the buyer where appropriate.

@@ -10,6 +10,9 @@ export function LegalFooter() {
         aria-label={t("label")}
         className="flex flex-wrap justify-center gap-x-6 gap-y-3"
       >
+        <Link href="/imprint">
+          {locale === "de" ? "Impressum" : "Legal notice"}
+        </Link>
         <Link href="/privacy">
           {locale === "de" ? "Datenschutz" : "Privacy"}
         </Link>

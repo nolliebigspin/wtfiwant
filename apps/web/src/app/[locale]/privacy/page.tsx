@@ -24,7 +24,9 @@ export default async function PrivacyPage({
       {sections.map(([title, body]) => (
         <section className="mt-10" key={title}>
           <h2 className="mb-3 text-xl font-bold">{title}</h2>
-          <p className="leading-relaxed text-muted">{body}</p>
+          <p className="whitespace-pre-line leading-relaxed text-muted">
+            {body}
+          </p>
         </section>
       ))}
     </main>

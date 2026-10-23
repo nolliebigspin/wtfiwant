@@ -3,11 +3,8 @@ import { BrandLink } from "@/components/ui/brand-link";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { Link } from "@/i18n/navigation";
 import { eyebrowClassName, horizontalHeaderClassName } from "@/lib/styles";
-import {
-  getLegalDocument,
-  type LegalDocumentKind,
-  merchant,
-} from "./legal-content";
+import { getLegalDocument, type LegalDocumentKind } from "./legal-content";
+import { MerchantContact } from "./merchant-contact";
 
 export function LegalDocument({
   kind,
@@ -36,11 +33,19 @@ export function LegalDocument({
             ? LEGAL_DOCUMENT_UPDATED_AT.split("-").reverse().join(".")
             : LEGAL_DOCUMENT_UPDATED_AT}
         </p>
-        <p className="my-8 text-lg leading-relaxed">{document.intro}</p>
+        <p className="my-8 whitespace-pre-line text-lg leading-relaxed">
+          {document.intro}
+        </p>
         <nav
           aria-label={german ? "Rechtliche Informationen" : "Legal information"}
           className="mb-12 flex flex-wrap gap-5 text-sm"
         >
+          <Link
+            href="/imprint"
+            aria-current={kind === "imprint" ? "page" : undefined}
+          >
+            {german ? "Impressum" : "Legal notice"}
+          </Link>
           <Link
             href="/terms"
             aria-current={kind === "terms" ? "page" : undefined}
@@ -72,7 +77,10 @@ export function LegalDocument({
             >
               <h2 className="m-0 text-xl font-bold">{section.title}</h2>
               {section.paragraphs.map((paragraph) => (
-                <p key={paragraph} className="mt-4 leading-relaxed text-muted">
+                <p
+                  key={paragraph}
+                  className="mt-4 whitespace-pre-line leading-relaxed text-muted"
+                >
                   {paragraph}
                 </p>
               ))}
@@ -83,10 +91,9 @@ export function LegalDocument({
           <h2 className="m-0 text-xl font-bold">
             {german ? "Kontakt" : "Contact"}
           </h2>
-          <p className="mt-3 mb-1">{merchant.name}</p>
-          <a className="break-all" href={`mailto:${merchant.email}`}>
-            {merchant.email}
-          </a>
+          <div className="mt-4">
+            <MerchantContact locale={locale} />
+          </div>
         </aside>
       </article>
     </main>

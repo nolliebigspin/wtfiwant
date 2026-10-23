@@ -1,4 +1,4 @@
-import { merchant, type WithdrawalReceipt } from "@wtfiwant/shared";
+import { merchantContact, type WithdrawalReceipt } from "@wtfiwant/shared";
 
 export function withdrawalConfirmation(input: WithdrawalReceipt) {
   const de = input.locale === "de";
@@ -10,7 +10,7 @@ export function withdrawalConfirmation(input: WithdrawalReceipt) {
       de
         ? "Deine Widerrufserklärung ist bei uns eingegangen."
         : "We have received your withdrawal declaration.",
-      `${de ? "Empfänger" : "Recipient"}: ${merchant.name} (${merchant.email})`,
+      `${de ? "Empfänger" : "Recipient"}: \n${merchantContact(input.locale)}`,
       `${de ? "Name" : "Name"}: ${input.name}`,
       `Email: ${input.email}`,
       `${de ? "Vertrag" : "Contract"}: ${input.contractReference}`,

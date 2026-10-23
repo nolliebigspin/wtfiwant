@@ -2,11 +2,60 @@ import { digitalPurchaseAgreementSchema } from "./commerce";
 import type { Locale } from "./localization";
 
 export const merchant = {
-  name: "Alec Winter · awinter.dev",
+  name: "Alec Winter",
+  brand: "awinter.dev",
+  street: "Blumenau 89",
+  postalCode: "22089",
+  city: "Hamburg",
+  country: { de: "Deutschland", en: "Germany" },
+  telephone: "+49 178 1705600",
+  telephoneHref: "tel:+491781705600",
   email: "contact@awinter.dev",
 };
 
-export type LegalDocumentKind = "terms" | "refunds";
+export function merchantContact(locale: Locale) {
+  return [
+    merchant.name,
+    locale === "de" ? "Einzelunternehmen" : "Sole proprietorship",
+    merchant.street,
+    `${merchant.postalCode} ${merchant.city}`,
+    merchant.country[locale],
+    `${locale === "de" ? "Telefon" : "Telephone"}: ${merchant.telephone}`,
+    `E-Mail: ${merchant.email}`,
+  ].join("\n");
+}
+
+export function withdrawalTemplate(locale: Locale) {
+  const de = locale === "de";
+  return [
+    de ? "Widerrufsformular" : "Withdrawal form",
+    de
+      ? "Wenn du den Vertrag widerrufen möchtest, kannst du diese Vorlage ausfüllen und an uns senden. Die Nutzung ist freiwillig; jede eindeutige Widerrufserklärung genügt."
+      : "To withdraw from the contract, you may complete this template and send it to us. Its use is optional; any clear withdrawal statement is sufficient.",
+    `${de ? "An" : "To"}: ${merchantContact(locale)}`,
+    de
+      ? "Hiermit erkläre ich / erklären wir den Widerruf des Vertrags über folgende Leistung: ____________________"
+      : "I / we hereby withdraw from the contract for this service: ____________________",
+    de
+      ? "Bestelldatum / Datum des Erhalts: ____________________"
+      : "Order date / date received: ____________________",
+    de
+      ? "Name der widerrufenden Person(en): ____________________"
+      : "Name of consumer(s): ____________________",
+    de
+      ? "Anschrift der widerrufenden Person(en): ____________________"
+      : "Address of consumer(s): ____________________",
+    de
+      ? "Unterschrift (nur bei Einreichung auf Papier): ____________________"
+      : "Signature (only when submitted on paper): ____________________",
+    de ? "Datum: ____________________" : "Date: ____________________",
+    de
+      ? "Bitte nicht zutreffende Angaben streichen. Eine Bestellreferenz ist hilfreich, aber keine Voraussetzung für einen wirksamen Widerruf. Über das Online-Formular ist keine handschriftliche Unterschrift erforderlich."
+      : "Delete inapplicable wording. An order reference helps us locate the purchase but is not required for an effective withdrawal. The online form requires no handwritten signature.",
+  ].join("\n\n");
+}
+
+export type LegalDocumentKind = "terms" | "refunds" | "imprint";
 
 type LegalContent = {
   title: string;
@@ -16,10 +65,35 @@ type LegalContent = {
 
 const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
   en: {
+    imprint: {
+      title: "Legal notice",
+      intro:
+        "Provider information for wtfiwant.app under section 5 of the German Digital Services Act (DDG).",
+      sections: [
+        {
+          title: "Provider and contact",
+          paragraphs: [
+            merchantContact("en"),
+            "awinter.dev and wtfiwant.app are business and product names. The contracting party is Alec Winter as an individual sole proprietor.",
+          ],
+        },
+        {
+          title: "VAT status",
+          paragraphs: [
+            "The operator uses the German small-business exemption under section 19 UStG. No VAT is separately stated for transactions exempt under this provision in Germany. This is not a worldwide exemption from VAT or similar taxes.",
+          ],
+        },
+        {
+          title: "The service",
+          paragraphs: [
+            "Operation of an online platform for the automated creation and provision of personalised reflection reports and digital premium content. The service does not provide medical diagnosis, therapy or individual professional advice.",
+          ],
+        },
+      ],
+    },
     terms: {
       title: "Terms of service",
-      intro:
-        "These terms explain what you receive when you use wtfiwant.app and purchase a Full Compass. The service is provided by Alec Winter, trading as awinter.dev. Contact: contact@awinter.dev.",
+      intro: `These terms explain what you receive when you use wtfiwant.app and purchase a Full Compass. Your contracting party and provider is:\n${merchantContact("en")}`,
       sections: [
         {
           title: "1. What the service provides",
@@ -86,7 +160,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "2. Exercising statutory rights",
           paragraphs: [
-            "Send your request to Alec Winter, awinter.dev, at contact@awinter.dev. To help us find the purchase, include the email address used at Checkout and, if available, the purchase date or Stripe receipt reference. Do not send card details or the contents of your reflection. Missing a receipt reference does not invalidate a clear withdrawal request.",
+            `Send your request to:\n${merchantContact("en")}\nTo help us find the purchase, include the email address used at Checkout and, if available, the purchase date or Stripe receipt reference. Do not send card details or the contents of your reflection. Missing a receipt reference does not invalidate a clear withdrawal request.`,
             "Where you have a statutory right of withdrawal, you can use the “Withdraw from contract” function on wtfiwant.app/withdraw, email us, or use this wording: ‘I withdraw from my purchase of the Full Compass on wtfiwant.app and request a refund. Purchase date: […]. Checkout email: […]. Name: […]. Date: […].’ You may use any other clear statement instead; no particular form is required.",
           ],
         },
@@ -111,14 +185,43 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
             "If the digital product is defective, statutory remedies may include correction, a price reduction, termination of the contract, or other remedies where the legal requirements are met. The exclusion of voluntary refunds does not limit these rights.",
           ],
         },
+        {
+          title: "6. Withdrawal form template",
+          paragraphs: [withdrawalTemplate("en")],
+        },
       ],
     },
   },
   de: {
+    imprint: {
+      title: "Impressum",
+      intro:
+        "Anbieterkennzeichnung für wtfiwant.app gemäß § 5 Digitale-Dienste-Gesetz (DDG).",
+      sections: [
+        {
+          title: "Anbieter und Kontakt",
+          paragraphs: [
+            merchantContact("de"),
+            "awinter.dev und wtfiwant.app sind Geschäfts- beziehungsweise Produktbezeichnungen. Vertragspartner ist Alec Winter als Einzelunternehmer.",
+          ],
+        },
+        {
+          title: "Umsatzsteuer",
+          paragraphs: [
+            "Der Anbieter nutzt die Kleinunternehmerregelung nach § 19 UStG. Für nach dieser Vorschrift in Deutschland steuerfreie Umsätze wird keine Umsatzsteuer gesondert ausgewiesen. Daraus folgt keine weltweite Befreiung von Umsatzsteuer oder vergleichbaren Steuern.",
+          ],
+        },
+        {
+          title: "Angebot",
+          paragraphs: [
+            "Betrieb einer Online-Plattform zur automatisierten Erstellung und Bereitstellung personalisierter Reflexionsberichte und digitaler Premium-Inhalte. Der Dienst bietet keine medizinische Diagnose, Therapie oder individuelle Fachberatung.",
+          ],
+        },
+      ],
+    },
     terms: {
       title: "Nutzungsbedingungen",
-      intro:
-        "Diese Bedingungen erklären, was du bei der Nutzung von wtfiwant.app und beim Kauf eines vollständigen Kompasses erhältst. Anbieter ist Alec Winter, handelnd unter awinter.dev. Kontakt: contact@awinter.dev.",
+      intro: `Diese Bedingungen erklären, was du bei der Nutzung von wtfiwant.app und beim Kauf eines vollständigen Kompasses erhältst. Anbieter und Vertragspartner ist:\n${merchantContact("de")}`,
       sections: [
         {
           title: "1. Was der Dienst bietet",
@@ -185,7 +288,7 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
         {
           title: "2. Gesetzliche Rechte ausüben",
           paragraphs: [
-            "Richte deinen Antrag an Alec Winter, awinter.dev, unter contact@awinter.dev. Nenne zur Zuordnung möglichst die beim Checkout verwendete E-Mail-Adresse sowie das Kaufdatum oder die Stripe-Belegreferenz, falls vorhanden. Sende keine Kartendaten oder Reflexionsinhalte. Eine fehlende Belegreferenz macht eine eindeutige Widerrufserklärung nicht unwirksam.",
+            `Richte deinen Antrag an:\n${merchantContact("de")}\nNenne zur Zuordnung möglichst die beim Checkout verwendete E-Mail-Adresse sowie das Kaufdatum oder die Stripe-Belegreferenz, falls vorhanden. Sende keine Kartendaten oder Reflexionsinhalte. Eine fehlende Belegreferenz macht eine eindeutige Widerrufserklärung nicht unwirksam.`,
             "Wenn dir ein gesetzliches Widerrufsrecht zusteht, kannst du die Funktion „Vertrag widerrufen“ auf wtfiwant.app/withdraw nutzen, uns eine E-Mail senden oder zum Beispiel schreiben: ‚Hiermit widerrufe ich meinen Kauf des vollständigen Kompasses auf wtfiwant.app und bitte um Erstattung. Kaufdatum: […]. E-Mail-Adresse beim Checkout: […]. Name: […]. Datum: […].‘ Eine andere eindeutige Erklärung genügt ebenfalls; ein bestimmtes Formular ist nicht vorgeschrieben.",
           ],
         },
@@ -210,6 +313,10 @@ const documents: Record<Locale, Record<LegalDocumentKind, LegalContent>> = {
             "Bei einem mangelhaften digitalen Produkt können die gesetzlichen Rechte unter den jeweiligen Voraussetzungen Nacherfüllung, Minderung, Vertragsbeendigung oder weitere Ansprüche umfassen. Der Ausschluss freiwilliger Erstattungen beschränkt diese Rechte nicht.",
           ],
         },
+        {
+          title: "6. Formularvorlage für den Widerruf",
+          paragraphs: [withdrawalTemplate("de")],
+        },
       ],
     },
   },
@@ -220,7 +327,7 @@ export function getLegalDocument(kind: LegalDocumentKind, locale: Locale) {
 }
 
 export const LEGAL_DOCUMENT_UPDATED_AT = "2026-10-23";
-export const DIGITAL_PURCHASE_VERSION = `${LEGAL_DOCUMENT_UPDATED_AT}.2`;
+export const DIGITAL_PURCHASE_VERSION = `${LEGAL_DOCUMENT_UPDATED_AT}.3`;
 
 export function createDigitalPurchaseAgreement(locale: Locale) {
   const asText = (kind: LegalDocumentKind) => {

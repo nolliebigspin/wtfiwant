@@ -1,4 +1,4 @@
-import { merchant } from "./legal-content";
+import { merchantContact } from "./legal-content";
 import type { Locale } from "./localization";
 
 export function getPrivacySections(locale: Locale): [string, string][] {
@@ -42,7 +42,7 @@ export function getPrivacySections(locale: Locale): [string, string][] {
         ],
         [
           "Kontakt und Rechte",
-          `Verantwortlich ist ${merchant.name}; Kontakt: ${merchant.email}. Soweit die gesetzlichen Voraussetzungen vorliegen, hast du Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung und Datenübertragbarkeit. Du kannst einer auf berechtigte Interessen gestützten Verarbeitung aus Gründen deiner besonderen Situation widersprechen. Eine Einwilligung kannst du jederzeit mit Wirkung für die Zukunft widerrufen; die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt. Du hast ein Beschwerderecht bei einer Datenschutzaufsichtsbehörde, insbesondere an deinem gewöhnlichen Aufenthaltsort, Arbeitsplatz oder am Ort des vermuteten Verstoßes. Bitte sende keine vollständigen Antworten oder Kartendaten zur Identifizierung per E-Mail.`,
+          `Verantwortlich für die Datenverarbeitung:\n${merchantContact("de")}\n\nSoweit die gesetzlichen Voraussetzungen vorliegen, hast du Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung und Datenübertragbarkeit. Du kannst einer auf berechtigte Interessen gestützten Verarbeitung aus Gründen deiner besonderen Situation widersprechen. Eine Einwilligung kannst du jederzeit mit Wirkung für die Zukunft widerrufen; die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt. Du hast ein Beschwerderecht bei einer Datenschutzaufsichtsbehörde, insbesondere an deinem gewöhnlichen Aufenthaltsort, Arbeitsplatz oder am Ort des vermuteten Verstoßes. Bitte sende keine vollständigen Antworten oder Kartendaten zur Identifizierung per E-Mail.`,
         ],
       ]
     : [
@@ -84,7 +84,7 @@ export function getPrivacySections(locale: Locale): [string, string][] {
         ],
         [
           "Contact and rights",
-          `The controller is ${merchant.name}; contact: ${merchant.email}. Subject to the applicable legal conditions, you have rights of access, correction, deletion, restriction and data portability. You can object to processing based on legitimate interests on grounds relating to your particular situation. You can withdraw consent for the future at any time; processing before withdrawal remains lawful. You may complain to a data protection authority, particularly in the country of your habitual residence, work or the alleged infringement. Do not email full reflection answers or card details to identify yourself.`,
+          `Data controller:\n${merchantContact("en")}\n\nSubject to the applicable legal conditions, you have rights of access, correction, deletion, restriction and data portability. You can object to processing based on legitimate interests on grounds relating to your particular situation. You can withdraw consent for the future at any time; processing before withdrawal remains lawful. You may complain to a data protection authority, particularly in the country of your habitual residence, work or the alleged infringement. Do not email full reflection answers or card details to identify yourself.`,
         ],
       ];
 }
